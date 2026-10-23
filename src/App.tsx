@@ -12,7 +12,6 @@ import {
   Card,
   Checkbox,
   ConfigProvider,
-  Descriptions,
   Empty,
   Form,
   Image,
@@ -23,7 +22,6 @@ import {
   Radio,
   Select,
   Space,
-  Statistic,
   Switch,
   Tabs,
   Tag,
@@ -203,13 +201,6 @@ interface ViewPropertiesFormValues {
   bkcolor: string
   viewTitleColor: string
   viewTitleFontSize: number
-}
-
-function countTags(devices: Record<string, unknown>): number {
-  return Object.values(devices).reduce<number>((count, device) => {
-    if (!isRecord(device) || !isRecord(device.tags)) return count
-    return count + Object.keys(device.tags).length
-  }, 0)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -748,7 +739,6 @@ function App() {
     () => [...new Set(tags.map((tag) => tag.floor).filter(Boolean))],
     [tags],
   )
-  const tagCount = config ? countTags(config.devices) : 0
   const preview = previewSnapshot && selectedView
     && previewSnapshot.viewId === selectedView.id
     ? previewSnapshot.result
@@ -4082,28 +4072,8 @@ function App() {
                   </Tag>
                 </div>
 
-                <Space className="summary-cards" size="middle" wrap>
-                  <Card className="summary-card"><Statistic title="Views" value={config.views.length} /></Card>
-                  <Card className="summary-card"><Statistic title="Devices" value={Object.keys(config.devices).length} /></Card>
-                  <Card className="summary-card"><Statistic title="Tags" value={tagCount} /></Card>
-                </Space>
-
                 {selectedView ? (
                   <Space className="view-panels" orientation="vertical" size="middle">
-                    <Card title="View 資訊" className="view-details">
-                      <Descriptions column={{ xs: 1, sm: 2 }}>
-                        <Descriptions.Item label="名稱">{selectedView.name}</Descriptions.Item>
-                        <Descriptions.Item label="View ID">{selectedView.id || '—'}</Descriptions.Item>
-                        <Descriptions.Item label="畫布尺寸">
-                          {selectedView.width && selectedView.height
-                            ? `${selectedView.width} × ${selectedView.height}`
-                            : '未提供'}
-                        </Descriptions.Item>
-                        <Descriptions.Item label="元件數">
-                          {selectedView.itemCount ?? '未提供'}
-                        </Descriptions.Item>
-                      </Descriptions>
-                    </Card>
                     {modelErrors.has(selectedView.id) ? (
                       <div className="editor-columns">
                         <Alert

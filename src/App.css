@@ -187,19 +187,6 @@
   letter-spacing: 0.08em;
 }
 
-.summary-cards {
-  display: flex;
-  width: 100%;
-  margin-bottom: 18px;
-}
-
-.summary-card {
-  flex: 1 1 150px;
-  max-width: 240px;
-  border-color: #e0e0e0;
-  box-shadow: none;
-}
-
 .view-details,
 .next-step-card {
   margin-top: 16px;
@@ -686,35 +673,6 @@
 
 .workspace-content .eyebrow {
   font-size: 10px;
-}
-
-.summary-cards {
-  gap: 10px !important;
-  margin-bottom: 10px;
-}
-
-.summary-cards .ant-space-item {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.summary-card {
-  max-width: none;
-  width: 100%;
-}
-
-.summary-card .ant-card-body {
-  padding: 10px 14px;
-}
-
-.summary-card .ant-statistic-title {
-  font-size: 12px;
-  margin-bottom: 2px;
-}
-
-.summary-card .ant-statistic-content {
-  font-size: 22px;
-  line-height: 1.2;
 }
 
 .view-panels.ant-space-vertical {
