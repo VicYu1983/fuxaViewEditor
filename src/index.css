@@ -1,7 +1,8 @@
 :root {
-  font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
-  color: #253941;
-  background: #f3f6f8;
+  font-family: "Segoe UI Symbol", "Roboto", "Segoe UI", "Microsoft JhengHei", sans-serif;
+  font-weight: 300;
+  color: #212121;
+  background: #ffffff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -29,4 +30,17 @@ body {
 button,
 input {
   font: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #d9d9d9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #bebebe;
 }

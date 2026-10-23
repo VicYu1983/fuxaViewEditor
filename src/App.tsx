@@ -2874,9 +2874,12 @@ function App() {
       locale={zhTW}
       theme={{
         token: {
-          colorPrimary: '#176b87',
-          borderRadius: 8,
-          fontFamily: '"Segoe UI", "Microsoft JhengHei", sans-serif',
+          colorPrimary: '#3059af',
+          colorInfo: '#3059af',
+          colorLink: '#3059af',
+          borderRadius: 4,
+          controlHeight: 32,
+          fontFamily: '"Segoe UI Symbol", "Roboto", "Segoe UI", "Microsoft JhengHei", sans-serif',
         },
       }}
     >

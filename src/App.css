@@ -1,6 +1,6 @@
-.editor-shell {
+﻿.editor-shell {
   min-height: 100vh;
-  background: #f3f6f8;
+  background: #f9f9f9;
 }
 
 .editor-header {
@@ -10,30 +10,30 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 68px;
-  padding-inline: 24px;
+  height: 52px;
+  padding-inline: 12px;
   background: #fff;
-  border-bottom: 1px solid #e8edf0;
+  border-bottom: 1px solid #f1f3f4;
   line-height: normal;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
 }
 
 .brand-mark {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   place-items: center;
   color: #fff;
-  background: #176b87;
-  border-radius: 10px;
-  font-size: 19px;
-  font-weight: 700;
+  background: #3059af;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .brand-name,
@@ -42,14 +42,14 @@
 }
 
 .brand-name {
-  color: #193440;
-  font-size: 15px;
-  font-weight: 650;
+  color: rgba(33, 33, 33, 0.92);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .brand-caption {
-  margin-top: 2px;
-  color: #7e8b91;
+  margin-top: 1px;
+  color: rgba(0, 0, 0, 0.45);
   font-size: 12px;
 }
 
@@ -69,12 +69,13 @@
 }
 
 .editor-body {
-  min-height: calc(100vh - 68px);
+  min-height: calc(100vh - 52px);
 }
 
 .view-sidebar {
   overflow: auto;
-  border-right: 1px solid #e8edf0;
+  border-right: 1px solid #f1f3f4;
+  background: #f9f9f9;
 }
 
 .sidebar-heading {
@@ -113,12 +114,12 @@
 
 .view-item:hover,
 .view-item:focus-visible {
-  background: #f0f5f7;
+  background: #f1f3f4;
   outline: none;
 }
 
 .view-item.selected {
-  background: #e9f3f6;
+  background: #e3eaf6;
 }
 
 .view-item .ant-typography {
@@ -128,7 +129,7 @@
 
 .view-item .view-id {
   margin-top: 3px;
-  color: #98a4a9;
+  color: rgba(0, 0, 0, 0.45);
   font-size: 11px;
 }
 
@@ -159,7 +160,7 @@
 
 .welcome-panel h4.ant-typography {
   margin: 4px 0;
-  color: #193440;
+  color: rgba(33, 33, 33, 0.92);
 }
 
 .workspace-content {
@@ -176,11 +177,11 @@
 
 .workspace-title h3.ant-typography {
   margin: 4px 0 0;
-  color: #193440;
+  color: rgba(33, 33, 33, 0.92);
 }
 
 .eyebrow {
-  color: #839198;
+  color: rgba(0, 0, 0, 0.45);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -195,15 +196,15 @@
 .summary-card {
   flex: 1 1 150px;
   max-width: 240px;
-  border-color: #e8edf0;
-  box-shadow: 0 2px 8px rgb(28 52 64 / 3%);
+  border-color: #e0e0e0;
+  box-shadow: none;
 }
 
 .view-details,
 .next-step-card {
   margin-top: 16px;
-  border-color: #e8edf0;
-  box-shadow: 0 2px 8px rgb(28 52 64 / 3%);
+  border-color: #e0e0e0;
+  box-shadow: none;
 }
 
 .view-panels,
@@ -239,9 +240,9 @@
   max-height: calc(100vh - 250px);
   min-height: 320px;
   overflow: auto;
-  border: 1px solid #e8edf0;
+  border: 1px solid #e0e0e0;
   border-radius: 6px;
-  background: #f7f9fa;
+  background: #f9f9f9;
 }
 
 .svg-preview svg {
@@ -386,26 +387,26 @@
 
 .tag-create-preview th,
 .tag-create-preview td {
-  border-bottom: 1px solid #e8edf0;
+  border-bottom: 1px solid #e0e0e0;
   padding: 7px;
   text-align: left;
 }
 
 .tag-create-preview th {
-  background: #f6f8fa;
+  background: #f1f3f4;
   position: sticky;
   top: 0;
 }
 
 .device-manager-summary {
   align-items: flex-start;
-  border-block: 1px solid #e8edf0;
+  border-block: 1px solid #e0e0e0;
   margin-bottom: 16px;
   padding: 12px 0;
 }
 
 .device-tag-manager {
-  border: 1px solid #e8edf0;
+  border: 1px solid #e0e0e0;
   border-radius: 8px;
   margin-bottom: 16px;
   padding: 10px;
@@ -442,7 +443,7 @@
 }
 
 .device-tag-row:nth-child(even) {
-  background: #f7f9fa;
+  background: #f9f9f9;
 }
 
 .device-tag-info {
@@ -485,13 +486,13 @@
 }
 
 .floor-tag-group + .floor-tag-group {
-  border-top: 1px solid #e8edf0;
+  border-top: 1px solid #e0e0e0;
   margin-top: 8px;
   padding-top: 8px;
 }
 
 .floor-tag-group-title {
-  color: #53656e;
+  color: rgba(0, 0, 0, 0.55);
   font-size: 13px;
   font-weight: 700;
   padding: 8px 0;
@@ -764,7 +765,7 @@
 }
 
 .workspace-content .grid-settings label > .ant-typography {
-  color: #64727a;
+  color: rgba(0, 0, 0, 0.55);
   font-size: 12px;
 }
 
@@ -776,7 +777,7 @@
 }
 
 .component-row:nth-child(odd) {
-  background: #e2f3ff;
+  background: #f1f3f4;
 }
 
 .component-row:nth-child(even) {
@@ -784,7 +785,7 @@
 }
 
 .component-row:hover {
-  background: #eaf2f5;
+  background: #f1f3f4;
 }
 
 .svg-preview {
@@ -812,10 +813,10 @@
 @media (max-width: 720px) {
   .editor-header {
     height: auto;
-    min-height: 68px;
+    min-height: 52px;
     flex-wrap: wrap;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: 8px;
+    padding: 8px 12px;
   }
 
   .editor-header > .ant-space {
