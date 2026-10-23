@@ -215,7 +215,7 @@
 
 .editor-controls .view-details,
 .preview-card.view-details {
-  margin-top: 0;
+  margin-top: 10px;
 }
 
 .preview-card {
