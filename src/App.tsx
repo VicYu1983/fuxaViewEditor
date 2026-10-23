@@ -43,8 +43,7 @@ import {
 import {
   parseFuxaConfig,
 } from './domain/config/parseFuxaConfig'
-import { createEmptyFuxaConfig } from './domain/config/createEmptyFuxaConfig'
-import { normalizeProjectName, projectFileName } from './domain/config/serialization'
+import { normalizeProjectName } from './domain/config/serialization'
 import {
   applyTagAlarms,
   updateExistingTagAlarmTexts,
@@ -287,7 +286,6 @@ function measureSvgBounds(doc: XMLDocument, id: string): Bounds {
 }
 
 function App() {
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [viewNameForm] = Form.useForm<{ name: string }>()
   const [deviceManagerForm] = Form.useForm<ModbusDeviceFormValues>()
   const [deviceTagForm] = Form.useForm<ModbusTagFormValues>()
@@ -356,7 +354,6 @@ function App() {
   const [tagAlarmLevel, setTagAlarmLevel] = useState<TagAlarmLevel>('highhigh')
   const [tagAlarmMessageLevel, setTagAlarmMessageLevel] = useState<TagAlarmMessageLevel>('error')
   const [tagAlarmTargetViewIds, setTagAlarmTargetViewIds] = useState<Record<string, string>>({})
-  const [isLoading, setIsLoading] = useState(false)
   const [fuxaSyncStatus, setFuxaSyncStatus] = useState<'disconnected' | 'ready' | 'pending'>('disconnected')
   const fuxaSyncRevision = useRef<string | null>(null)
   const [editor, dispatchEditor] = useReducer(
@@ -372,17 +369,21 @@ function App() {
     && config?.rawConfig.name !== normalizedProjectName
   const isDirty = editor.configurationDirty || modifiedViewIds.size > 0 || projectNameNeedsExport
 
-  useEffect(() => {
-    if (!isDirty) return
-
-    function preventDataLoss(event: BeforeUnloadEvent) {
-      event.preventDefault()
-      event.returnValue = ''
-    }
-
-    window.addEventListener('beforeunload', preventDataLoss)
-    return () => window.removeEventListener('beforeunload', preventDataLoss)
-  }, [isDirty])
+  function replaceWorkspace(parsed: ParsedFuxaConfig) {
+    getIconLibrary(parsed.rawConfig)
+    const editorModels = buildViewEditorModels(parsed.rawConfig, DOMParser, measureSvgBounds)
+    dispatchEditor({
+      type: 'reset',
+      models: editorModels.models,
+      document: parsed,
+    })
+    setModelErrors(editorModels.errors)
+    setUnsupported(editorModels.unsupported)
+    setBatchSearch('')
+    setBatchSelection(new Set())
+    const firstView = parsed.views[0]
+    setSelectedViewId(firstView ? firstView.id || firstView.key : '')
+  }
 
   useEffect(() => {
     const opener = window.opener
@@ -412,6 +413,18 @@ function App() {
           setFuxaSyncStatus('ready')
           if (data.type === 'sync-result') {
             messageApi.success('專案已同步並儲存至 FUXA。')
+            try {
+              if (opener && !opener.closed) {
+                opener.focus()
+              }
+            } catch {
+              // focus 可能被瀏覽器策略阻擋，忽略此錯誤
+            }
+            try {
+              window.close()
+            } catch {
+              // 瀏覽器可能禁止直接關閉，忽略此錯誤
+            }
           }
         } catch (error) {
           fuxaSyncRevision.current = null
@@ -778,92 +791,6 @@ function App() {
     })
   }
 
-  async function loadFile(file: File) {
-    setIsLoading(true)
-    try {
-      const text = await file.text()
-      const parsed = parseFuxaConfig(text)
-      replaceWorkspace(parsed)
-      detachFuxaSync()
-      const configuredName = parsed.rawConfig.name
-      const nextProjectName = typeof configuredName === 'string' && configuredName.trim()
-        ? normalizeProjectName(configuredName)
-        : normalizeProjectName(file.name)
-      setProjectName(nextProjectName)
-      messageApi.success(`已載入 ${file.name}；專案名稱為「${nextProjectName}」。`)
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : '未知錯誤'
-      messageApi.error(`載入失敗：${detail}`)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  function replaceWorkspace(parsed: ParsedFuxaConfig) {
-    getIconLibrary(parsed.rawConfig)
-    const editorModels = buildViewEditorModels(parsed.rawConfig, DOMParser, measureSvgBounds)
-    dispatchEditor({
-      type: 'reset',
-      models: editorModels.models,
-      document: parsed,
-    })
-    setModelErrors(editorModels.errors)
-    setUnsupported(editorModels.unsupported)
-    setBatchSearch('')
-    setBatchSelection(new Set())
-    const firstView = parsed.views[0]
-    setSelectedViewId(firstView ? firstView.id || firstView.key : '')
-  }
-
-  function detachFuxaSync() {
-    if (fuxaSyncStatus === 'disconnected') return
-    fuxaSyncRevision.current = null
-    setFuxaSyncStatus('disconnected')
-    messageApi.info('已切換為獨立 JSON 編輯模式；如需同步至 FUXA，請從 FUXA 重新開啟工具。')
-  }
-
-  function handleClearProject() {
-    function createProject() {
-      try {
-        const text = `${JSON.stringify(createEmptyFuxaConfig(), null, 4)}\n`
-        replaceWorkspace(parseFuxaConfig(text))
-        detachFuxaSync()
-        setProjectName('新專案')
-        messageApi.success('已建立空白 FUXA 專案，可另存新 JSON。')
-      } catch (error) {
-        const detail = error instanceof Error ? error.message : '未知錯誤'
-        messageApi.error(`建立空白專案失敗：${detail}`)
-      }
-    }
-
-    if (!config) {
-      createProject()
-      return
-    }
-
-    Modal.confirm({
-      title: '清空目前專案？',
-      content: isDirty
-        ? '目前專案尚有未匯出的修改。建立空白專案後，這些修改將無法復原；原始檔不會被修改。'
-        : '目前載入的專案將被空白 FUXA 範本取代；原始檔不會被修改。',
-      okText: '清空並建立',
-      okButtonProps: { danger: true },
-      cancelText: '取消',
-      onOk: createProject,
-    })
-  }
-
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-
-    if (isDirty) {
-      if (!window.confirm('有尚未匯出的修改。載入新配置會捨棄目前修改，確定繼續嗎？')) return
-    }
-    void loadFile(file)
-  }
-
   function prepareCurrentExport() {
     if (!config) return null
     const hasFloorFrames = [...models.values()].some((model) =>
@@ -892,51 +819,6 @@ function App() {
         modifiedViewIds,
         tags: buildTagIndex(config.rawConfig),
       }, dependencies)
-  }
-
-  function handleSave() {
-    if (!config) return
-
-    try {
-      const outputFileName = projectFileName(normalizedProjectName)
-      const prepared = prepareCurrentExport()
-      if (!prepared) return
-      const blob = new Blob([prepared.text], { type: 'application/json;charset=utf-8' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = outputFileName
-      link.hidden = true
-      document.body.append(link)
-      link.click()
-      link.remove()
-      window.setTimeout(() => URL.revokeObjectURL(url), 0)
-      let modelsToReset = models
-      if (prepared.dirty) {
-        const savedModels = new Map<string, ExportViewModel>()
-        for (const model of prepared.models) {
-          savedModels.set(model.viewId, {
-            ...model,
-            originalComponents: structuredClone(model.components),
-            originalFloorTitleIds: structuredClone(model.floorTitleIds),
-            originalFloorFrameIds: structuredClone(model.floorFrameIds),
-          })
-        }
-        modelsToReset = savedModels
-      }
-      const savedConfig = prepared.dirty
-        ? parseFuxaConfig(prepared.text)
-        : config
-      dispatchEditor({
-        type: 'reset',
-        models: modelsToReset,
-        document: savedConfig,
-      })
-      messageApi.success(prepared.dirty ? '已匯出修改後的配置 JSON。' : '已另存配置 JSON。')
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : '未知錯誤'
-      messageApi.error(`匯出失敗：${detail}`)
-    }
   }
 
   function handleSyncToFuxa() {
@@ -4091,26 +3973,6 @@ function App() {
                 onClick={() => dispatchEditor({ type: 'redo' })}
               />
             </Tooltip>
-            <input
-              ref={fileInputRef}
-              className="visually-hidden"
-              type="file"
-              accept=".json,application/json"
-              onChange={handleFileChange}
-            />
-            <Button
-              type="primary"
-              loading={isLoading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              開啟 JSON
-            </Button>
-            <Button danger disabled={isLoading} onClick={handleClearProject}>
-              清空專案
-            </Button>
-            <Button disabled={!config} onClick={handleSave}>
-              {isDirty ? '匯出修改' : '另存新 JSON'}
-            </Button>
             {fuxaSyncStatus !== 'disconnected' && (
               <Button
                 type="primary"
@@ -4192,7 +4054,7 @@ function App() {
               )
             ) : (
               <div className="sidebar-empty">
-                <Text type="secondary">開啟 FUXA JSON 後，View 清單會顯示於此。</Text>
+                <Text type="secondary">等待 FUXA 傳送專案資料後，View 清單會顯示於此。</Text>
               </div>
             )}
           </Sider>
@@ -4206,15 +4068,11 @@ function App() {
                     <Space orientation="vertical" size={4}>
                       <Title level={4}>開始編輯 FUXA View</Title>
                       <Text type="secondary">
-                        選取本機 FUXA 配置 JSON。檔案只在瀏覽器中讀取，不會上傳。
+                        請從 FUXA 編輯器開啟本工具，以載入目前專案並進行同步。
                       </Text>
                     </Space>
                   )}
-                >
-                  <Button type="primary" size="large" onClick={() => fileInputRef.current?.click()}>
-                    開啟 JSON
-                  </Button>
-                </Empty>
+                />
               </div>
             ) : (
               <div className="workspace-content">
