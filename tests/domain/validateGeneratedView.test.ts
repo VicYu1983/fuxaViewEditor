@@ -1,0 +1,523 @@
+import { describe, expect, it } from 'vitest'
+import type { FloorGroupFrameSettings, GridSettings } from '../../src/domain/config/types'
+import { validateGeneratedView, validateGeneratedViews } from '../../src/domain/svg/validateGeneratedView'
+import type {
+  GeneratedView,
+  GeneratedViewModel,
+} from '../../src/domain/svg/validateGeneratedView'
+import type { SvgParser } from '../../src/domain/svg/parseSvg'
+
+class TestElement {
+  readonly localName: string
+  readonly attributes: Record<string, string>
+  readonly children: TestElement[] = []
+  parentNode: TestElement | null = null
+  textContent: string
+
+  constructor(
+    localName: string,
+    attributes: Record<string, string> = {},
+    textContent = '',
+  ) {
+    this.localName = localName
+    this.attributes = { ...attributes }
+    this.textContent = textContent
+  }
+
+  getAttribute(name: string): string | null {
+    return this.attributes[name] ?? null
+  }
+
+  hasAttribute(name: string): boolean {
+    return Object.hasOwn(this.attributes, name)
+  }
+
+  appendChild(child: TestElement): TestElement {
+    child.parentNode = this
+    this.children.push(child)
+    return child
+  }
+
+  querySelector(selector: string): TestElement | null {
+    for (const child of this.children) {
+      if (selector === 'foreignObject' && child.localName === 'foreignObject') return child
+      const nested = child.querySelector(selector)
+      if (nested) return nested
+    }
+    return null
+  }
+
+  getElementsByTagName(name: string): TestElement[] {
+    const result: TestElement[] = []
+    const visit = (node: TestElement): void => {
+      for (const child of node.children) {
+        if (name === '*' || child.localName === name) result.push(child)
+        visit(child)
+      }
+    }
+    visit(this)
+    return result
+  }
+}
+
+class TestDocument {
+  readonly documentElement: TestElement
+
+  constructor(root: TestElement) {
+    this.documentElement = root
+  }
+
+  getElementsByTagName(name: string): TestElement[] {
+    if (name === '*' || this.documentElement.localName === name) {
+      return [this.documentElement, ...this.documentElement.getElementsByTagName(name)]
+    }
+    return this.documentElement.getElementsByTagName(name)
+  }
+}
+
+const grid: GridSettings = {
+  columns: 4,
+  originX: 60,
+  originY: 80,
+  gapX: 40,
+  gapY: 40,
+  labelPosition: 'above',
+  labelOffset: 10,
+  labelFontSize: 14,
+  iconScale: 100,
+}
+
+const floorFrame: FloorGroupFrameSettings = {
+  fill: '#eff6ff',
+  fillOpacity: 0.55,
+  stroke: '#93c5fd',
+  strokeWidth: 1,
+  cornerRadius: 12,
+  padding: 16,
+}
+
+function parserFor(doc: TestDocument | TestElement): new () => SvgParser {
+  return class {
+    parseFromString(): XMLDocument {
+      const document = doc instanceof TestDocument ? doc : new TestDocument(doc)
+      return document as unknown as XMLDocument
+    }
+  }
+}
+
+function makeModel(components: GeneratedViewModel['components'] = []): GeneratedViewModel {
+  return {
+    viewId: 'view-1',
+    components,
+    grid,
+    floorGroupFrame: floorFrame,
+    floorTitles: { 'floor:1F': 'title-id' },
+    floorTitleIds: { 'floor:1F': ['title-id'] },
+    floorFrames: { 'floor:1F': 'frame-id' },
+    floorFrameIds: { 'floor:1F': ['frame-id'] },
+  }
+}
+
+function makeView(items: unknown): GeneratedView {
+  return { id: 'view-1', name: 'Main', svgcontent: '<svg/>', items }
+}
+
+function validDocument(): TestDocument {
+  const root = new TestElement('svg')
+  const layer = root.appendChild(new TestElement('g'))
+  layer.appendChild(new TestElement('g', { id: 'shape-id' }))
+  layer.appendChild(new TestElement('text', { id: 'label-id' }, 'Pump'))
+  layer.appendChild(new TestElement(
+    'text',
+    { id: 'title-id', 'data-floor-group': '1F' },
+    '1F',
+  ))
+  layer.appendChild(new TestElement(
+    'g',
+    { id: 'frame-id', 'data-floor-group': '1F' },
+  ))
+  return new TestDocument(root)
+}
+
+function managedComponent(): GeneratedViewModel['components'][number] {
+  return {
+    key: 'component-1',
+    seq: 1,
+    tagId: 'tag-1',
+    label: 'Pump',
+    template: 'rect',
+    palette: 'normal',
+    shapeId: 'shape-id',
+    labelId: 'label-id',
+    managed: true,
+  }
+}
+
+function validItems(): Record<string, unknown> {
+  return {
+    'shape-id': {
+      id: 'shape-id',
+      property: {
+        variableId: 'tag-1',
+        ranges: [
+          { color: '#00ff07ff' },
+          { color: '#f80000ff' },
+        ],
+      },
+    },
+    'label-id': { id: 'label-id', name: 'tc_1_label' },
+    'title-id': { id: 'title-id', name: 'fuxa_floor_section_title' },
+    'frame-id': { id: 'frame-id', name: 'fuxa_floor_section_frame' },
+  }
+}
+
+function validMultiStateArtifacts() {
+  const root = new TestElement('svg')
+  const layer = root.appendChild(new TestElement('g'))
+  const common = {
+    'data-fuxa-icon-set-id': 'tank-set',
+    x: '10',
+    y: '20',
+    width: '40',
+    height: '40',
+  }
+  layer.appendChild(new TestElement('image', {
+    ...common,
+    id: 'normal-id',
+    'data-name': 'tc_1',
+    'data-fuxa-icon-id': 'normal-icon',
+    'data-fuxa-state-key': 'normal',
+  }))
+  layer.appendChild(new TestElement('image', {
+    ...common,
+    id: 'high-id',
+    'data-name': 'tc_1_state_high',
+    'data-fuxa-icon-id': 'high-icon',
+    'data-fuxa-state-key': 'high',
+    'data-fuxa-state-priority': '1',
+  }))
+  layer.appendChild(new TestElement('image', {
+    ...common,
+    id: 'alarm-id',
+    'data-name': 'tc_1_state_alarm',
+    'data-fuxa-icon-id': 'alarm-icon',
+    'data-fuxa-state-key': 'alarm',
+    'data-fuxa-state-priority': '0',
+  }))
+  layer.appendChild(new TestElement('text', { id: 'label-id' }, 'Tank'))
+  layer.appendChild(new TestElement(
+    'text',
+    { id: 'title-id', 'data-floor-group': '1F' },
+    '1F',
+  ))
+  layer.appendChild(new TestElement('g', { id: 'frame-id', 'data-floor-group': '1F' }))
+
+  const model = makeModel([{
+    key: 'component-1',
+    seq: 1,
+    tagId: 'tag-alarm',
+    label: 'Tank',
+    template: 'icon-multi',
+    multiIconSetId: 'tank-set',
+    normalIconId: 'normal-icon',
+    multiStateBindings: [
+      { stateKey: 'alarm', iconId: 'alarm-icon', tagId: 'tag-alarm', shapeId: 'alarm-id' },
+      { stateKey: 'high', iconId: 'high-icon', tagId: 'tag-high', shapeId: 'high-id' },
+    ],
+    shapeId: 'normal-id',
+    labelId: 'label-id',
+    managed: true,
+  }])
+  const actions = (variableId: string) => [
+    { variableId, range: { min: 0, max: 0 }, type: 'hide' },
+    { variableId, range: { min: 1, max: 1 }, type: 'show' },
+  ]
+  const items = {
+    'normal-id': { id: 'normal-id', type: 'svg-ext-shapes-select', property: { actions: [] } },
+    'high-id': {
+      id: 'high-id',
+      type: 'svg-ext-shapes-select',
+      property: { actions: actions('tag-high') },
+    },
+    'alarm-id': {
+      id: 'alarm-id',
+      type: 'svg-ext-shapes-select',
+      property: { actions: actions('tag-alarm') },
+    },
+    'label-id': { id: 'label-id', name: 'tc_1_label' },
+    'title-id': { id: 'title-id', name: 'fuxa_floor_section_title' },
+    'frame-id': { id: 'frame-id', name: 'fuxa_floor_section_frame' },
+  }
+  return { doc: new TestDocument(root), model, items }
+}
+
+describe('validateGeneratedView', () => {
+  it('accepts a Coil Switch only when its click event is bound to a Boolean Coil Tag', () => {
+    const doc = validDocument()
+    const shape = doc.documentElement.children[0]?.children[0]
+    if (!shape) throw new Error('Missing test shape')
+    shape.attributes.type = 'svg-ext-html_switch'
+    const foreignObject = new TestElement('foreignObject', { id: 'H-HXT_a', width: '50', height: '28' })
+    foreignObject.appendChild(new TestElement('LABEL', { id: 'T-HXT_b' }))
+    shape.appendChild(foreignObject)
+
+    const model = makeModel([{ ...managedComponent(), template: 'switch' }])
+    const items = validItems()
+    items['shape-id'] = {
+      id: 'shape-id',
+      type: 'svg-ext-html_switch',
+      property: {
+        variableId: null,
+        events: [{
+          type: 'click',
+          action: 'onToggleValue',
+          actoptions: { variable: { variableId: 'tag-1' } },
+        }],
+      },
+    }
+    const options = {
+      Parser: parserFor(doc),
+      tags: {
+        'tag-1': { floor: '1F', type: 'Bool', memaddress: '000000' },
+      },
+    }
+
+    expect(() => validateGeneratedView(makeView(items), model, options)).not.toThrow()
+    expect(() => validateGeneratedView(
+      makeView(items),
+      model,
+      { ...options, tags: { 'tag-1': { floor: '1F', type: 'Bool', memaddress: '100000' } } },
+    )).toThrow('Coil Switch 或 click Tag 綁定不正確。')
+  })
+
+  it('accepts a consistent generated component with matching floor artifacts', () => {
+    expect(() => validateGeneratedView(
+      makeView(validItems()),
+      makeModel([managedComponent()]),
+      { Parser: parserFor(validDocument()), tags: new Map([['tag-1', { floor: '1F' }]]) },
+    )).not.toThrow()
+  })
+
+  it('accepts multi-state images with unique Boolean Tag visibility rules and matching priority', () => {
+    const { doc, model, items } = validMultiStateArtifacts()
+    expect(() => validateGeneratedView(
+      makeView(items),
+      model,
+      {
+        Parser: parserFor(doc),
+        tags: new Map([
+          ['tag-alarm', { floor: '1F', type: 'Bool' }],
+          ['tag-high', { floor: '1F', type: 'Boolean' }],
+        ]),
+        iconLibrary: [{
+          id: 'tank-set',
+          name: 'Tank',
+          type: 'multi-state',
+          normal: { id: 'normal-icon', mimeType: 'image/png', dataUrl: 'data:image/png;base64,AA==' },
+          states: [
+            {
+              key: 'alarm',
+              name: 'Alarm',
+              asset: { id: 'alarm-icon', mimeType: 'image/png', dataUrl: 'data:image/png;base64,AA==' },
+            },
+            {
+              key: 'high',
+              name: 'High',
+              asset: { id: 'high-icon', mimeType: 'image/png', dataUrl: 'data:image/png;base64,AA==' },
+            },
+          ],
+        }],
+      },
+    )).not.toThrow()
+  })
+
+  it('rejects malformed item IDs and missing or mismatched Tag bindings', () => {
+    const parser = parserFor(validDocument())
+    const model = makeModel([managedComponent()])
+    expect(() => validateGeneratedView(
+      makeView({ ...validItems(), 'bad-key': { id: 'bad-value' } }),
+      model,
+      { Parser: parser, tags: { 'tag-1': { floor: '1F' } } },
+    )).toThrow('存在不一致的 item id：bad-key')
+
+    const items = validItems()
+    items['shape-id'] = { id: 'shape-id', property: { variableId: 'wrong-tag' } }
+    expect(() => validateGeneratedView(
+      makeView(items),
+      model,
+      { Parser: parser, tags: { 'tag-1': { floor: '1F' } } },
+    )).toThrow('元件 shape-id 的 Tag 連結與清單不一致。')
+  })
+
+  it('rejects a component linked to a Tag that does not exist', () => {
+    const component = managedComponent()
+    component.tagId = 'missing-tag'
+    const items = validItems()
+    items['shape-id'] = { id: 'shape-id', property: { variableId: 'missing-tag' } }
+    expect(() => validateGeneratedView(
+      makeView(items),
+      makeModel([component]),
+      { Parser: parserFor(validDocument()), tags: {} },
+    )).toThrow('連結到不存在的 Tag：missing-tag')
+  })
+
+  it('rejects a label or palette that differs from the editor model', () => {
+    const parser = parserFor(validDocument())
+    const component = managedComponent()
+    const items = validItems()
+    expect(() => validateGeneratedView(
+      makeView(items),
+      makeModel([{ ...component, label: 'Changed' }]),
+      { Parser: parser, tags: { 'tag-1': { floor: '1F' } } },
+    )).toThrow('文字標籤未正確寫入 SVG。')
+
+    const wrongPaletteItems = validItems()
+    wrongPaletteItems['shape-id'] = {
+      id: 'shape-id',
+      property: {
+        variableId: 'tag-1',
+        ranges: [
+          { color: '#ff0000ff' },
+          { color: '#00ff07ff' },
+        ],
+      },
+    }
+    expect(() => validateGeneratedView(
+      makeView(wrongPaletteItems),
+      makeModel([component]),
+      { Parser: parser, tags: { 'tag-1': { floor: '1F' } } },
+    )).toThrow('顏色狀態未正確寫入。')
+  })
+
+  it('rejects an icon pair that is not colocated or has an incomplete visibility rule', () => {
+    const root = new TestElement('svg')
+    const layer = root.appendChild(new TestElement('g'))
+    layer.appendChild(new TestElement('image', {
+      id: 'shape-id',
+      x: '1',
+      y: '2',
+      width: '40',
+      height: '40',
+    }))
+    layer.appendChild(new TestElement('image', {
+      id: 'alarm-id',
+      x: '1',
+      y: '3',
+      width: '40',
+      height: '40',
+    }))
+    layer.appendChild(new TestElement('text', { id: 'label-id' }))
+    const component = {
+      ...managedComponent(),
+      template: 'icon-pair' as const,
+      alarmShapeId: 'alarm-id',
+    }
+    const items = validItems()
+    items['alarm-id'] = { id: 'alarm-id', property: { actions: [] } }
+
+    expect(() => validateGeneratedView(
+      makeView(items),
+      makeModel([component]),
+      { Parser: parserFor(root), tags: { 'tag-1': { floor: '1F' } } },
+    )).toThrow('正常／告警圖示未輸出為同層且重疊的獨立圖片。')
+  })
+
+  it('requires Boolean Tags for icon pairs and validates the generated label', () => {
+    const root = new TestElement('svg')
+    const layer = root.appendChild(new TestElement('g'))
+    layer.appendChild(new TestElement('image', {
+      id: 'shape-id',
+      x: '1',
+      y: '2',
+      width: '40',
+      height: '40',
+    }))
+    layer.appendChild(new TestElement('image', {
+      id: 'alarm-id',
+      x: '1',
+      y: '2',
+      width: '40',
+      height: '40',
+    }))
+    layer.appendChild(new TestElement('text', { id: 'label-id' }, 'Pump'))
+    layer.appendChild(new TestElement(
+      'text',
+      { id: 'title-id', 'data-floor-group': '1F' },
+      '1F',
+    ))
+    layer.appendChild(new TestElement(
+      'g',
+      { id: 'frame-id', 'data-floor-group': '1F' },
+    ))
+    const component = {
+      ...managedComponent(),
+      template: 'icon-pair' as const,
+      alarmShapeId: 'alarm-id',
+    }
+    const items = validItems()
+    const actions = (showAt: number) => [0, 1].map((value) => ({
+      variableId: 'tag-1',
+      range: { min: value, max: value },
+      type: value === showAt ? 'show' : 'hide',
+    }))
+    items['shape-id'] = { id: 'shape-id', property: { actions: actions(0) } }
+    items['alarm-id'] = { id: 'alarm-id', property: { actions: actions(1) } }
+
+    expect(() => validateGeneratedView(
+      makeView(items),
+      makeModel([component]),
+      { Parser: parserFor(root), tags: { 'tag-1': { floor: '1F', type: 'Boolean' } } },
+    )).not.toThrow()
+    expect(() => validateGeneratedView(
+      makeView(items),
+      makeModel([component]),
+      { Parser: parserFor(root), tags: { 'tag-1': { floor: '1F', type: 'String' } } },
+    )).toThrow('正常／告警圖示顯示條件需要 Boolean Tag。')
+  })
+
+  it('rejects deleted managed components that remain in the SVG and items', () => {
+    const root = new TestElement('svg')
+    const layer = root.appendChild(new TestElement('g'))
+    layer.appendChild(new TestElement('g', { id: 'deleted-shape' }))
+    const currentModel = makeModel([])
+    currentModel.originalComponents = [{
+      ...managedComponent(),
+      shapeId: 'deleted-shape',
+    }]
+    currentModel.floorTitles = {}
+    currentModel.floorTitleIds = {}
+    currentModel.floorFrames = {}
+    currentModel.floorFrameIds = {}
+    const items = { 'deleted-shape': { id: 'deleted-shape' } }
+
+    expect(() => validateGeneratedView(
+      makeView(items),
+      currentModel,
+      { Parser: parserFor(root), tags: {} },
+    )).toThrow('已刪除的元件 deleted-shape 仍留在輸出配置中。')
+  })
+
+  it('detects duplicate newly created SVG IDs across modified Views', () => {
+    const firstRoot = new TestElement('svg')
+    firstRoot.appendChild(new TestElement('g', { id: 'created-id' }))
+    const views = [
+      makeView({}),
+      { ...makeView({}), id: 'view-2' },
+    ]
+    const models = [
+      { ...makeModel([]), viewId: 'view-1' },
+      { ...makeModel([]), viewId: 'view-2' },
+    ]
+
+    expect(() => validateGeneratedViews(
+      views,
+      new Set(['view-1', 'view-2']),
+      models,
+      {
+        Parser: parserFor(firstRoot),
+        tags: {},
+        createdIds: new Set(['created-id']),
+      },
+    )).toThrow('新元件 ID created-id 在 SVG 中重複出現。')
+  })
+})

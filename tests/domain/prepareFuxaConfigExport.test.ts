@@ -1,0 +1,497 @@
+import { describe, expect, it, vi } from 'vitest'
+import type { FuxaConfig, SourceTextFormat } from '../../src/domain/config/types'
+import {
+  buildVoiceScriptCode,
+  needsVoiceBridgeUpdate,
+  prepareFuxaConfigExport,
+} from '../../src/domain/config/prepareFuxaConfigExport'
+import { createFuxaConfigExportDependencies } from '../../src/domain/config/fuxaConfigExportDependencies'
+import type {
+  ExportViewModel,
+  PrepareFuxaConfigExportInput,
+} from '../../src/domain/config/prepareFuxaConfigExport'
+
+const sourceFormat: SourceTextFormat = {
+  lineEnding: '\r\n',
+  hasTrailingNewline: true,
+}
+
+function config(): FuxaConfig {
+  const voiceOnId = 't_voiceOn'
+  const voiceMessageId = 't_voiceMessage'
+  return {
+    devices: {
+      '0': {
+        id: '0',
+        name: 'FUXA',
+        enabled: true,
+        property: { delay: 10 },
+        type: 'FuxaServer',
+        polling: 1000,
+        tags: {
+          [voiceOnId]: {
+            id: voiceOnId,
+            name: 'voiceOn',
+            type: 'boolean',
+            init: '0',
+          },
+          [voiceMessageId]: {
+            id: voiceMessageId,
+            name: 'voiceMessage',
+            type: 'string',
+          },
+        },
+      },
+    },
+    hmi: {
+      views: [
+        { id: 'view-1', name: 'Main', items: {}, svgcontent: '<svg/>' },
+        { id: 'view-2', name: 'Other', items: {}, svgcontent: '<svg/>' },
+      ],
+    },
+    scripts: [{
+      id: 's_voice',
+      name: 'voice',
+      sync: false,
+      parameters: [],
+      mode: 'CLIENT',
+      code: buildVoiceScriptCode(voiceOnId, voiceMessageId),
+      scheduling: { mode: 'interval', interval: 1, schedules: [] },
+    }],
+    extra: { customField: { keep: true } },
+  }
+}
+
+function model(viewId = 'view-1'): ExportViewModel {
+  return {
+    viewId,
+    components: [],
+    grid: {
+      columns: 2,
+      originX: 10,
+      originY: 20,
+      gapX: 5,
+      gapY: 6,
+      labelPosition: 'below',
+      labelOffset: 3,
+      labelFontSize: 12,
+      iconScale: 100,
+    },
+    floorGroupFrame: {
+      fill: '#eff6ff',
+      fillOpacity: 0.55,
+      stroke: '#93c5fd',
+      strokeWidth: 1,
+      cornerRadius: 12,
+      padding: 16,
+    },
+    floorTitles: {},
+    floorTitleIds: {},
+    floorFrames: {},
+    floorFrameIds: {},
+    floorFrameShapeIds: {},
+  }
+}
+
+function input(overrides: Partial<PrepareFuxaConfigExportInput> = {}): PrepareFuxaConfigExportInput {
+  return {
+    config: config(),
+    originalText: '{\r\n  "raw": true\r\n}\r\n',
+    sourceFormat,
+    dirty: false,
+    ...overrides,
+  }
+}
+
+describe('prepareFuxaConfigExport', () => {
+  it('returns the original JSON text and does not mutate config when unchanged', () => {
+    const original = config()
+    const result = prepareFuxaConfigExport(input({ config: original }))
+
+    expect(result.text).toBe('{\r\n  "raw": true\r\n}\r\n')
+    expect(result.config).toBe(original)
+    expect(result.dirty).toBe(false)
+    expect(result.modifiedViewIds.size).toBe(0)
+    expect(original.extra).toEqual({ customField: { keep: true } })
+  })
+
+  it('writes the edited project name to the top-level JSON name', () => {
+    const original = config()
+    original.name = 'Before'
+    const result = prepareFuxaConfigExport(input({
+      config: original,
+      projectName: 'After',
+    }), {
+      validate: vi.fn(),
+    })
+
+    expect(result.dirty).toBe(true)
+    expect(result.config.name).toBe('After')
+    expect(JSON.parse(result.text).name).toBe('After')
+    expect(original.name).toBe('Before')
+  })
+
+  it('keeps the original JSON text when the project name is unchanged', () => {
+    const original = config()
+    original.name = 'Same name'
+    const originalText = '{ "name": "Same name", "devices": {}, "hmi": { "views": [] } }\n'
+    const result = prepareFuxaConfigExport(input({
+      config: original,
+      originalText,
+      projectName: 'Same name',
+    }))
+
+    expect(result.text).toBe(originalText)
+    expect(result.config).toBe(original)
+    expect(result.dirty).toBe(false)
+  })
+
+  it('fills the existing voice script code during export without other edits', () => {
+    const original = config()
+    const voiceScript = {
+      id: 's_voice',
+      name: 'voice',
+      parameters: [{ name: 'message', type: 'value' }, { name: 'count', type: 'value' }],
+      mode: 'CLIENT',
+      code: '// here is voice script',
+    }
+    const otherScript = { name: 'other', code: 'keep this script' }
+    original.scripts = [
+      voiceScript,
+      otherScript,
+    ]
+
+    const result = prepareFuxaConfigExport(input({ config: original }), {
+      validate: vi.fn(),
+    })
+    const scripts = JSON.parse(result.text).scripts
+
+    expect(result.dirty).toBe(true)
+    expect(scripts[0].code).toBe(buildVoiceScriptCode('t_voiceOn', 't_voiceMessage'))
+    expect(scripts[0].parameters).toEqual([])
+    expect(scripts[0].scheduling).toEqual({ mode: 'interval', interval: 1, schedules: [] })
+    expect(scripts[1]).toEqual(otherScript)
+    expect(voiceScript.code).toBe('// here is voice script')
+  })
+
+  it('adds bridge Tags, a polling CLIENT script, and Server setValue alarm actions', () => {
+    const missingBridge = config()
+    const server = missingBridge.devices['0'] as Record<string, unknown>
+    server.tags = {}
+    delete missingBridge.scripts
+    missingBridge.alarms = [{
+      highhigh: {
+        enabled: true,
+        min: 1,
+        max: 1,
+        text: '水箱蓋異常',
+      },
+      high: { enabled: false },
+      actions: {
+        enabled: true,
+        values: [{ type: 'setView', actparam: 'view-1', min: 1, max: 1 }],
+      },
+      property: { variableId: 'tag-water' },
+    }]
+    expect(needsVoiceBridgeUpdate(missingBridge)).toBe(true)
+
+    const result = prepareFuxaConfigExport(input({ config: missingBridge }), {
+      validate: vi.fn(),
+    })
+    const exported = JSON.parse(result.text)
+    const tags = (exported.devices['0'] as { tags: Record<string, Record<string, unknown>> }).tags
+    const voiceOn = Object.values(tags).find((tag) => tag.name === 'voiceOn')
+    const voiceMessage = Object.values(tags).find((tag) => tag.name === 'voiceMessage')
+    const scripts = exported.scripts
+    const actions = exported.alarms[0].actions.values
+
+    expect(result.dirty).toBe(true)
+    expect(voiceOn).toMatchObject({ type: 'boolean', init: '0' })
+    expect(voiceMessage).toMatchObject({ type: 'string' })
+    expect(scripts).toHaveLength(1)
+    expect(scripts[0]).toMatchObject({
+      name: 'voice',
+      sync: false,
+      parameters: [],
+      mode: 'CLIENT',
+      code: buildVoiceScriptCode(voiceOn!.id as string, voiceMessage!.id as string),
+      scheduling: { mode: 'interval', interval: 1, schedules: [] },
+    })
+    expect(actions).toHaveLength(3)
+    expect(actions[0]).toMatchObject({ type: 'setView', actparam: 'view-1' })
+    expect(actions[1]).toMatchObject({
+      type: 'setValue',
+      actparam: 'true',
+      variableId: voiceOn!.id,
+      min: 1,
+      max: 1,
+    })
+    expect(actions[2]).toMatchObject({
+      type: 'setValue',
+      actparam: '水箱蓋異常',
+      variableId: voiceMessage!.id,
+      min: 1,
+      max: 1,
+    })
+    expect(needsVoiceBridgeUpdate(exported)).toBe(false)
+    expect((missingBridge.devices['0'] as { tags: object }).tags).toEqual({})
+  })
+
+  it('does not alter exports when the full voice bridge is already configured', () => {
+    const current = config()
+    expect(needsVoiceBridgeUpdate(current)).toBe(false)
+    expect(prepareFuxaConfigExport(input({ config: current })).text)
+      .toBe('{\r\n  "raw": true\r\n}\r\n')
+  })
+
+  it('rejects malformed scripts instead of replacing them during export', () => {
+    const malformed = config()
+    malformed.scripts = {}
+    expect(() => needsVoiceBridgeUpdate(malformed))
+      .toThrow('FUXA scripts 欄位格式無效')
+  })
+
+  it('sorts device Tags by numeric address in JSON export, even without other edits', () => {
+    const original = config()
+    original.devices.device1 = {
+        type: 'ModbusTCP',
+        tags: {
+          later: { id: 'later', address: 20 },
+          earlier: { id: 'earlier', address: 3 },
+        },
+    }
+
+    const result = prepareFuxaConfigExport(input({ config: original }), {
+      validate: vi.fn(),
+    })
+
+    expect(result.dirty).toBe(true)
+    expect(Object.keys(JSON.parse(result.text).devices.device1.tags)).toEqual([
+      'earlier',
+      'later',
+    ])
+    expect(Object.keys((original.devices.device1 as { tags: object }).tags)).toEqual([
+      'later',
+      'earlier',
+    ])
+  })
+
+  it('applies selected Views, persists metadata, preserves unknown settings and source formatting', () => {
+    const original = config()
+    original.extra = {
+      customField: { keep: true },
+      fuxaSetting: {
+        viewGrids: { 'view-2': { columns: 7 } },
+        floorGroupArtifacts: {
+          'view-2': {
+            'floor:1F': { titleId: 'title-2', frameId: 'frame-2', frameShapeId: 'shape-2' },
+          },
+        },
+        customSetting: 'preserve',
+      },
+    }
+    const originalSnapshot = structuredClone(original)
+    const currentModel = model()
+    const applyView = vi.fn((view: Record<string, unknown>) => {
+      view.applied = true
+    })
+    const validate = vi.fn()
+    const result = prepareFuxaConfigExport(input({
+      config: original,
+      dirty: true,
+      models: [currentModel],
+      modifiedViewIds: new Set(['view-1']),
+      floorGroupFrame: {
+        fill: '#eff6ff',
+        fillOpacity: 0.55,
+        stroke: '#93c5fd',
+        strokeWidth: 1,
+        cornerRadius: 12,
+        padding: 16,
+      },
+    }), { applyView, validate })
+
+    expect(applyView).toHaveBeenCalledOnce()
+    expect(validate).toHaveBeenCalledOnce()
+    expect(result.modifiedViewIds).toEqual(new Set(['view-1']))
+    expect(result.config).not.toBe(original)
+    expect(original).toEqual(originalSnapshot)
+    expect(result.config.extra).toMatchObject({
+      customField: { keep: true },
+      fuxaSetting: {
+        viewGrids: {
+          'view-1': { columns: 2, labelPosition: 'below' },
+        },
+        floorGroupFrames: { padding: 16 },
+        floorGroupArtifacts: {
+          'view-1': {},
+          'view-2': {
+            'floor:1F': { titleId: 'title-2', frameId: 'frame-2', frameShapeId: 'shape-2' },
+          },
+        },
+        customSetting: 'preserve',
+      },
+    })
+    expect(result.config.extra).toMatchObject({
+      fuxaSetting: {
+        viewGrids: { 'view-2': { columns: 7 } },
+      },
+    })
+    expect(result.text).toContain('\r\n')
+    expect(result.text.endsWith('\r\n')).toBe(true)
+    expect(JSON.parse(result.text).hmi.views[0].applied).toBe(true)
+  })
+
+  it('does not return success output if SVG application or validation fails', () => {
+    const applyFailure = new Error('invalid view')
+    expect(() => prepareFuxaConfigExport(input({
+      dirty: true,
+      models: [model()],
+      modifiedViewIds: new Set(['view-1']),
+    }), {
+      applyView: () => {
+        throw applyFailure
+      },
+      validate: vi.fn(),
+    })).toThrow(applyFailure)
+
+    expect(() => prepareFuxaConfigExport(input({ dirty: true }), {
+      validate: () => {
+        throw new Error('validation failed')
+      },
+    })).toThrow('validation failed')
+  })
+
+  it('rejects modified View export when no SVG apply function is provided', () => {
+    expect(() => prepareFuxaConfigExport(input({
+      dirty: true,
+      models: [model()],
+      modifiedViewIds: new Set(['view-1']),
+    }))).toThrow('尚未設定 SVG View 套用函式，無法匯出修改後的配置。')
+  })
+
+  it('requires output validation for modified exports', () => {
+    expect(() => prepareFuxaConfigExport(input({ dirty: true })))
+      .toThrow('尚未設定輸出驗證函式，無法匯出修改後的配置。')
+  })
+
+  it('rejects missing or ambiguous modified Views instead of silently skipping them', () => {
+    const missingView = input({
+      dirty: true,
+      models: [model('missing')],
+      modifiedViewIds: new Set(['missing']),
+    })
+    expect(() => prepareFuxaConfigExport(missingView, {
+      applyView: vi.fn(),
+      validate: vi.fn(),
+    })).toThrow('配置中找不到已修改的 View「missing」。')
+
+    const duplicateConfig = config()
+    duplicateConfig.hmi.views.push({
+      id: 'view-1',
+      name: 'Duplicate',
+      items: {},
+      svgcontent: '<svg/>',
+    })
+    expect(() => prepareFuxaConfigExport(input({
+      config: duplicateConfig,
+      dirty: true,
+      models: [model()],
+      modifiedViewIds: new Set(['view-1']),
+    }), {
+      applyView: vi.fn(),
+      validate: vi.fn(),
+    })).toThrow('配置中 View ID「view-1」重複，無法安全匯出。')
+
+    expect(() => prepareFuxaConfigExport(input({
+      dirty: true,
+      modifiedViewIds: new Set(['view-1']),
+    }), {
+      applyView: vi.fn(),
+      validate: vi.fn(),
+    })).toThrow('找不到 View「view-1」的編輯模型，無法匯出修改。')
+
+    expect(() => prepareFuxaConfigExport(input({
+      dirty: true,
+      models: [model(), model()],
+    }), {
+      validate: vi.fn(),
+    })).toThrow('編輯模型包含重複的 View ID「view-1」，無法安全匯出。')
+  })
+
+  it('does not let SVG application mutate the caller-owned model', () => {
+    const currentModel = model()
+    const snapshot = structuredClone(currentModel)
+    const result = prepareFuxaConfigExport(input({
+      dirty: true,
+      models: [currentModel],
+      modifiedViewIds: new Set(['view-1']),
+    }), {
+      applyView: (_view, stagedModel) => {
+        stagedModel.floorTitles['floor:1F'] = 'generated-title'
+      },
+      validate: vi.fn(),
+    })
+
+    expect(currentModel).toEqual(snapshot)
+    expect(result.models[0]?.floorTitles['floor:1F']).toBe('generated-title')
+  })
+
+  it('provides the SVG validation/export adapters for metadata-only dirty changes', () => {
+    class Parser {
+      parseFromString(): XMLDocument {
+        throw new Error('Parser should not be used when no View is modified.')
+      }
+    }
+    const original = config()
+    const dependencies = createFuxaConfigExportDependencies(original, {
+      Parser,
+      serialize: () => {
+        throw new Error('Serializer should not be used when no View is modified.')
+      },
+      crypto: {
+        getRandomValues(bytes) {
+          return bytes
+        },
+      },
+    })
+
+    const result = prepareFuxaConfigExport(input({
+      config: original,
+      dirty: true,
+    }), dependencies)
+
+    expect(result.dirty).toBe(true)
+    expect(result.modifiedViewIds.size).toBe(0)
+    expect(JSON.parse(result.text).hmi.views).toHaveLength(2)
+    expect(result.config.extra).toMatchObject({
+      fuxaSetting: { floorFrameLayoutVersion: 1 },
+    })
+  })
+
+  it('surfaces malformed existing SVG when it prevents safe ID allocation', () => {
+    class Parser {
+      parseFromString(): XMLDocument {
+        return {
+          documentElement: { localName: 'html' },
+          getElementsByTagName: () => [],
+        } as unknown as XMLDocument
+      }
+    }
+    const source = config()
+    const dependencies = createFuxaConfigExportDependencies(source, {
+      Parser,
+      serialize: () => '<svg/>',
+      crypto: {
+        getRandomValues(bytes) {
+          return bytes
+        },
+      },
+    })
+    const targetView = source.hmi.views[1] as Record<string, unknown>
+    const targetModel = model('view-2')
+
+    expect(() => dependencies.applyView?.(targetView, targetModel, [targetModel]))
+      .toThrow('無法檢查 View「Main」的 SVG ID，無法安全匯出修改：View 的 svgcontent 無法解析。')
+  })
+})
