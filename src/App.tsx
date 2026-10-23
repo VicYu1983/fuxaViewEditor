@@ -4526,13 +4526,6 @@ function App() {
                 ) : (
                   <Alert type="info" showIcon title="此配置沒有可選取的 View。" />
                 )}
-
-                <Card className="next-step-card">
-                  <Text strong>目前進度</Text>
-                  <Text type="secondary">
-                    可管理 View、調整 Grid 排版、編輯或刪除已管理元件，並查看唯讀預覽；修改僅在本機進行。
-                  </Text>
-                </Card>
               </div>
             )}
           </Content>
