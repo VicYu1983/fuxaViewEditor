@@ -386,11 +386,11 @@ function App() {
   }
 
   useEffect(() => {
-    const opener = window.opener
-    if (!opener) return
+    const hostWindow = window.parent !== window ? window.parent : window.opener
+    if (!hostWindow) return
 
     function handleFuxaMessage(event: MessageEvent) {
-      if (event.origin !== window.location.origin || event.source !== opener) return
+      if (event.origin !== window.location.origin || event.source !== hostWindow) return
       const data: unknown = event.data
       if (!isRecord(data) || data.source !== 'fuxa-host' || data.protocol !== 1) return
 
@@ -413,17 +413,9 @@ function App() {
           setFuxaSyncStatus('ready')
           if (data.type === 'sync-result') {
             messageApi.success('專案已同步並儲存至 FUXA。')
-            try {
-              if (opener && !opener.closed) {
-                opener.focus()
-              }
-            } catch {
-              // focus 可能被瀏覽器策略阻擋，忽略此錯誤
-            }
-            try {
+            if (window.parent === window && window.opener && !window.opener.closed) {
+              window.opener.focus()
               window.close()
-            } catch {
-              // 瀏覽器可能禁止直接關閉，忽略此錯誤
             }
           }
         } catch (error) {
@@ -441,7 +433,7 @@ function App() {
     }
 
     window.addEventListener('message', handleFuxaMessage)
-    opener.postMessage({
+    hostWindow.postMessage({
       source: 'fuxa-view-editor',
       protocol: 1,
       type: 'ready',
@@ -822,12 +814,13 @@ function App() {
   }
 
   function handleSyncToFuxa() {
-    if (!config || fuxaSyncStatus !== 'ready' || !fuxaSyncRevision.current || !window.opener) return
+    const hostWindow = window.parent !== window ? window.parent : window.opener
+    if (!config || fuxaSyncStatus !== 'ready' || !fuxaSyncRevision.current || !hostWindow) return
     try {
       const prepared = prepareCurrentExport()
       if (!prepared) return
       const project = JSON.parse(prepared.text) as unknown
-      window.opener.postMessage({
+      hostWindow.postMessage({
         source: 'fuxa-view-editor',
         protocol: 1,
         type: 'sync-project',

@@ -4,7 +4,7 @@ FUXA 配置編輯工具，使用 React、TypeScript、Ant Design 與 Vite。View
 
 ## 與 FUXA 的關係
 
-本專案是獨立的 React 編輯器，也是未來在 FUXA 開源專案中新增功能時，供使用者與 AI 查閱的操作及功能參考。它不是要整體移植成 FUXA 的 Angular 功能，也不代表其中每項功能都需要搬到 FUXA。目前 React 編輯器可由 FUXA server 提供為獨立頁面，並從 FUXA 編輯器另開分頁使用；它仍與 Angular 用戶端分開建置。從 FUXA 開啟時，工具會載入目前專案，並可將整份修改後的配置同步回 FUXA。
+本專案是獨立的 React 編輯器，也是未來在 FUXA 開源專案中新增功能時，供使用者與 AI 查閱的操作及功能參考。它不是要整體移植成 FUXA 的 Angular 功能，也不代表其中每項功能都需要搬到 FUXA。目前 React 編輯器由 FUXA server 同源提供，並透過 FUXA 的 Angular 路由與 iframe 在同一個視窗中使用；React 工具仍與 Angular 用戶端分開建置。從 FUXA 開啟時，工具會載入目前專案，並可將整份修改後的配置同步回 FUXA。
 
 未來的 FUXA 功能會依實際操作需求逐項決定並原生實作於 FUXA 的 Angular 用戶端。使用本專案作為參考時：
 
@@ -63,9 +63,9 @@ Vite 會顯示本機網址；在瀏覽器開啟後，使用「開啟 JSON」選�
 yarn build
 ```
 
-建置檔會輸出到相鄰的 `FUXA/server/view-editor/` 目錄，由 FUXA server 同源提供。重啟 FUXA 後，在編輯器頂部工具列按「視圖編輯工具」即可於新分頁開啟；也可直接前往 FUXA 網址下的 `/view-editor/`。每次修改 React 工具後，重新執行 `yarn build` 以更新頁面。此輸出目錄是產生檔且已加入 FUXA 的 Git 忽略清單，因此在乾淨環境或部署時需先建置。
+建置檔會輸出到相鄰的 `FUXA/server/view-editor/` 目錄，由 FUXA server 同源提供。重啟 FUXA 後，在編輯器設定中的「視圖編輯工具」入口開啟，即會在目前視窗切換至 View Editor 路由並於 iframe 中載入工具；每次修改 React 工具後，重新執行 `yarn build` 以更新頁面。此輸出目錄是產生檔且已加入 FUXA 的 Git 忽略清單，因此在乾淨環境或部署時需先建置。
 
-由 FUXA 開啟時，工具會自動載入當前專案；編輯完成後按「同步至 FUXA」會儲存整份專案並更新 FUXA 編輯器。若 FUXA 專案在工具開啟期間已有變更，為避免覆蓋資料，該次同步會被拒絕；請關閉工具並從 FUXA 重新開啟。獨立開啟工具時仍可使用 JSON 匯入與下載匯出。
+由 FUXA 開啟時，工具會自動載入當前專案；編輯完成後按「同步至 FUXA」會儲存整份專案並透過 Angular 路由返回編輯器，不會另開視窗或重新載入整個 FUXA 頁面。若 FUXA 專案在工具開啟期間已有變更，為避免覆蓋資料，該次同步會被拒絕；請關閉工具並從 FUXA 重新開啟。獨立開啟工具時仍可使用 JSON 匯入與下載匯出。
 
 如需本機預覽建置結果，可在此目錄執行：
 
