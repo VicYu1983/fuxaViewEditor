@@ -1,8 +1,25 @@
+/* FUXA View Editor — 設計 token（科技感 × 簡潔） */
 :root {
-  font-family: "Segoe UI Symbol", "Roboto", "Segoe UI", "Microsoft JhengHei", sans-serif;
-  font-weight: 300;
-  color: #212121;
-  background: #ffffff;
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --border: #e3e8f0;
+  --hairline: #eef1f6;
+  --hover: #f1f5f9;
+  --primary: #2563eb;
+  --primary-strong: #1d4ed8;
+  --primary-tint: #eaf1ff;
+  --text: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
+}
+
+:root {
+  font-family: "Segoe UI", "Microsoft JhengHei", "Roboto", sans-serif;
+  font-weight: 400;
+  color: #1e293b;
+  background: #f4f6fa;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -25,6 +42,7 @@ body,
 
 body {
   min-height: 100vh;
+  background: var(--bg);
 }
 
 button,
@@ -38,9 +56,14 @@ input {
 }
 
 ::-webkit-scrollbar-track {
-  background: #d9d9d9;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #bebebe;
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

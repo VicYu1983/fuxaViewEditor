@@ -1,7 +1,17 @@
-﻿.editor-shell {
+/* ============================================================
+   FUXA View Editor — 科技感 × 簡潔（明亮風）
+   設計 token 定義於 index.css 的 :root CSS 變數
+   ============================================================ */
+
+/* ---------- 外殼 ---------- */
+
+.editor-shell {
   min-height: 100vh;
-  background: #f9f9f9;
+  background: var(--bg);
+  color: var(--text);
 }
+
+/* ---------- 頂欄 ---------- */
 
 .editor-header {
   position: sticky;
@@ -10,10 +20,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 52px;
-  padding-inline: 12px;
-  background: #fff;
-  border-bottom: 1px solid #f1f3f4;
+  height: 56px;
+  padding-inline: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   line-height: normal;
 }
 
@@ -30,10 +43,12 @@
   height: 30px;
   place-items: center;
   color: #fff;
-  background: #3059af;
-  border-radius: 4px;
-  font-size: 16px;
-  font-weight: 600;
+  background: linear-gradient(160deg, #2563eb 0%, #4f7df5 100%);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .brand-name,
@@ -42,15 +57,18 @@
 }
 
 .brand-name {
-  color: rgba(33, 33, 33, 0.92);
+  color: var(--text);
   font-size: 14px;
   font-weight: 600;
 }
 
 .brand-caption {
   margin-top: 1px;
-  color: rgba(0, 0, 0, 0.45);
-  font-size: 12px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .project-name-input {
@@ -68,14 +86,18 @@
   clip-path: inset(50%);
 }
 
+/* ---------- 主體 ---------- */
+
 .editor-body {
-  min-height: calc(100vh - 52px);
+  min-height: calc(100vh - 56px);
 }
+
+/* ---------- 左側 View 清單 ---------- */
 
 .view-sidebar {
   overflow: auto;
-  border-right: 1px solid #f1f3f4;
-  background: #f9f9f9;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .sidebar-heading {
@@ -84,13 +106,18 @@
   align-items: stretch;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 12px 14px;
+  padding: 16px 12px 12px;
 }
 
 .sidebar-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.sidebar-title .ant-typography {
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .view-list {
@@ -101,25 +128,46 @@
 }
 
 .view-item {
+  position: relative;
   display: flex !important;
   height: auto !important;
   flex-direction: column;
   align-items: flex-start !important;
   padding: 10px 12px !important;
-  border-radius: 7px;
+  border-radius: 8px;
   cursor: pointer;
   text-align: left;
   transition: background-color 120ms ease;
 }
 
+.view-item::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 3px;
+  border-radius: 2px;
+  background: transparent;
+  content: '';
+  transition: background-color 120ms ease;
+}
+
 .view-item:hover,
 .view-item:focus-visible {
-  background: #f1f3f4;
+  background: var(--hover);
   outline: none;
 }
 
 .view-item.selected {
-  background: #e3eaf6;
+  background: var(--primary-tint);
+}
+
+.view-item.selected::before {
+  background: var(--primary);
+}
+
+.view-item.selected .ant-typography:first-child {
+  color: var(--primary-strong);
 }
 
 .view-item .ant-typography {
@@ -129,8 +177,10 @@
 
 .view-item .view-id {
   margin-top: 3px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
   font-size: 11px;
+  letter-spacing: 0.01em;
 }
 
 .sidebar-empty {
@@ -139,6 +189,8 @@
   line-height: 1.6;
 }
 
+/* ---------- 工作區 ---------- */
+
 .workspace {
   min-width: 0;
   padding: 28px clamp(20px, 4vw, 52px);
@@ -146,7 +198,7 @@
 
 .welcome-panel {
   display: grid;
-  min-height: calc(100vh - 124px);
+  min-height: calc(100vh - 140px);
   place-items: center;
 }
 
@@ -160,11 +212,11 @@
 
 .welcome-panel h4.ant-typography {
   margin: 4px 0;
-  color: rgba(33, 33, 33, 0.92);
+  color: var(--text);
 }
 
 .workspace-content {
-  max-width: 1180px;
+  max-width: 1440px;
   margin-inline: auto;
 }
 
@@ -177,20 +229,25 @@
 
 .workspace-title h3.ant-typography {
   margin: 4px 0 0;
-  color: rgba(33, 33, 33, 0.92);
+  color: var(--text);
+  font-weight: 600;
 }
 
 .eyebrow {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--text-tertiary);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
+
+/* ---------- 卡片 ---------- */
 
 .view-details {
   margin-top: 16px;
-  border-color: #e0e0e0;
-  box-shadow: none;
+  border-color: var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
 }
 
 .view-panels,
@@ -222,13 +279,17 @@
   min-width: 0;
 }
 
+/* ---------- SVG 預覽（藍圖點狀網格） ---------- */
+
 .svg-preview {
   max-height: calc(100vh - 250px);
   min-height: 320px;
   overflow: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  background: #f9f9f9;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--surface);
+  background-image: radial-gradient(circle, rgba(100, 116, 139, 0.16) 1px, transparent 1px);
+  background-size: 18px 18px;
 }
 
 .svg-preview svg {
@@ -238,10 +299,12 @@
   margin-inline: auto;
 }
 
+/* ---------- 已管理元件 ---------- */
+
 .component-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
 }
 
 .managed-component-floor {
@@ -252,6 +315,7 @@
 .managed-component-floor-title {
   font-weight: 600;
   margin-bottom: 4px;
+  font-size: 12px;
 }
 
 .component-actions {
@@ -266,8 +330,9 @@
 }
 
 .batch-tag-list {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 8px;
+  background: var(--surface);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -289,6 +354,8 @@
   gap: 12px;
   justify-content: space-between;
 }
+
+/* ---------- 圖示庫 ---------- */
 
 .icon-library-manager {
   width: 100%;
@@ -338,6 +405,8 @@
   flex: 1 1 280px;
 }
 
+/* ---------- 批次建立 Tag ---------- */
+
 .tag-create-manager {
   width: 100%;
 }
@@ -373,27 +442,32 @@
 
 .tag-create-preview th,
 .tag-create-preview td {
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--hairline);
   padding: 7px;
   text-align: left;
 }
 
 .tag-create-preview th {
-  background: #f1f3f4;
+  background: var(--hover);
+  color: var(--text-secondary);
+  font-weight: 600;
   position: sticky;
   top: 0;
 }
 
+/* ---------- 設備與 Tag 管理 ---------- */
+
 .device-manager-summary {
   align-items: flex-start;
-  border-block: 1px solid #e0e0e0;
+  border-block: 1px solid var(--border);
   margin-bottom: 16px;
   padding: 12px 0;
 }
 
 .device-tag-manager {
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border);
   border-radius: 8px;
+  background: var(--surface);
   margin-bottom: 16px;
   padding: 10px;
 }
@@ -416,7 +490,7 @@
 
 .device-tag-row {
   align-items: center;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--hairline);
   display: flex;
   gap: 8px;
   justify-content: space-between;
@@ -426,10 +500,6 @@
 
 .device-tag-row:last-child {
   border-bottom: 0;
-}
-
-.device-tag-row:nth-child(even) {
-  background: #f9f9f9;
 }
 
 .device-tag-info {
@@ -449,6 +519,8 @@
   margin-top: 28px;
 }
 
+/* ---------- 樓層管理 / 告警 ---------- */
+
 .floor-manager-toolbar,
 .floor-bulk-toolbar {
   align-items: center;
@@ -464,23 +536,25 @@
 }
 
 .floor-tag-list {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 8px;
+  background: var(--surface);
   max-height: min(56vh, 520px);
   overflow: auto;
   padding: 8px 12px;
 }
 
 .floor-tag-group + .floor-tag-group {
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--hairline);
   margin-top: 8px;
   padding-top: 8px;
 }
 
 .floor-tag-group-title {
-  color: rgba(0, 0, 0, 0.55);
-  font-size: 13px;
+  color: var(--text-secondary);
+  font-size: 12px;
   font-weight: 700;
+  letter-spacing: 0.04em;
   padding: 8px 0;
 }
 
@@ -562,17 +636,26 @@
   }
 }
 
+/* ---------- 元件列 ---------- */
+
 .component-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 10px 0;
-  border-bottom: 1px solid #edf0f2;
+  gap: 10px;
+  margin-inline: -14px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: 6px;
+  transition: background-color 120ms ease;
 }
 
 .component-row:last-child {
   border-bottom: 0;
+}
+
+.component-row:hover {
+  background: var(--hover);
 }
 
 .component-row-multi {
@@ -629,6 +712,8 @@
   max-width: 100%;
 }
 
+/* ---------- Grid 排版設定 ---------- */
+
 .grid-settings {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -646,6 +731,8 @@
 .grid-settings .ant-select {
   width: 100%;
 }
+
+/* ---------- 工作區精修（與卡片／標題呼應） ---------- */
 
 .workspace {
   padding: 18px clamp(16px, 2vw, 28px);
@@ -715,27 +802,8 @@
 }
 
 .workspace-content .grid-settings label > .ant-typography {
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--text-secondary);
   font-size: 12px;
-}
-
-.component-row {
-  gap: 10px;
-  margin-inline: -14px;
-  padding: 8px 14px;
-  transition: background-color 120ms ease;
-}
-
-.component-row:nth-child(odd) {
-  background: #f1f3f4;
-}
-
-.component-row:nth-child(even) {
-  background: #fff;
-}
-
-.component-row:hover {
-  background: #f1f3f4;
 }
 
 .svg-preview {
@@ -760,10 +828,12 @@
   margin-top: 1px;
 }
 
+/* ---------- 響應式 ---------- */
+
 @media (max-width: 720px) {
   .editor-header {
     height: auto;
-    min-height: 52px;
+    min-height: 56px;
     flex-wrap: wrap;
     gap: 8px;
     padding: 8px 12px;
