@@ -35,7 +35,21 @@ const fixedRandom = {
 const gifBytes = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x02])
 
 function emptyConfig(): FuxaConfig {
-  return { devices: {}, hmi: { views: [] }, extra: { preserve: true } }
+  return {
+    devices: {
+      '0': {
+        id: '0',
+        name: 'FUXA',
+        enabled: true,
+        property: { delay: 10 },
+        type: 'FuxaServer',
+        polling: 1000,
+        tags: {},
+      },
+    },
+    hmi: { views: [] },
+    extra: { preserve: true },
+  }
 }
 
 function model(component: ExportViewModel['components'][number]): ExportViewModel {

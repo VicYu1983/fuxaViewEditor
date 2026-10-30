@@ -8,10 +8,12 @@ import {
   serializeFuxaConfig,
 } from '../../src/domain/config/serialization'
 
+const fixturePath = (name: string) => resolve(__dirname, '..', 'fixtures', name)
+
 describe('parseFuxaConfig', () => {
   it('creates an independent empty project with an initialized FUXA SVG layer', () => {
     const template = JSON.parse(
-      readFileSync(resolve(process.cwd(), '..', 'fuxa-project.json'), 'utf8'),
+      readFileSync(fixturePath('fuxa-empty-project.json'), 'utf8'),
     )
     const config = createEmptyFuxaConfig()
     const secondConfig = createEmptyFuxaConfig()
@@ -109,7 +111,7 @@ describe('FUXA config serialization', () => {
   })
 
   it('retains the exact source text for an unchanged FUXA configuration', () => {
-    const originalText = readFileSync(resolve(process.cwd(), '..', '旭峰建設.json'), 'utf8')
+    const originalText = readFileSync(fixturePath('旭峰建設.json'), 'utf8')
     const parsed = parseFuxaConfig(originalText)
 
     expect(parsed.originalText).toBe(originalText)

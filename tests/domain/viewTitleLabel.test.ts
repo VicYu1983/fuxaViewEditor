@@ -91,7 +91,17 @@ function createRuntime() {
 
 function createConfig(): FuxaConfig {
   return {
-    devices: {},
+    devices: {
+      '0': {
+        id: '0',
+        name: 'FUXA',
+        enabled: true,
+        property: { delay: 10 },
+        type: 'FuxaServer',
+        polling: 1000,
+        tags: {},
+      },
+    },
     hmi: {
       views: [
         {
