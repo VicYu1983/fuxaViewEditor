@@ -146,8 +146,7 @@ describe('applyTagAlarms', () => {
       .toThrow('FUXA alarms 欄位格式無效')
   })
 
-  it('creates an inverted alarm that triggers when the Boolean Tag is zero', () => {
-    const result = applyTagAlarms(createConfig(), [{
+  it('creates an inverted alarm that triggers when the Boolean Tag is zero', () => {    const result = applyTagAlarms(createConfig(), [{
       tagId: 'tag-1',
       tagName: '水箱水位',
       text: '水位異常',
@@ -167,6 +166,70 @@ describe('applyTagAlarms', () => {
           { min: 0, max: 0, type: 'toastMessage' },
         ],
       },
+    })
+  })
+
+  it('stores the voice repeat count on the enabled level and preserves existing values', () => {
+    const source = createConfig()
+    source.alarms = [{
+      property: { variableId: 'tag-1' },
+      highhigh: { enabled: true, min: 1, max: 1, text: '舊', voiceRepeat: 4 },
+      low: { enabled: true, min: 1, max: 1, text: '低', voiceRepeat: 2 },
+      actions: { enabled: true, values: [] },
+    }]
+
+    const result = applyTagAlarms(source, [{
+      tagId: 'tag-1',
+      tagName: '水箱水位',
+      text: '水位異常',
+      level: 'highhigh',
+      messageLevel: 'error',
+      invertState: false,
+      viewId: 'view-water',
+      voiceRepeat: 7,
+    }])
+    const alarms = result.config.alarms as Record<string, unknown>[]
+
+    expect(alarms[0]).toMatchObject({
+      highhigh: { enabled: true, voiceRepeat: 7 },
+      low: { enabled: false, voiceRepeat: 2 },
+      high: { enabled: false, voiceRepeat: 7 },
+    })
+  })
+
+  it('clamps the voice repeat count into the supported range', () => {    const result = applyTagAlarms(createConfig(), [{
+      tagId: 'tag-1',
+      tagName: '水箱水位',
+      text: '水位異常',
+      level: 'high',
+      messageLevel: 'error',
+      invertState: false,
+      viewId: 'view-water',
+      voiceRepeat: 99,
+    }])
+    const alarms = result.config.alarms as Record<string, unknown>[]
+
+    expect(alarms[0]).toMatchObject({ high: { enabled: true, voiceRepeat: 10 } })
+  })
+
+  it('applies per-level voice repeat counts from the draft', () => {
+    const result = applyTagAlarms(createConfig(), [{
+      tagId: 'tag-1',
+      tagName: '水箱水位',
+      text: '水位異常',
+      level: 'highhigh',
+      messageLevel: 'error',
+      invertState: false,
+      viewId: 'view-water',
+      voiceRepeats: { highhigh: 3, high: 5, low: 2, info: 1 },
+    }])
+    const alarms = result.config.alarms as Record<string, unknown>[]
+
+    expect(alarms[0]).toMatchObject({
+      highhigh: { enabled: true, voiceRepeat: 3 },
+      high: { enabled: false, voiceRepeat: 5 },
+      low: { enabled: false, voiceRepeat: 2 },
+      info: { enabled: false, voiceRepeat: 1 },
     })
   })
 })

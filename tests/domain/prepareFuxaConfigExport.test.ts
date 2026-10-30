@@ -19,6 +19,7 @@ const sourceFormat: SourceTextFormat = {
 function config(): FuxaConfig {
   const voiceOnId = 't_voiceOn'
   const voiceMessageId = 't_voiceMessage'
+  const voiceRepeatId = 't_voiceRepeat'
   return {
     devices: {
       '0': {
@@ -40,6 +41,12 @@ function config(): FuxaConfig {
             name: 'voiceMessage',
             type: 'string',
           },
+          [voiceRepeatId]: {
+            id: voiceRepeatId,
+            name: 'voiceRepeat',
+            type: 'number',
+            init: '1',
+          },
         },
       },
     },
@@ -55,7 +62,7 @@ function config(): FuxaConfig {
       sync: false,
       parameters: [],
       mode: 'CLIENT',
-      code: buildVoiceScriptCode(voiceOnId, voiceMessageId),
+      code: buildVoiceScriptCode(voiceOnId, voiceMessageId, voiceRepeatId),
       scheduling: { mode: 'interval', interval: 1, schedules: [] },
     }],
     extra: { customField: { keep: true } },
@@ -167,7 +174,7 @@ describe('prepareFuxaConfigExport', () => {
     const scripts = JSON.parse(result.text).scripts
 
     expect(result.dirty).toBe(true)
-    expect(scripts[0].code).toBe(buildVoiceScriptCode('t_voiceOn', 't_voiceMessage'))
+    expect(scripts[0].code).toBe(buildVoiceScriptCode('t_voiceOn', 't_voiceMessage', 't_voiceRepeat'))
     expect(scripts[0].parameters).toEqual([])
     expect(scripts[0].scheduling).toEqual({ mode: 'interval', interval: 1, schedules: [] })
     expect(scripts[1]).toEqual(otherScript)
@@ -202,22 +209,28 @@ describe('prepareFuxaConfigExport', () => {
     const tags = (exported.devices['0'] as { tags: Record<string, Record<string, unknown>> }).tags
     const voiceOn = Object.values(tags).find((tag) => tag.name === 'voiceOn')
     const voiceMessage = Object.values(tags).find((tag) => tag.name === 'voiceMessage')
+    const voiceRepeat = Object.values(tags).find((tag) => tag.name === 'voiceRepeat')
     const scripts = exported.scripts
     const actions = exported.alarms[0].actions.values
 
     expect(result.dirty).toBe(true)
     expect(voiceOn).toMatchObject({ type: 'boolean', init: '0' })
     expect(voiceMessage).toMatchObject({ type: 'string' })
+    expect(voiceRepeat).toMatchObject({ type: 'number', init: '1' })
     expect(scripts).toHaveLength(1)
     expect(scripts[0]).toMatchObject({
       name: 'voice',
       sync: false,
       parameters: [],
       mode: 'CLIENT',
-      code: buildVoiceScriptCode(voiceOn!.id as string, voiceMessage!.id as string),
+      code: buildVoiceScriptCode(
+        voiceOn!.id as string,
+        voiceMessage!.id as string,
+        voiceRepeat!.id as string,
+      ),
       scheduling: { mode: 'interval', interval: 1, schedules: [] },
     })
-    expect(actions).toHaveLength(3)
+    expect(actions).toHaveLength(4)
     expect(actions[0]).toMatchObject({ type: 'setView', actparam: 'view-1' })
     expect(actions[1]).toMatchObject({
       type: 'setValue',
@@ -230,6 +243,13 @@ describe('prepareFuxaConfigExport', () => {
       type: 'setValue',
       actparam: '水箱蓋異常',
       variableId: voiceMessage!.id,
+      min: 1,
+      max: 1,
+    })
+    expect(actions[3]).toMatchObject({
+      type: 'setValue',
+      actparam: '1',
+      variableId: voiceRepeat!.id,
       min: 1,
       max: 1,
     })

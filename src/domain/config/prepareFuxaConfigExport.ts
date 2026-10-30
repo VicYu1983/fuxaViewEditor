@@ -16,23 +16,41 @@ import {
 } from '../devices/deviceTagAddressSort'
 import { generateId } from '../ids'
 import { isRecord } from './validateFuxaConfig'
+import { normalizeVoiceRepeat, VOICE_REPEAT_MAX, VOICE_REPEAT_MIN } from './voiceRepeat'
 import type { GeneratedViewModel } from '../svg/validateGeneratedView'
 
 const VOICE_TRIGGER_TAG_NAME = 'voiceOn'
 const VOICE_MESSAGE_TAG_NAME = 'voiceMessage'
+const VOICE_REPEAT_TAG_NAME = 'voiceRepeat'
 const VOICE_ALARM_LEVELS = ['highhigh', 'high', 'low', 'info'] as const
 
-export function buildVoiceScriptCode(triggerTagId: string, messageTagId: string): string {
+export { VOICE_REPEAT_MAX, VOICE_REPEAT_MIN, normalizeVoiceRepeat } from './voiceRepeat'
+
+export function buildVoiceScriptCode(
+  triggerTagId: string,
+  messageTagId: string,
+  repeatTagId: string,
+): string {
   return [
     `const voiceOn = $getTag(${JSON.stringify(triggerTagId)} /* FUXA - ${VOICE_TRIGGER_TAG_NAME} */);`,
     'if (voiceOn) {',
     `  $setTag(${JSON.stringify(triggerTagId)} /* FUXA - ${VOICE_TRIGGER_TAG_NAME} */, false);`,
     `  const message = $getTag(${JSON.stringify(messageTagId)} /* FUXA - ${VOICE_MESSAGE_TAG_NAME} */);`,
+    `  const repeatTag = $getTag(${JSON.stringify(repeatTagId)} /* FUXA - ${VOICE_REPEAT_TAG_NAME} */);`,
+    `  const repeat = Math.min(${VOICE_REPEAT_MAX}, Math.max(${VOICE_REPEAT_MIN}, Math.round(Number(repeatTag) || ${VOICE_REPEAT_MIN})));`,
     "  const voice = speechSynthesis.getVoices().find(v => v.lang === 'zh-TW' && v.localService);",
-    '  const u = new SpeechSynthesisUtterance(message);',
-    '  if (voice) u.voice = voice;',
-    "  u.lang = 'zh-TW';",
-    '  speechSynthesis.speak(u);',
+    '  let played = 0;',
+    '  const speakOnce = () => {',
+    '    const u = new SpeechSynthesisUtterance(message);',
+    '    if (voice) u.voice = voice;',
+    "    u.lang = 'zh-TW';",
+    '    u.onend = () => {',
+    '      played += 1;',
+    '      if (played < repeat) speakOnce();',
+    '    };',
+    '    speechSynthesis.speak(u);',
+    '  };',
+    '  speakOnce();',
     '}',
   ].join('\n')
 }
@@ -82,6 +100,7 @@ export interface PreparedFuxaConfigExport {
 interface VoiceBridgeTags {
   triggerId: string
   messageId: string
+  repeatId: string
 }
 
 function getFuxaServerDevice(config: FuxaConfig): Record<string, unknown> {
@@ -114,7 +133,10 @@ function getVoiceBridgeTags(config: FuxaConfig): VoiceBridgeTags | undefined {
 
   const triggerId = findTag(VOICE_TRIGGER_TAG_NAME, 'boolean')
   const messageId = findTag(VOICE_MESSAGE_TAG_NAME, 'string')
-  return triggerId && messageId ? { triggerId, messageId } : undefined
+  const repeatId = findTag(VOICE_REPEAT_TAG_NAME, 'number')
+  return triggerId && messageId && repeatId
+    ? { triggerId, messageId, repeatId }
+    : undefined
 }
 
 function expectedVoiceActions(
@@ -127,6 +149,7 @@ function expectedVoiceActions(
     const min = typeof level.min === 'number' ? level.min : 1
     const max = typeof level.max === 'number' ? level.max : 1
     const message = typeof level.text === 'string' ? level.text : ''
+    const repeat = normalizeVoiceRepeat(level.voiceRepeat)
     return [
       {
         type: 'setValue',
@@ -142,6 +165,16 @@ function expectedVoiceActions(
         type: 'setValue',
         actparam: message,
         variableId: tags.messageId,
+        actoptions: {},
+        checkdelay: 1,
+        timedelay: 0,
+        min,
+        max,
+      },
+      {
+        type: 'setValue',
+        actparam: String(repeat),
+        variableId: tags.repeatId,
         actoptions: {},
         checkdelay: 1,
         timedelay: 0,
@@ -170,7 +203,7 @@ function alarmHasVoiceActions(alarm: unknown, tags: VoiceBridgeTags): boolean {
 }
 
 function expectedVoiceScriptCode(tags: VoiceBridgeTags): string {
-  return buildVoiceScriptCode(tags.triggerId, tags.messageId)
+  return buildVoiceScriptCode(tags.triggerId, tags.messageId, tags.repeatId)
 }
 
 function generateVoiceScriptId(scripts: readonly unknown[]): string {
@@ -216,14 +249,15 @@ export function needsVoiceBridgeUpdate(config: FuxaConfig): boolean {
 function createVoiceBridgeTag(
   id: string,
   name: string,
-  type: 'boolean' | 'string',
+  type: 'boolean' | 'string' | 'number',
+  init: string | null,
 ): Record<string, unknown> {
   return {
     id,
     name,
     type,
     daq: { enabled: false, interval: 60, changed: false, restored: false },
-    init: type === 'boolean' ? '0' : null,
+    init,
     description: null,
     timestamp: Date.now(),
   }
@@ -241,7 +275,11 @@ function ensureVoiceBridgeTags(config: FuxaConfig): VoiceBridgeTags {
       if (isRecord(tag) && typeof tag.id === 'string') allIds.add(tag.id)
     }
   }
-  const findOrCreate = (name: string, type: 'boolean' | 'string'): string => {
+  const findOrCreate = (
+    name: string,
+    type: 'boolean' | 'string' | 'number',
+    init: string | null,
+  ): string => {
     const matches = Object.entries(tags).filter(([, value]) =>
       isRecord(value) && value.name === name)
     if (matches.length > 1) {
@@ -260,13 +298,14 @@ function ensureVoiceBridgeTags(config: FuxaConfig): VoiceBridgeTags {
       throw new Error('目前環境無法產生語音 Tag ID，請使用支援 Web Crypto 的瀏覽器。')
     }
     const id = generateId('t', allIds, globalThis.crypto)
-    tags[id] = createVoiceBridgeTag(id, name, type)
+    tags[id] = createVoiceBridgeTag(id, name, type, init)
     return id
   }
 
   return {
-    triggerId: findOrCreate(VOICE_TRIGGER_TAG_NAME, 'boolean'),
-    messageId: findOrCreate(VOICE_MESSAGE_TAG_NAME, 'string'),
+    triggerId: findOrCreate(VOICE_TRIGGER_TAG_NAME, 'boolean', '0'),
+    messageId: findOrCreate(VOICE_MESSAGE_TAG_NAME, 'string', null),
+    repeatId: findOrCreate(VOICE_REPEAT_TAG_NAME, 'number', String(VOICE_REPEAT_MIN)),
   }
 }
 
@@ -318,7 +357,9 @@ function updateVoiceAlarmActions(config: FuxaConfig, tags: VoiceBridgeTags): voi
     const values = previousValues.filter((value) => (
       !isRecord(value)
       || (value.type !== 'setValue'
-        || (value.variableId !== tags.triggerId && value.variableId !== tags.messageId))
+        || (value.variableId !== tags.triggerId
+          && value.variableId !== tags.messageId
+          && value.variableId !== tags.repeatId))
     ))
     alarm.actions = {
       ...previousActions,

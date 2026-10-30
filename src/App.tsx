@@ -57,6 +57,11 @@ import {
   prepareFuxaConfigExport,
   updateVoiceBridge,
 } from './domain/config/prepareFuxaConfigExport'
+import {
+  normalizeVoiceRepeat,
+  VOICE_REPEAT_MAX,
+  VOICE_REPEAT_MIN,
+} from './domain/config/voiceRepeat'
 import { createFuxaConfigExportDependencies } from './domain/config/fuxaConfigExportDependencies'
 import { buildViewEditorModels } from './domain/views/buildViewEditorModels'
 import { deleteView, renameView, validateViewName } from './domain/views/viewManagement'
@@ -344,6 +349,12 @@ function App() {
   const [tagAlarmText, setTagAlarmText] = useState('設備異常告警')
   const [tagAlarmLevel, setTagAlarmLevel] = useState<TagAlarmLevel>('highhigh')
   const [tagAlarmMessageLevel, setTagAlarmMessageLevel] = useState<TagAlarmMessageLevel>('error')
+  const [tagAlarmVoiceRepeats, setTagAlarmVoiceRepeats] = useState<Record<TagAlarmLevel, number>>({
+    highhigh: 1,
+    high: 1,
+    low: 1,
+    info: 1,
+  })
   const [tagAlarmTargetViewIds, setTagAlarmTargetViewIds] = useState<Record<string, string>>({})
   const [fuxaSyncStatus, setFuxaSyncStatus] = useState<'disconnected' | 'ready' | 'pending'>('disconnected')
   const fuxaSyncRevision = useRef<string | null>(null)
@@ -499,7 +510,10 @@ function App() {
     [tagViewOptions, tags],
   )
   const alarmSettingsByTag = useMemo(() => {
-    const settingsByTag = new Map<string, { level: TagAlarmLevel; text: string }[]>()
+    const settingsByTag = new Map<
+      string,
+      { level: TagAlarmLevel; text: string; voiceRepeat: number }[]
+    >()
     const alarms = config?.rawConfig.alarms
     if (!Array.isArray(alarms)) return settingsByTag
 
@@ -519,6 +533,7 @@ function App() {
           ? [{
             level: key,
             text: typeof level.text === 'string' ? level.text : '',
+            voiceRepeat: normalizeVoiceRepeat(level.voiceRepeat),
           }]
           : []
       })
@@ -1363,6 +1378,8 @@ function App() {
             ?? tagAlarmInversionDrafts[tag.id]
             ?? false,
           viewId: tagAlarmTargetViewIds[tag.id] ?? '',
+          voiceRepeat: tagAlarmVoiceRepeats[tagAlarmLevel],
+          voiceRepeats: tagAlarmVoiceRepeats,
         })),
       )
       const document = parseUpdatedConfig(result.config, config)
@@ -1505,7 +1522,7 @@ function App() {
                   )}
                   <div className="alarm-tag-settings" aria-label={`${tag.name} 已設定告警`}>
                     {alarmSettingsByTag.get(tag.id)?.length ? (
-                      alarmSettingsByTag.get(tag.id)?.map(({ level, text }, index) => (
+                      alarmSettingsByTag.get(tag.id)?.map(({ level, text, voiceRepeat }, index) => (
                         <div className="alarm-tag-setting" key={`${level}-${index}`}>
                           <Tag>{TAG_ALARM_LEVEL_LABELS[level]}</Tag>
                           <Text
@@ -1514,6 +1531,7 @@ function App() {
                           >
                             {text || '未設定告警文字'}
                           </Text>
+                          <Text type="secondary">語音 {voiceRepeat} 次</Text>
                         </div>
                       ))
                     ) : (
@@ -1557,6 +1575,33 @@ function App() {
             onChange={setTagAlarmMessageLevel}
           />
         </label>
+        <section className="device-tag-manager" aria-label="語音播放次數設定">
+          <div className="device-tag-manager-heading">
+            <Text strong>語音播放次數</Text>
+            <Text type="secondary">
+              每個告警等級可設定 {VOICE_REPEAT_MIN}–{VOICE_REPEAT_MAX} 次，執行時由 voiceRepeat Tag 控制
+            </Text>
+          </div>
+          <Space orientation="vertical" style={{ width: '100%' }}>
+            {TAG_ALARM_LEVEL_OPTIONS.map(({ value, label }) => (
+              <div className="device-tag-row" key={value}>
+                <Text strong>{label}</Text>
+                <InputNumber
+                  aria-label={`${label} 語音播放次數`}
+                  min={VOICE_REPEAT_MIN}
+                  max={VOICE_REPEAT_MAX}
+                  precision={0}
+                  value={tagAlarmVoiceRepeats[value]}
+                  onChange={(next) => setTagAlarmVoiceRepeats((current) => ({
+                    ...current,
+                    [value]: normalizeVoiceRepeat(next),
+                  }))}
+                  style={{ width: 120 }}
+                />
+              </div>
+            ))}
+          </Space>
+        </section>
         {selectedAlarmTags.length > 0 && (
           <section className="device-tag-manager" aria-label="告警跳轉頁面設定">
             <div className="device-tag-manager-heading">
