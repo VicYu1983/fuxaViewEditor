@@ -1,6 +1,5 @@
 import type { FuxaConfig } from '../config/types'
 import { isRecord } from '../config/validateFuxaConfig'
-import { normalizeVoiceRepeat } from '../config/voiceRepeat'
 
 export type TagAlarmLevel = 'highhigh' | 'high' | 'low' | 'info'
 export type TagAlarmMessageLevel = 'info' | 'success' | 'warning' | 'error'
@@ -17,8 +16,6 @@ export interface TagAlarmDraft {
   messageLevel: TagAlarmMessageLevel
   invertState: boolean
   viewId: string
-  voiceRepeat?: number
-  voiceRepeats?: Partial<Record<TagAlarmLevel, number>>
 }
 
 export function updateTagAlarmInversion(
@@ -179,14 +176,12 @@ function createAlarmLevel(
   text: string,
   enabled: boolean,
   inverted: boolean,
-  voiceRepeat: number,
 ) {
   return {
     ...ALARM_LEVEL_DEFAULTS[level],
     ...(enabled && inverted ? { min: 0, max: 0 } : {}),
     enabled,
     text,
-    voiceRepeat,
   }
 }
 
@@ -232,22 +227,12 @@ export function applyTagAlarms(
     const previousValues = Array.isArray(previousActions.values)
       ? previousActions.values
       : []
-    const voiceRepeat = normalizeVoiceRepeat(draft.voiceRepeat)
-    const repeatFor = (level: TagAlarmLevel): number => {
-      const draftValue = draft.voiceRepeats?.[level]
-      if (draftValue !== undefined) return normalizeVoiceRepeat(draftValue)
-      if (level === draft.level) return voiceRepeat
-      const existingLevel = existing[level]
-      return isRecord(existingLevel) && existingLevel.voiceRepeat !== undefined
-        ? normalizeVoiceRepeat(existingLevel.voiceRepeat)
-        : voiceRepeat
-    }
     const alarm = {
       ...existing,
-      highhigh: createAlarmLevel('highhigh', text, draft.level === 'highhigh', draft.invertState, repeatFor('highhigh')),
-      high: createAlarmLevel('high', text, draft.level === 'high', draft.invertState, repeatFor('high')),
-      low: createAlarmLevel('low', text, draft.level === 'low', draft.invertState, repeatFor('low')),
-      info: createAlarmLevel('info', text, draft.level === 'info', draft.invertState, repeatFor('info')),
+      highhigh: createAlarmLevel('highhigh', text, draft.level === 'highhigh', draft.invertState),
+      high: createAlarmLevel('high', text, draft.level === 'high', draft.invertState),
+      low: createAlarmLevel('low', text, draft.level === 'low', draft.invertState),
+      info: createAlarmLevel('info', text, draft.level === 'info', draft.invertState),
       actions: {
         ...previousActions,
         enabled: true,

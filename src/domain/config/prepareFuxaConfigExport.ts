@@ -16,7 +16,12 @@ import {
 } from '../devices/deviceTagAddressSort'
 import { generateId } from '../ids'
 import { isRecord } from './validateFuxaConfig'
-import { normalizeVoiceRepeat, VOICE_REPEAT_MAX, VOICE_REPEAT_MIN } from './voiceRepeat'
+import {
+  getVoiceRepeatSettings,
+  normalizeVoiceRepeat,
+  VOICE_REPEAT_MAX,
+  VOICE_REPEAT_MIN,
+} from './voiceRepeat'
 import type { GeneratedViewModel } from '../svg/validateGeneratedView'
 
 const VOICE_TRIGGER_TAG_NAME = 'voiceOn'
@@ -142,6 +147,7 @@ function getVoiceBridgeTags(config: FuxaConfig): VoiceBridgeTags | undefined {
 function expectedVoiceActions(
   alarm: Record<string, unknown>,
   tags: VoiceBridgeTags,
+  repeats: Record<string, number>,
 ): Record<string, unknown>[] {
   return VOICE_ALARM_LEVELS.flatMap((levelName) => {
     const level = alarm[levelName]
@@ -149,7 +155,7 @@ function expectedVoiceActions(
     const min = typeof level.min === 'number' ? level.min : 1
     const max = typeof level.max === 'number' ? level.max : 1
     const message = typeof level.text === 'string' ? level.text : ''
-    const repeat = normalizeVoiceRepeat(level.voiceRepeat)
+    const repeat = normalizeVoiceRepeat(repeats[levelName])
     return [
       {
         type: 'setValue',
@@ -185,9 +191,13 @@ function expectedVoiceActions(
   })
 }
 
-function alarmHasVoiceActions(alarm: unknown, tags: VoiceBridgeTags): boolean {
+function alarmHasVoiceActions(
+  alarm: unknown,
+  tags: VoiceBridgeTags,
+  repeats: Record<string, number>,
+): boolean {
   if (!isRecord(alarm)) return true
-  const expected = expectedVoiceActions(alarm, tags)
+  const expected = expectedVoiceActions(alarm, tags, repeats)
   if (!expected.length) return true
   if (!isRecord(alarm.actions) || alarm.actions.enabled !== true
       || !Array.isArray(alarm.actions.values)) return false
@@ -243,7 +253,11 @@ export function needsVoiceBridgeUpdate(config: FuxaConfig): boolean {
       || script.scheduling.interval !== 1
       || !Array.isArray(script.scheduling.schedules)) return true
   return Array.isArray(config.alarms)
-    && config.alarms.some((alarm) => !alarmHasVoiceActions(alarm, tags))
+    && config.alarms.some((alarm) => !alarmHasVoiceActions(
+      alarm,
+      tags,
+      getVoiceRepeatSettings(config),
+    ))
 }
 
 function createVoiceBridgeTag(
@@ -348,9 +362,10 @@ function updateVoiceScripts(config: FuxaConfig, tags: VoiceBridgeTags): void {
 
 function updateVoiceAlarmActions(config: FuxaConfig, tags: VoiceBridgeTags): void {
   if (!Array.isArray(config.alarms)) return
+  const repeats = getVoiceRepeatSettings(config)
   for (const alarm of config.alarms) {
     if (!isRecord(alarm)) continue
-    const expected = expectedVoiceActions(alarm, tags)
+    const expected = expectedVoiceActions(alarm, tags, repeats)
     if (!expected.length) continue
     const previousActions = isRecord(alarm.actions) ? alarm.actions : {}
     const previousValues = Array.isArray(previousActions.values) ? previousActions.values : []
