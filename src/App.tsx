@@ -304,6 +304,7 @@ function App() {
   const [batchMoveDialogOpen, setBatchMoveDialogOpen] = useState(false)
   const [batchMoveSelection, setBatchMoveSelection] = useState<Set<string>>(new Set())
   const [batchSearch, setBatchSearch] = useState('')
+  const [batchOnlyUnused, setBatchOnlyUnused] = useState(false)
   const [batchSelection, setBatchSelection] = useState<Set<string>>(new Set())
   const [batchGraphic, setBatchGraphic] = useState('rect')
   const [batchCoilSwitchEnabled, setBatchCoilSwitchEnabled] = useState(true)
@@ -661,12 +662,22 @@ function App() {
   const batchableTags = useMemo(() => tags.filter((tag) => !isAutoFilledTag(tag)), [tags])
   const filteredBatchTags = useMemo(() => {
     const query = batchSearch.trim().toLocaleLowerCase()
+    const used = new Set<string>()
+    for (const model of models.values()) {
+      for (const component of model.components) {
+        if (component.tagId) used.add(component.tagId)
+        for (const binding of component.multiStateBindings ?? []) {
+          if (binding.tagId) used.add(binding.tagId)
+        }
+      }
+    }
     return batchableTags.filter((tag) => (
-      `${tag.deviceName} ${tag.name} ${tag.type} ${tag.memaddress} ${tag.id} ${tag.floor}`
+      (!batchOnlyUnused || !used.has(tag.id))
+      && `${tag.deviceName} ${tag.name} ${tag.type} ${tag.memaddress} ${tag.id} ${tag.floor}`
         .toLocaleLowerCase()
         .includes(query)
     ))
-  }, [batchSearch, batchableTags])
+  }, [batchSearch, batchableTags, batchOnlyUnused, models])
   const selectedBatchCount = filteredBatchTags.filter((tag) => batchSelection.has(tag.id)).length
   const selectedBatchTags = batchableTags.filter((tag) => batchSelection.has(tag.id))
   const selectedCoilTags = selectedBatchTags.filter(isCoilTag)
@@ -2027,6 +2038,14 @@ function App() {
           onChange={(event) => setBatchSearch(event.target.value)}
           style={{ margin: '16px 0 12px' }}
         />
+        <Space style={{ marginBottom: 12 }}>
+          <Switch
+            aria-label="只顯示尚未加入任何 View 的 Tag"
+            checked={batchOnlyUnused}
+            onChange={setBatchOnlyUnused}
+          />
+          <Text>只顯示還沒有加入任何 View 的 Tag</Text>
+        </Space>
         <div className="batch-tag-toolbar">
           <Checkbox
             checked={filteredBatchTags.length > 0 && selectedBatchCount === filteredBatchTags.length}
