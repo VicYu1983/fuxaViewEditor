@@ -76,6 +76,7 @@ import {
   updateAllViewTitleLabels,
 } from './domain/views/viewTitleLabel'
 import { getSiteNameSettings, updateAllSiteNameLabels } from './domain/views/siteNameLabel'
+import { navigationNeedsSync } from './domain/views/syncNavigation'
 import {
   AUTO_FILLED_TAG_DESCRIPTION,
   buildTagIndex,
@@ -818,6 +819,7 @@ function App() {
       || floorFrameLayoutNeedsUpdate
       || deviceTagsNeedAddressSorting(config.rawConfig)
       || needsVoiceBridgeUpdate(config.rawConfig)
+      || navigationNeedsSync(config.rawConfig)
     const dependencies = exportDirty
       ? createFuxaConfigExportDependencies(config.rawConfig, {
         Parser: DOMParser,

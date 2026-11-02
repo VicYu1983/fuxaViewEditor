@@ -5,6 +5,7 @@ import type {
 } from './types'
 import { serializeFuxaConfig } from './serialization'
 import { saveViewGridSettings } from '../layout/gridSettings'
+import { navigationNeedsSync, syncNavigationItems } from '../views/syncNavigation'
 import { saveFloorGroupFrameSettings } from '../layout/floorGroupFrame'
 import { saveFloorGroupArtifacts } from '../layout/floorGroupArtifacts'
 import { groupComponentsByFloor } from '../layout/floorLayout'
@@ -443,6 +444,7 @@ export function prepareFuxaConfigExport(
       && !projectNameChanged
       && !deviceTagsNeedSorting
       && !needsVoiceBridgeUpdate(input.config)
+      && !navigationNeedsSync(input.config)
       && findLegacySwitchViewIds(input.models ?? []).size === 0) {
     return {
       config: input.config,
@@ -455,6 +457,7 @@ export function prepareFuxaConfigExport(
 
   const output = structuredClone(input.config)
   updateVoiceBridge(output)
+  syncNavigationItems(output)
   sortDeviceTagsByAddress(output)
   if (input.projectName !== undefined) output.name = input.projectName
   const models = (input.models ?? []).map((model) => structuredClone(model))
