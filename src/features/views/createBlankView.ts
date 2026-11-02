@@ -6,6 +6,7 @@ import type { SvgParserConstructor } from '../../domain/svg/parseSvg'
 import { buildTagIndex } from '../../domain/tags/index'
 import { isRecord } from '../../domain/config/validateFuxaConfig'
 import { getViewTitleLabelSettings } from '../../domain/views/viewTitleLabel'
+import { getSiteNameSettings, upsertSiteNameLabel } from '../../domain/views/siteNameLabel'
 
 export interface CreateBlankViewRuntime {
   Parser: SvgParserConstructor
@@ -110,5 +111,7 @@ export function createBlankView(
     svgcontent: runtime.serialize(doc),
     type: 'svg',
   }
+  const siteSettings = getSiteNameSettings(config)
+  if (siteSettings.name) upsertSiteNameLabel(view, siteSettings.name, siteSettings, usedIds, runtime)
   return { view, titleId }
 }

@@ -75,6 +75,7 @@ import {
   getViewTitleLabelSettings,
   updateAllViewTitleLabels,
 } from './domain/views/viewTitleLabel'
+import { getSiteNameSettings, updateAllSiteNameLabels } from './domain/views/siteNameLabel'
 import {
   AUTO_FILLED_TAG_DESCRIPTION,
   buildTagIndex,
@@ -208,6 +209,12 @@ interface ViewPropertiesFormValues {
   bkcolor: string
   viewTitleColor: string
   viewTitleFontSize: number
+  siteName: string
+  siteColor: string
+  siteFontSize: number
+  siteBold: boolean
+  siteItalic: boolean
+  siteUnderline: boolean
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -2501,10 +2508,17 @@ function App() {
         selected?.id,
         DOMParser,
       )
+      const siteSettings = getSiteNameSettings(config.rawConfig)
       viewPropertiesForm.setFieldsValue({
         bkcolor: getViewBackgroundInputColor(config.rawConfig, Math.max(index, 0)),
         viewTitleColor: titleStyle.color,
         viewTitleFontSize: titleStyle.fontSize,
+        siteName: siteSettings.name,
+        siteColor: siteSettings.color,
+        siteFontSize: siteSettings.fontSize,
+        siteBold: siteSettings.bold,
+        siteItalic: siteSettings.italic,
+        siteUnderline: siteSettings.underline,
       })
     } catch (error) {
       messageApi.error(`讀取 View 屬性失敗：${error instanceof Error ? error.message : String(error)}`)
@@ -2554,14 +2568,30 @@ function App() {
         DOMParser,
         (doc) => new XMLSerializer().serializeToString(doc),
       )
-      if (!backgroundResult.changed && !titleResult.changed) {
+      const siteResult = updateAllSiteNameLabels(
+        titleResult.config,
+        {
+          name: values.siteName ?? '',
+          color: values.siteColor,
+          fontSize: values.siteFontSize,
+          bold: values.siteBold,
+          italic: values.siteItalic,
+          underline: values.siteUnderline,
+        },
+        {
+          Parser: DOMParser,
+          serialize: (doc) => new XMLSerializer().serializeToString(doc),
+          crypto: window.crypto,
+        },
+      )
+      if (!backgroundResult.changed && !titleResult.changed && !siteResult.changed) {
         setViewSettingsOpen(false)
         messageApi.info('View 屬性沒有變更。')
         return
       }
       dispatchEditor({
         type: 'document-edit',
-        document: parseUpdatedConfig(titleResult.config, config),
+        document: parseUpdatedConfig(siteResult.config, config),
         models,
       })
       setViewSettingsOpen(false)
@@ -3207,6 +3237,36 @@ function App() {
           >
             <InputNumber min={8} max={72} step={1} aria-label="View 名稱標籤大小" />
           </Form.Item>
+          <Form.Item
+            label="案場名稱（顯示於每個 View 右下角）"
+            name="siteName"
+            extra="留空則移除所有 View 的案場名稱標籤；設定會保存於 extra.fuxaSetting.siteNameLabel，避免重複建立。"
+          >
+            <Input aria-label="案場名稱" allowClear />
+          </Form.Item>
+          <Form.Item label="案場名稱顏色" name="siteColor" rules={[{ required: true }]}>
+            <Input type="color" aria-label="案場名稱顏色" />
+          </Form.Item>
+          <Form.Item
+            label="案場名稱大小"
+            name="siteFontSize"
+            rules={[
+              { required: true, type: 'number', min: 8, max: 72, message: '請輸入 8–72。' },
+            ]}
+          >
+            <InputNumber min={8} max={72} step={1} aria-label="案場名稱大小" />
+          </Form.Item>
+          <Space size="large">
+            <Form.Item label="粗體" name="siteBold" valuePropName="checked">
+              <Switch aria-label="案場名稱粗體" />
+            </Form.Item>
+            <Form.Item label="斜體" name="siteItalic" valuePropName="checked">
+              <Switch aria-label="案場名稱斜體" />
+            </Form.Item>
+            <Form.Item label="底線" name="siteUnderline" valuePropName="checked">
+              <Switch aria-label="案場名稱底線" />
+            </Form.Item>
+          </Space>
         </Form>
               </>,
             },
