@@ -43,6 +43,27 @@ import {
 } from './domain/config/parseFuxaConfig'
 import { normalizeProjectName } from './domain/config/serialization'
 import { isRecord } from './domain/shared/isRecord'
+import { parseUpdatedConfig } from './app/lib/parseUpdatedConfig'
+import { measureSvgBounds } from './app/lib/measureSvgBounds'
+import {
+  buildDuplicateTagGroups,
+  buildTagViewOptions,
+} from './domain/tags/tagViews'
+import {
+  readAlarmInversionByTag,
+  readAlarmSettingsByTag,
+} from './domain/alarms/readTagAlarms'
+import {
+  readDeviceFormValues,
+  readManagedDeviceTags,
+  readModbusDevices,
+  type ModbusDeviceFormValues,
+} from './domain/devices/readModbusDevices'
+import {
+  findEditableTargetView,
+  planComponentsMove,
+} from './features/views/moveComponentsBetweenViews'
+import { findTagReferences } from './features/devices/findTagReferences'
 import {
   applyTagAlarms,
   updateExistingTagAlarmTexts,
@@ -87,7 +108,6 @@ import {
 import { groupByFloor, normalizeFloor } from './domain/tags/floor'
 import {
   deviceTagsNeedAddressSorting,
-  sortTagEntriesByAddress,
 } from './domain/devices/deviceTagAddressSort'
 import { getIconAssets, getIconLibrary, MAX_MULTI_STATE_COUNT } from './domain/icons/iconLibrary'
 import type { MultiStateIconSet } from './domain/icons/iconLibrary'
@@ -140,7 +160,7 @@ import {
 import type { FuxaViewSummary, ParsedFuxaConfig } from './domain/config/types'
 import type { ExportViewModel } from './domain/config/prepareFuxaConfigExport'
 import type { GeneratedComponent } from './domain/svg/validateGeneratedView'
-import type { Bounds, FloorLayoutComponent } from './domain/layout/floorLayout'
+import type { FloorLayoutComponent } from './domain/layout/floorLayout'
 import type { GridSettings } from './domain/config/types'
 import type { IndexedTag } from './domain/tags/index'
 import {
@@ -170,16 +190,6 @@ interface PreviewSnapshot {
   config: ParsedFuxaConfig
   models: Map<string, ExportViewModel>
   viewId: string
-}
-
-interface ModbusDeviceFormValues {
-  [key: string]: unknown
-  name: string
-  address: string
-  addressCount: number
-  slaveid: number
-  enabled: boolean
-  polling: number
 }
 
 type ModbusTagFormValues = DeviceTagUpdate
@@ -228,18 +238,6 @@ function getSelectedView(
   return views.find((view) => (view.id || view.key) === selectedViewId) ?? views[0]
 }
 
-function parseUpdatedConfig(
-  rawConfig: ParsedFuxaConfig['rawConfig'],
-  source: ParsedFuxaConfig,
-): ParsedFuxaConfig {
-  const parsed = parseFuxaConfig(JSON.stringify(rawConfig))
-  return {
-    ...parsed,
-    originalText: source.originalText,
-    sourceFormat: source.sourceFormat,
-  }
-}
-
 function createPreviewState(
   config: ParsedFuxaConfig,
   view: FuxaViewSummary,
@@ -257,36 +255,6 @@ function createPreviewState(
       height: view.height || 768,
       error: error instanceof Error ? error.message : String(error),
     }
-  }
-}
-
-function measureSvgBounds(doc: XMLDocument, id: string): Bounds {
-  const node = Array.from(doc.getElementsByTagName('*'))
-    .find((element) => element.getAttribute('id') === id)
-  if (!node) throw new Error('找不到對應的 SVG 元件。')
-
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-  const sourceRoot = doc.documentElement
-  svg.setAttribute('viewBox', sourceRoot.getAttribute('viewBox') || '0 0 1000 1000')
-  svg.setAttribute('preserveAspectRatio', 'none')
-  svg.setAttribute('width', '1000')
-  svg.setAttribute('height', '1000')
-  svg.setAttribute('visibility', 'hidden')
-  const clone = node.cloneNode(true) as SVGGraphicsElement
-  if (clone.getAttribute('data-fuxa-floor-layout') === 'floor-layout-v1') {
-    clone.removeAttribute('transform')
-  }
-  svg.append(clone)
-  document.body.append(svg)
-  try {
-    const bounds = clone.getBBox()
-    if (![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)
-        || bounds.width <= 0 || bounds.height <= 0) {
-      throw new Error('無法取得有效的 SVG 外框。')
-    }
-    return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }
-  } finally {
-    svg.remove()
   }
 }
 
@@ -460,55 +428,14 @@ function App() {
     () => config ? [...buildTagIndex(config.rawConfig).values()] : [],
     [config],
   )
-  const duplicateTagGroups = useMemo(() => {
-    const names = new Map<string, typeof tags>()
-    for (const tag of tags) {
-      const name = tag.name.trim().toLocaleLowerCase()
-      if (!name) continue
-      const group = names.get(name) ?? []
-      group.push(tag)
-      names.set(name, group)
-    }
-    return [...names.values()].filter((group) => group.length > 1)
-  }, [tags])
+  const duplicateTagGroups = useMemo(() => buildDuplicateTagGroups(tags), [tags])
   const duplicateTagIds = useMemo(() => new Set(
     duplicateTagGroups.flatMap((group) => group.map((tag) => tag.id)),
   ), [duplicateTagGroups])
-  const tagViewOptions = useMemo(() => {
-    const optionsByTag = new Map<string, FuxaViewSummary[]>()
-    if (!config) return optionsByTag
-    const addTagView = (tagId: string, viewId: string, viewName?: string) => {
-      const view = config.views.find((candidate) => candidate.id === viewId)
-        ?? { id: viewId, key: viewId, name: viewName || viewId }
-      const options = optionsByTag.get(tagId) ?? []
-      if (!options.some((candidate) => candidate.id === viewId)) options.push(view)
-      optionsByTag.set(tagId, options)
-    }
-    if (Array.isArray(config.rawConfig.hmi.views)) {
-      for (const rawView of config.rawConfig.hmi.views) {
-        if (!isRecord(rawView) || !isRecord(rawView.items)) continue
-        const viewId = typeof rawView.id === 'string' ? rawView.id : ''
-        if (!viewId) continue
-        for (const item of Object.values(rawView.items)) {
-          if (!isRecord(item) || !isRecord(item.property)) continue
-          const tagId = item.property.variableId
-          if (typeof tagId === 'string') {
-            addTagView(tagId, viewId, String(rawView.name || viewId))
-          }
-        }
-      }
-    }
-    for (const [viewId, model] of models) {
-      const viewName = config.views.find((candidate) => candidate.id === viewId)?.name
-      for (const component of model.components) {
-        if (component.tagId) addTagView(component.tagId, viewId, viewName)
-        for (const binding of component.multiStateBindings ?? []) {
-          if (binding.tagId) addTagView(binding.tagId, viewId, viewName)
-        }
-      }
-    }
-    return optionsByTag
-  }, [config, models])
+  const tagViewOptions = useMemo(
+    () => config ? buildTagViewOptions(config, models) : new Map<string, FuxaViewSummary[]>(),
+    [config, models],
+  )
   const selectedAlarmTags = tagAlarmTagIds.flatMap((tagId) => {
     const tag = tags.find((candidate) => candidate.id === tagId)
     return tag ? [tag] : []
@@ -517,36 +444,10 @@ function App() {
     () => tags.filter((tag) => tagViewOptions.has(tag.id)),
     [tagViewOptions, tags],
   )
-  const alarmSettingsByTag = useMemo(() => {
-    const settingsByTag = new Map<string, { level: TagAlarmLevel; text: string }[]>()
-    const alarms = config?.rawConfig.alarms
-    if (!Array.isArray(alarms)) return settingsByTag
-
-    const levels: { key: TagAlarmLevel; label: string }[] = [
-      { key: 'highhigh', label: '高高' },
-      { key: 'high', label: '高' },
-      { key: 'low', label: '低' },
-      { key: 'info', label: '資訊' },
-    ]
-    for (const alarm of alarms) {
-      if (!isRecord(alarm) || !isRecord(alarm.property)
-          || typeof alarm.property.variableId !== 'string') continue
-      const tagId = alarm.property.variableId
-      const settings = levels.flatMap(({ key }) => {
-        const level = alarm[key]
-        return isRecord(level) && level.enabled === true
-          ? [{
-            level: key,
-            text: typeof level.text === 'string' ? level.text : '',
-          }]
-          : []
-      })
-      if (settings.length) {
-        settingsByTag.set(tagId, [...(settingsByTag.get(tagId) ?? []), ...settings])
-      }
-    }
-    return settingsByTag
-  }, [config])
+  const alarmSettingsByTag = useMemo(
+    () => readAlarmSettingsByTag(config?.rawConfig.alarms),
+    [config],
+  )
   const tagAlarmVoiceRepeats = useMemo(
     () => (config ? getVoiceRepeatSettings(config.rawConfig) : {
       highhigh: 1,
@@ -556,28 +457,10 @@ function App() {
     }),
     [config],
   )
-  const alarmInversionByTag = useMemo(() => {
-    const inversionByTag = new Map<string, boolean>()
-    const alarms = config?.rawConfig.alarms
-    if (!Array.isArray(alarms)) return inversionByTag
-
-    for (const alarm of alarms) {
-      if (!isRecord(alarm) || !isRecord(alarm.property)
-          || typeof alarm.property.variableId !== 'string') continue
-      const activeLevels = (['highhigh', 'high', 'low', 'info'] as const)
-        .flatMap((key) => {
-          const level = alarm[key]
-          return isRecord(level) && level.enabled === true ? [level] : []
-        })
-      if (activeLevels.length) {
-        inversionByTag.set(
-          alarm.property.variableId,
-          activeLevels.every((level) => level.min === 0 && level.max === 0),
-        )
-      }
-    }
-    return inversionByTag
-  }, [config])
+  const alarmInversionByTag = useMemo(
+    () => readAlarmInversionByTag(config?.rawConfig.alarms),
+    [config],
+  )
   const filteredAlarmTags = useMemo(() => {
     const query = tagAlarmSearch.trim().toLocaleLowerCase()
     return selectableAlarmTags.filter((tag) => (
@@ -617,34 +500,15 @@ function App() {
   )
   const editingMultiStateIcon = iconLibrary.find((icon): icon is MultiStateIconSet =>
     icon.type === 'multi-state' && icon.id === editingMultiStateIconId)
-  const modbusDevices = useMemo(() => (
-    config
-      ? Object.entries(config.rawConfig.devices)
-        .filter((entry): entry is [string, Record<string, unknown>] => (
-          isRecord(entry[1]) && entry[1].type === 'ModbusTCP'
-        ))
-        .map(([id, record]) => ({ id, record }))
-      : []
-  ), [config])
+  const modbusDevices = useMemo(
+    () => config ? readModbusDevices(config.rawConfig.devices) : [],
+    [config],
+  )
   const managedDevice = modbusDevices.find((device) => device.id === managedDeviceId)
-  const managedDeviceTags = useMemo(() => (
-    managedDevice && isRecord(managedDevice.record.tags)
-      ? sortTagEntriesByAddress(Object.entries(managedDevice.record.tags))
-        .filter((entry): entry is [string, Record<string, unknown>] => isRecord(entry[1]))
-        .map(([key, record]) => ({
-          id: typeof record.id === 'string' ? record.id : key,
-          name: typeof record.name === 'string' ? record.name : key,
-          type: typeof record.type === 'string' ? record.type : '',
-          address: record.address,
-          memaddress: typeof record.memaddress === 'string' ? record.memaddress : '',
-          description: typeof record.description === 'string' ? record.description : '',
-          floor: isRecord(record.extra) && typeof record.extra.floor === 'string'
-            ? record.extra.floor
-            : '',
-          record,
-        }))
-      : []
-  ), [managedDevice])
+  const managedDeviceTags = useMemo(
+    () => managedDevice ? readManagedDeviceTags(managedDevice.record) : [],
+    [managedDevice],
+  )
   const autoFilledManagedDeviceTags = managedDeviceTags.filter(
     (tag) => tag.description === AUTO_FILLED_TAG_DESCRIPTION,
   )
@@ -1060,10 +924,9 @@ function App() {
   }
 
   function openComponentMoveDialog(viewId: string, componentKey: string) {
-    const targetView = config?.views.find((view) => {
-      const id = view.id || view.key
-      return id !== viewId && models.has(id)
-    })
+    const targetView = config
+      ? findEditableTargetView(config.views, viewId, models)
+      : undefined
     if (!targetView) {
       messageApi.info('沒有其他可編輯的 View 可移動元件。')
       return
@@ -1073,10 +936,9 @@ function App() {
   }
 
   function openBatchMoveDialog(viewId: string) {
-    const targetView = config?.views.find((view) => {
-      const id = view.id || view.key
-      return id !== viewId && models.has(id)
-    })
+    const targetView = config
+      ? findEditableTargetView(config.views, viewId, models)
+      : undefined
     if (!targetView) {
       messageApi.info('沒有其他可編輯的 View 可移動元件。')
       return
@@ -1092,54 +954,28 @@ function App() {
     targetViewId: string,
   ): boolean {
     if (!config || !componentKeys.length || !targetViewId) return false
-    const sourceModel = models.get(sourceViewId)
-    const targetModel = models.get(targetViewId)
-    if (!sourceModel || !targetModel || sourceViewId === targetViewId) {
-      messageApi.error('來源或目標 View 不可編輯，無法移動元件。')
+    const plan = planComponentsMove({
+      models,
+      modifiedViewIds,
+      sourceViewId,
+      componentKeys,
+      targetViewId,
+      randomValues: window.crypto,
+    })
+    if (!plan.ok) {
+      messageApi.error(plan.error)
       return false
     }
-    const keySet = new Set(componentKeys)
-    const components = sourceModel.components.filter((item) =>
-      keySet.has(item.key) && item.managed !== false)
-    if (components.length !== keySet.size) {
-      messageApi.error('部分選取項目已不存在或不是可移動的受管理元件。')
-      return false
-    }
-
-    const usedKeys = new Set(
-      [...models.values()].flatMap((model) => model.components.map((item) => item.key)),
-    )
-    let sequence = targetModel.components.reduce((maximum, item) => {
-      if (item.managed === false || !Number.isSafeInteger(item.seq)) return maximum
-      return Math.max(maximum, item.seq ?? 0)
-    }, 0)
-    const movedComponents = components.map((component) => ({
-      ...component,
-      key: `moved-${generateId('component', usedKeys, window.crypto)}`,
-      seq: ++sequence,
-    }))
-    const nextModels = new Map(models)
-    nextModels.set(sourceViewId, {
-      ...sourceModel,
-      components: sourceModel.components.filter((item) => !keySet.has(item.key)),
-    })
-    nextModels.set(targetViewId, {
-      ...targetModel,
-      components: [...targetModel.components, ...movedComponents],
-    })
-    const nextModifiedViewIds = new Set(modifiedViewIds)
-    nextModifiedViewIds.add(sourceViewId)
-    nextModifiedViewIds.add(targetViewId)
     dispatchEditor({
       type: 'document-edit',
       document: config,
-      models: nextModels,
-      modifiedViewIds: nextModifiedViewIds,
+      models: plan.models,
+      modifiedViewIds: plan.modifiedViewIds,
     })
     setSelectedViewId(targetViewId)
     const targetName = config.views.find((view) =>
       (view.id || view.key) === targetViewId)?.name || targetViewId
-    messageApi.success(`已將 ${components.length} 個元件移動至 View「${targetName}」。`)
+    messageApi.success(`已將 ${plan.movedCount} 個元件移動至 View「${targetName}」。`)
     return true
   }
 
@@ -2124,21 +1960,7 @@ function App() {
     if (firstDevice) {
       setDeviceManagerMode('edit')
       setManagedDeviceId(firstDevice.id)
-      deviceManagerForm.setFieldsValue({
-        name: typeof firstDevice.record.name === 'string' ? firstDevice.record.name : '',
-        address: isRecord(firstDevice.record.property)
-          && typeof firstDevice.record.property.address === 'string'
-          ? firstDevice.record.property.address
-          : '127.0.0.1:502',
-        addressCount: isRecord(firstDevice.record.property)
-          ? Number(firstDevice.record.property.addressCount) || 0
-          : 0,
-        slaveid: isRecord(firstDevice.record.property)
-          ? Number(firstDevice.record.property.slaveid) || 1
-          : 1,
-        enabled: Boolean(firstDevice.record.enabled),
-        polling: Number(firstDevice.record.polling) || 200,
-      })
+      deviceManagerForm.setFieldsValue(readDeviceFormValues(firstDevice.record))
     } else {
       setDeviceManagerMode('create')
       setManagedDeviceId('')
@@ -2161,21 +1983,7 @@ function App() {
     setManagedDeviceId(device.id)
     setDeviceTagSearch('')
     setSelectedDeviceTagIds([])
-    deviceManagerForm.setFieldsValue({
-      name: typeof device.record.name === 'string' ? device.record.name : '',
-      address: isRecord(device.record.property)
-        && typeof device.record.property.address === 'string'
-        ? device.record.property.address
-        : '127.0.0.1:502',
-      addressCount: isRecord(device.record.property)
-        ? Number(device.record.property.addressCount) || 0
-        : 0,
-      slaveid: isRecord(device.record.property)
-        ? Number(device.record.property.slaveid) || 1
-        : 1,
-      enabled: Boolean(device.record.enabled),
-      polling: Number(device.record.polling) || 200,
-    })
+    deviceManagerForm.setFieldsValue(readDeviceFormValues(device.record))
   }
 
   function openDeviceTagEditor(tagId: string) {
@@ -2269,13 +2077,7 @@ function App() {
 
   function handleDeleteDeviceTag(tagId: string) {
     if (!config || !managedDevice) return
-    const referencedModels = [...models.entries()].flatMap(([viewId, model]) => {
-      const components = model.components.filter((component) => (
-        component.tagId === tagId
-        || component.multiStateBindings?.some((binding) => binding.tagId === tagId)
-      ))
-      return components.length ? [{ viewId, model, components }] : []
-    })
+    const referencedModels = findTagReferences(models, new Set([tagId]))
     const readonlyReferences = referencedModels.flatMap(({ viewId, components }) => {
       const count = components.filter((component) => component.managed === false).length
       if (!count) return []
@@ -2333,13 +2135,7 @@ function App() {
   function handleDeleteAutoFilledDeviceTags() {
     if (!config || !managedDevice || !autoFilledManagedDeviceTags.length) return
     const autoFilledTagIds = new Set(autoFilledManagedDeviceTags.map((tag) => tag.id))
-    const referencedModels = [...models.entries()].flatMap(([viewId, model]) => {
-      const components = model.components.filter((component) => (
-        autoFilledTagIds.has(component.tagId)
-        || component.multiStateBindings?.some((binding) => autoFilledTagIds.has(binding.tagId))
-      ))
-      return components.length ? [{ viewId, model, components }] : []
-    })
+    const referencedModels = findTagReferences(models, autoFilledTagIds)
     const readonlyReferences = referencedModels.flatMap(({ viewId, components }) => {
       const count = components.filter((component) => component.managed === false).length
       if (!count) return []
