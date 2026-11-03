@@ -358,6 +358,7 @@ function App() {
   const [deviceTagMoveOpen, setDeviceTagMoveOpen] = useState(false)
   const [deviceTagMoveTargetId, setDeviceTagMoveTargetId] = useState('')
   const [editingDeviceTagId, setEditingDeviceTagId] = useState('')
+  const [deviceAddressShiftStep, setDeviceAddressShiftStep] = useState<number | null>(1)
   const [deviceTagDialogOpen, setDeviceTagDialogOpen] = useState(false)
   const [tagAlarmTagIds, setTagAlarmTagIds] = useState<string[]>([])
   const [tagAlarmInversionDrafts, setTagAlarmInversionDrafts] = useState<Record<string, boolean>>({})
@@ -2427,8 +2428,13 @@ function App() {
     }
   }
 
-  function handleShiftDeviceAddresses(delta: 1 | -1) {
+  function handleShiftDeviceAddresses(direction: 1 | -1) {
     if (!config || !managedDevice) return
+    if (!deviceAddressShiftStep || !Number.isSafeInteger(deviceAddressShiftStep) || deviceAddressShiftStep < 1) {
+      messageApi.error('調整數值必須是大於 0 的整數。')
+      return
+    }
+    const delta = direction * deviceAddressShiftStep
     try {
       const shifted = shiftModbusDeviceTags(config.rawConfig, managedDeviceId, delta)
       if (!shifted.count) {
@@ -2437,8 +2443,9 @@ function App() {
           : '此設備沒有可調整的數字 address。')
         return
       }
+      const deltaLabel = delta > 0 ? `+${delta}` : String(delta)
       if (!window.confirm(
-        `確定將設備「${managedDevice.record.name || managedDeviceId}」的 ${shifted.count} 個 Tag address 全部 ${delta > 0 ? '+1' : '-1'}？\n此操作跨所有 memaddress 區段；沒有 address 的 Tag 不變。`,
+        `確定將設備「${managedDevice.record.name || managedDeviceId}」的 ${shifted.count} 個 Tag address 全部 ${deltaLabel}？\n此操作跨所有 memaddress 區段；沒有 address 的 Tag 不變。`,
       )) return
       dispatchEditor({
         type: 'document-edit',
@@ -3815,8 +3822,21 @@ function App() {
                   : ' · 尚無可補位的起始 Tag'}
             </Text>
             <Space wrap>
-              <Button onClick={() => handleShiftDeviceAddresses(1)}>Tag address 全部 +1</Button>
-              <Button onClick={() => handleShiftDeviceAddresses(-1)}>Tag address 全部 -1</Button>
+              <Button onClick={() => handleShiftDeviceAddresses(1)}>
+                Tag address 全部 +{deviceAddressShiftStep ?? ''}
+              </Button>
+              <Button onClick={() => handleShiftDeviceAddresses(-1)}>
+                Tag address 全部 -{deviceAddressShiftStep ?? ''}
+              </Button>
+              <InputNumber
+                aria-label="Tag address 調整數值"
+                min={1}
+                max={65535}
+                precision={0}
+                value={deviceAddressShiftStep}
+                onChange={setDeviceAddressShiftStep}
+                style={{ width: 90 }}
+              />
               <Button
                 onClick={handleFillDeviceAddresses}
                 disabled={!addressFillPlan?.hasAnchor || addressFillPlan.missing.length === 0}
@@ -3975,7 +3995,7 @@ function App() {
           </Form.Item>
         </Form>
         <Text type="secondary">
-          儲存 addressCount 時會以目前最小有效位址為起點，複製其 Tag 範本補齊相同 memaddress 區段的缺漏；位址 +1/-1 會先檢查整台設備的所有 Tag，超出 0–65535 時整批取消。
+          儲存 addressCount 時會以目前最小有效位址為起點，複製其 Tag 範本補齊相同 memaddress 區段的缺漏；位址 +/- 調整會先檢查整台設備的所有 Tag，超出 0–65535 時整批取消。
         </Text>
               </>,
             },

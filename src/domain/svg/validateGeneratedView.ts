@@ -153,6 +153,7 @@ function validateManagedComponent(
   doc: XMLDocument,
   tags: Map<string, FloorTag> | Record<string, FloorTag>,
   component: GeneratedComponent,
+  expectedShape: { width: number; height: number } | undefined,
   iconLibrary?: readonly IconLibraryEntry[],
 ): void {
   const normalNode = findSvgElementById(doc, component.shapeId)
@@ -223,8 +224,8 @@ function validateManagedComponent(
         || !foreignObject
         || !(foreignObject.getAttribute('id') ?? '').startsWith('H-HXT_')
         || !(foreignObject.children[0]?.getAttribute('id') ?? '').startsWith('T-HXT_')
-        || foreignObject.getAttribute('width') !== '50'
-        || foreignObject.getAttribute('height') !== '28') {
+        || foreignObject.getAttribute('width') !== String(expectedShape?.width)
+        || foreignObject.getAttribute('height') !== String(expectedShape?.height)) {
       throw new Error(`元件「${component.label || component.shapeId}」的 Coil Switch 或 click Tag 綁定不正確。`)
     }
   } else if (tagProperty(items[component.shapeId]).variableId !== component.tagId) {
@@ -441,7 +442,10 @@ export function validateGeneratedView(
       validateExistingTag(items, doc, component, layout.placements)
       continue
     }
-    validateManagedComponent(view, items, doc, options.tags, component, options.iconLibrary)
+    const expectedShape = layout.placements.find(
+      ({ component: placed }) => placed.key === component.key,
+    )?.placement.shape
+    validateManagedComponent(view, items, doc, options.tags, component, expectedShape, options.iconLibrary)
   }
   validateFloorArtifacts(view, items, doc, model, layout.sections)
   validateDeletedComponents(view, items, doc, model)

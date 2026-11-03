@@ -163,6 +163,17 @@ describe('Modbus TCP domain', () => {
     expect(() => shiftModbusTcpAddresses(outOfBounds, 1)).toThrow('未修改任何 Tag')
     expect(outOfBounds.tags.first.address).toBe(8)
     expect(outOfBounds.tags.last.address).toBe(65535)
+
+    const stepped = {
+      type: 'ModbusTCP',
+      tags: { a: { address: 10 }, b: { address: '20' } },
+    }
+    expect(shiftModbusTcpAddresses(stepped, 5)).toEqual({ count: 2, skippedInvalid: 0 })
+    expect(stepped.tags.a.address).toBe(15)
+    expect(stepped.tags.b.address).toBe('25')
+    expect(shiftModbusTcpAddresses(stepped, -10)).toEqual({ count: 2, skippedInvalid: 0 })
+    expect(stepped.tags.a.address).toBe(5)
+    expect(() => shiftModbusTcpAddresses(stepped, 0)).toThrow('非零整數')
   })
 })
 

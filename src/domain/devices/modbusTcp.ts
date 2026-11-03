@@ -162,7 +162,7 @@ export function getModbusTcpAddressShiftPlan(
   if (!isRecord(device) || device.type !== 'ModbusTCP') {
     throw new Error('無效的 ModbusTCP 設備。')
   }
-  if (delta !== 1 && delta !== -1) throw new Error('位址調整量只能是 +1 或 -1。')
+  if (!Number.isSafeInteger(delta) || delta === 0) throw new Error('位址調整量必須是非零整數。')
   const tags = isRecord(device.tags) ? Object.values(device.tags) : []
   const updates: ModbusAddressShiftPlan['updates'] = []
   let skippedInvalid = 0
@@ -178,7 +178,7 @@ export function getModbusTcpAddressShiftPlan(
     const nextAddress = address + delta
     if (nextAddress < 0 || nextAddress > 65535) {
       throw new Error(
-        `無法將本站所有 Tag address ${delta > 0 ? '+1' : '-1'}：位址 ${address} 超出 Modbus 位址範圍 0–65535。未修改任何 Tag。`,
+        `無法將本站所有 Tag address ${delta > 0 ? `+${delta}` : delta}：位址 ${address} 超出 Modbus 位址範圍 0–65535。未修改任何 Tag。`,
       )
     }
     updates.push({ tag, nextAddress })

@@ -290,6 +290,46 @@ describe('validateGeneratedView', () => {
     )).toThrow('Coil Switch 或 click Tag 綁定不正確。')
   })
 
+  it('accepts a scaled Coil Switch whose foreignObject size matches its placement', () => {
+    const buildDoc = (width: string, height: string) => {
+      const doc = validDocument()
+      const shape = doc.documentElement.children[0]?.children[0]
+      if (!shape) throw new Error('Missing test shape')
+      shape.attributes.type = 'svg-ext-html_switch'
+      const foreignObject = new TestElement('foreignObject', { id: 'H-HXT_a', width, height })
+      foreignObject.appendChild(new TestElement('LABEL', { id: 'T-HXT_b' }))
+      shape.appendChild(foreignObject)
+      return doc
+    }
+    const items = validItems()
+    items['shape-id'] = {
+      id: 'shape-id',
+      type: 'svg-ext-html_switch',
+      property: {
+        variableId: null,
+        events: [{
+          type: 'click',
+          action: 'onToggleValue',
+          actoptions: { variable: { variableId: 'tag-1' } },
+        }],
+      },
+    }
+    const baseModel = makeModel([{ ...managedComponent(), template: 'switch' }])
+    const model = { ...baseModel, grid: { ...baseModel.grid, iconScale: 150 } }
+    const tags = { 'tag-1': { floor: '1F', type: 'Bool', memaddress: '000000' } }
+
+    expect(() => validateGeneratedView(
+      makeView(items),
+      model,
+      { Parser: parserFor(buildDoc('75', '42')), tags },
+    )).not.toThrow()
+    expect(() => validateGeneratedView(
+      makeView(items),
+      model,
+      { Parser: parserFor(buildDoc('50', '28')), tags },
+    )).toThrow('Coil Switch 或 click Tag 綁定不正確。')
+  })
+
   it('accepts a consistent generated component with matching floor artifacts', () => {
     expect(() => validateGeneratedView(
       makeView(validItems()),
