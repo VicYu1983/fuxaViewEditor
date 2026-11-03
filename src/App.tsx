@@ -19,7 +19,6 @@ import {
   InputNumber,
   Layout,
   Modal,
-  Radio,
   Select,
   Space,
   Tag,
@@ -89,6 +88,7 @@ import {
   type TagAddTabHandle,
 } from './ui/device/TagAddTab'
 import { PreviewPanel } from './ui/preview/PreviewPanel'
+import { FloorsTab } from './ui/device/FloorsTab'
 import { ViewSidebar } from './ui/view/ViewSidebar'
 import { ViewNameDialog } from './ui/view/ViewNameDialog'
 import {
@@ -115,7 +115,6 @@ import {
   isAutoFilledTag,
   isCoilTag,
 } from './domain/tags/index'
-import { groupByFloor, normalizeFloor } from './domain/tags/floor'
 import {
   deviceTagsNeedAddressSorting,
 } from './domain/devices/deviceTagAddressSort'
@@ -254,10 +253,7 @@ function App() {
   const [projectManagerTab, setProjectManagerTab] = useState<
     'devices' | 'floors' | 'alarms' | 'tag-create' | 'tag-add'
   >('devices')
-  const [floorSearch, setFloorSearch] = useState('')
-  const [floorDisplayMode, setFloorDisplayMode] = useState<'group' | 'list'>('group')
-  const [floorSelection, setFloorSelection] = useState<Set<string>>(new Set())
-  const [bulkFloor, setBulkFloor] = useState('')
+  const [floorSession, setFloorSession] = useState(0)
   const [iconLibraryOpen, setIconLibraryOpen] = useState(false)
   const [editingMultiStateIconId, setEditingMultiStateIconId] = useState('')
   const [multiStateAddDrafts, setMultiStateAddDrafts] = useState<
@@ -442,22 +438,6 @@ function App() {
     : null
   const batchableTags = useMemo(() => tags.filter((tag) => !isAutoFilledTag(tag)), [tags])
   const usedTagIds = new Set(selectedModel?.components.map((component) => component.tagId) ?? [])
-  const filteredFloorTags = useMemo(() => {
-    const query = floorSearch.trim().toLocaleLowerCase()
-    return tags.filter((tag) => (
-      `${tag.deviceName} ${tag.name} ${tag.floor} ${tag.type} ${tag.id} ${String(tag.record.address ?? '')}`
-        .toLocaleLowerCase()
-        .includes(query)
-    ))
-  }, [floorSearch, tags])
-  const floorTagGroups = useMemo(() => floorDisplayMode === 'group'
-    ? groupByFloor(filteredFloorTags, (tag) => tag.floor)
-    : [{ floor: '', title: '', items: filteredFloorTags }],
-  [filteredFloorTags, floorDisplayMode])
-  const allFloors = useMemo(
-    () => [...new Set(tags.map((tag) => tag.floor).filter(Boolean))],
-    [tags],
-  )
   const preview = previewSnapshot && selectedView
     && previewSnapshot.viewId === selectedView.id
     ? previewSnapshot.result
@@ -1091,10 +1071,7 @@ function App() {
     setProjectManagerTab('devices')
     setDeviceTagSearch('')
     setSelectedDeviceTagIds([])
-    setFloorSearch('')
-    setFloorSelection(new Set())
-    setBulkFloor('')
-    setFloorDisplayMode('group')
+    setFloorSession((value) => value + 1)
     const firstDevice = modbusDevices[0]
     if (firstDevice) {
       setDeviceManagerMode('edit')
@@ -1464,17 +1441,6 @@ function App() {
     }
   }
 
-  function toggleVisibleFloorTags(checked: boolean) {
-    setFloorSelection((current) => {
-      const next = new Set(current)
-      for (const tag of filteredFloorTags) {
-        if (checked) next.add(tag.id)
-        else next.delete(tag.id)
-      }
-      return next
-    })
-  }
-
   function applyFloorChange(tagIds: readonly string[], value: string) {
     if (!config || !tagIds.length) return
     try {
@@ -1493,15 +1459,6 @@ function App() {
       const detail = getErrorMessage(error)
       messageApi.error(`更新 Tag 樓層失敗：${detail}`)
     }
-  }
-
-  function handleApplyBulkFloor() {
-    if (!floorSelection.size) {
-      messageApi.warning('請先選取要設定樓層的 Tag。')
-      return
-    }
-    applyFloorChange([...floorSelection], bulkFloor)
-    setBulkFloor('')
   }
 
   function openFloorFrameDialog() {
@@ -2401,113 +2358,12 @@ function App() {
             {
               key: 'floors',
               label: '樓層管理',
-              children: <>
-        <Input
-          aria-label="搜尋樓層 Tag"
-          allowClear
-          placeholder="搜尋設備、Tag、型別、ID 或樓層"
-          value={floorSearch}
-          onChange={(event) => setFloorSearch(event.target.value)}
-          style={{ margin: '12px 0' }}
-        />
-        <div className="floor-manager-toolbar">
-          <Radio.Group
-            aria-label="樓層顯示方式"
-            optionType="button"
-            buttonStyle="solid"
-            value={floorDisplayMode}
-            onChange={(event) => setFloorDisplayMode(event.target.value)}
-            options={[
-              { label: '依樓層分組', value: 'group' },
-              { label: '平面清單', value: 'list' },
-            ]}
-          />
-          <Text type="secondary">{tags.length} 個 Tag · 已選 {floorSelection.size} 個</Text>
-        </div>
-        <div className="floor-bulk-toolbar">
-          <Checkbox
-            checked={filteredFloorTags.length > 0
-              && filteredFloorTags.every((tag) => floorSelection.has(tag.id))}
-            indeterminate={filteredFloorTags.some((tag) => floorSelection.has(tag.id))
-              && !filteredFloorTags.every((tag) => floorSelection.has(tag.id))}
-            disabled={filteredFloorTags.length === 0}
-            onChange={(event) => toggleVisibleFloorTags(event.target.checked)}
-          >
-            全選可見 Tag
-          </Checkbox>
-          <Input
-            aria-label="批次設定樓層"
-            list="known-floor-options"
-            placeholder="輸入或選擇樓層"
-            value={bulkFloor}
-            onChange={(event) => setBulkFloor(event.target.value)}
-            style={{ maxWidth: 220 }}
-          />
-          <datalist id="known-floor-options">
-            {allFloors.map((floor) => <option key={floor} value={floor} />)}
-          </datalist>
-          <Button
-            type="primary"
-            disabled={!floorSelection.size}
-            onClick={handleApplyBulkFloor}
-          >
-            套用至選取項目
-          </Button>
-        </div>
-        <div className="floor-tag-list" role="group" aria-label="Tag 樓層清單">
-          {filteredFloorTags.length ? floorTagGroups.map((group) => (
-            <section className="floor-tag-group" key={group.floor || 'all'}>
-              {group.title && (
-                <div className="floor-tag-group-title">
-                  {group.title} · {group.items.length} 個 Tag
-                </div>
-              )}
-              {group.items.map((tag) => (
-                <div className="floor-tag-row" key={tag.id}>
-                  <Checkbox
-                    aria-label={`選取 ${tag.deviceName}／${tag.name}`}
-                    checked={floorSelection.has(tag.id)}
-                    onChange={(event) => {
-                      setFloorSelection((current) => {
-                        const next = new Set(current)
-                        if (event.target.checked) next.add(tag.id)
-                        else next.delete(tag.id)
-                        return next
-                      })
-                    }}
-                  />
-                  <span className="floor-tag-name" title={tag.name}>{tag.name}</span>
-                  <Text className="floor-tag-device" type="secondary" title={tag.deviceName}>
-                    {tag.deviceName}
-                  </Text>
-                  <Text
-                    className="floor-tag-address"
-                    type="secondary"
-                    title={`Address: ${String(tag.record.address ?? '未設定')}`}
-                  >
-                    Address: {String(tag.record.address ?? '未設定')}
-                  </Text>
-                  <Input
-                    aria-label={`${tag.name} 的樓層`}
-                    key={`${tag.id}-${tag.floor}`}
-                    defaultValue={tag.floor}
-                    placeholder="未設定樓層"
-                    onPressEnter={(event) => event.currentTarget.blur()}
-                    onBlur={(event) => {
-                      const value = normalizeFloor(event.currentTarget.value)
-                      if (value !== tag.floor || event.currentTarget.value.trim() !== value) {
-                        applyFloorChange([tag.id], value)
-                      }
-                    }}
-                  />
-                </div>
-              ))}
-            </section>
-          )) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="沒有符合條件的 Tag。" />
-          )}
-        </div>
-              </>,
+              children: <FloorsTab
+                key={floorSession}
+                tags={tags}
+                onApplyFloor={applyFloorChange}
+                onNotify={(type, content) => messageApi[type](content)}
+              />,
             },
           ]}
         />
