@@ -9,12 +9,10 @@ import {
 import {
   Alert,
   Button,
-  Card,
   Checkbox,
   ConfigProvider,
   Empty,
   Form,
-  Image,
   Input,
   InputNumber,
   Layout,
@@ -28,12 +26,8 @@ import {
 } from 'antd'
 import zhTW from 'antd/locale/zh_TW'
 import {
-  DeleteOutlined,
-  DownOutlined,
   RedoOutlined,
-  SwapOutlined,
   UndoOutlined,
-  UpOutlined,
 } from '@ant-design/icons'
 import {
   parseFuxaConfig,
@@ -91,6 +85,7 @@ import { FloorsTab } from './ui/device/FloorsTab'
 import { ViewSidebar } from './ui/view/ViewSidebar'
 import { ViewNameDialog } from './ui/view/ViewNameDialog'
 import { GridSettingsCard } from './ui/view/GridSettingsCard'
+import { ManagedComponentCard } from './ui/view/ManagedComponentCard'
 import {
   findLegacySwitchViewIds,
   needsVoiceBridgeUpdate,
@@ -160,16 +155,12 @@ import {
   removeIconLibraryEntry,
 } from './features/icons/iconLibraryManagement'
 import {
-  getComponentGraphicChoices,
-  selectedComponentGraphic,
   updateComponentGraphic,
 } from './features/icons/componentGraphics'
 import type { FuxaViewSummary, ParsedFuxaConfig } from './domain/config/types'
 import type { ExportViewModel } from './domain/config/prepareFuxaConfigExport'
 import type { GeneratedComponent } from './domain/svg/validateGeneratedView'
-import type { FloorLayoutComponent } from './domain/layout/floorLayout'
 import type { GridSettings } from './domain/config/types'
-import type { IndexedTag } from './domain/tags/index'
 import {
   createEditorHistoryState,
   editorHistoryReducer,
@@ -1806,27 +1797,6 @@ function App() {
     }
   }
 
-  function tagLabel(tag: IndexedTag): string {
-    return `${tag.deviceName} / ${tag.name} (${tag.type || '未設定型別'})`
-  }
-
-  function tagOptions(component: FloorLayoutComponent) {
-    const options = tags.map((tag) => ({
-      value: tag.id,
-      label: tagLabel(tag),
-      disabled: (component.template === 'icon-pair' || component.template === 'icon-multi')
-        && !['bool', 'boolean'].includes(tag.type.toLocaleLowerCase()),
-    }))
-    if (component.tagId && !tags.some((tag) => tag.id === component.tagId)) {
-      options.unshift({
-        value: component.tagId,
-        label: `Tag 不存在（${component.tagId}）`,
-        disabled: true,
-      })
-    }
-    return options
-  }
-
   const previewPanel = (
     <PreviewPanel
       preview={preview}
@@ -2385,295 +2355,34 @@ function App() {
                             onUpdateGrid={handleUpdateGrid}
                           />
                         )}
-                      <Card
-                        title="已管理元件"
-                        extra={(
-                          <Space>
-                            <Tag>
-                              {selectedModel?.components.filter(
-                                (component) => component.managed !== false,
-                              ).length ?? 0}
-                            </Tag>
-                            <Button
-                              size="small"
-                              disabled={!selectedModel || tags.length === 0}
-                              onClick={openBatchAddTab}
-                            >
-                              批次加入 Tag
-                            </Button>
-                            <Button
-                              size="small"
-                              disabled={
-                                !selectedView
-                                || !selectedModel?.components.some(
-                                  (component) => component.managed !== false,
-                                )
-                                || !config?.views.some((view) => {
-                                  const id = view.id || view.key
-                                  return id !== selectedView.id && models.has(id)
-                                })
-                              }
-                              onClick={() => selectedView && openBatchMoveDialog(selectedView.id)}
-                            >
-                              批次移動
-                            </Button>
-                          </Space>
-                        )}
-                        className="view-details"
-                      >
-                        {selectedModel && selectedModel.components.some(
+                      <ManagedComponentCard
+                        viewId={selectedView.id}
+                        managedCount={selectedModel?.components.filter(
                           (component) => component.managed !== false,
-                        ) ? (
-                          <div className="component-list">
-                            <Text type="secondary">
-                              使用箭頭調整同一樓層內的元件順序；排序會同步套用至預覽與匯出。
-                            </Text>
-                            {managedComponentGroups.map((group) => (
-                              <section className="managed-component-floor" key={group.floor}>
-                                <Text className="managed-component-floor-title" type="secondary">
-                                  {group.title}
-                                </Text>
-                                {group.items.map((component, index) => (
-                                <div
-                                  className={`component-row${
-                                    component.template === 'icon-multi' ? ' component-row-multi' : ''
-                                  }`}
-                                  key={component.key}
-                                >
-                                  <div className="component-meta">
-                                    <Input
-                                      aria-label="元件標籤"
-                                      value={component.label ?? ''}
-                                      placeholder="元件標籤"
-                                      maxLength={120}
-                                      onChange={(event) => handleUpdateComponent(
-                                        selectedView.id,
-                                        component.key,
-                                        { label: event.target.value },
-                                      )}
-                                    />
-                                    <Select
-                                      aria-label="綁定 Tag"
-                                      showSearch
-                                      optionFilterProp="label"
-                                      value={component.tagId || undefined}
-                                      placeholder="選擇 Tag"
-                                      options={tagOptions(component)}
-                                      onChange={(tagId: string) => {
-                                        if (component.template === 'icon-multi') {
-                                          const primaryBinding = component.multiStateBindings?.[0]
-                                          if (primaryBinding) {
-                                            handleUpdateMultiStateBinding(
-                                              selectedView.id,
-                                              component,
-                                              primaryBinding.stateKey,
-                                              tagId,
-                                            )
-                                            return
-                                          }
-                                        }
-                                        handleUpdateComponent(
-                                          selectedView.id,
-                                          component.key,
-                                          { tagId },
-                                        )
-                                      }}
-                                    />
-                                    <Select
-                                      aria-label="圖形"
-                                      value={selectedComponentGraphic(component, iconLibrary)}
-                                      options={getComponentGraphicChoices(
-                                        iconLibrary,
-                                        component,
-                                        ['bool', 'boolean'].includes(
-                                          tags.find((tag) => tag.id === component.tagId)
-                                            ?.type.toLocaleLowerCase() ?? '',
-                                        ),
-                                      )}
-                                      onChange={(value: string) => handleUpdateGraphic(
-                                        selectedView.id,
-                                        component,
-                                        value,
-                                      )}
-                                    />
-                                    {component.template === 'icon-pair' && (
-                                      <Checkbox
-                                        checked={Boolean(component.invertIconState)}
-                                        onChange={(event) => handleUpdateComponent(
-                                          selectedView.id,
-                                          component.key,
-                                          { invertIconState: event.target.checked },
-                                        )}
-                                      >
-                                        反轉狀態
-                                      </Checkbox>
-                                    )}
-                                    {component.template !== 'icon-pair'
-                                      && component.template !== 'icon-multi' && (
-                                      <Select
-                                        aria-label="顏色狀態"
-                                        value={component.palette === 'alarm' ? 'alarm' : 'normal'}
-                                        options={[
-                                          { value: 'normal', label: '一般狀態配色' },
-                                          { value: 'alarm', label: '告警狀態配色' },
-                                        ]}
-                                        onChange={(palette: 'normal' | 'alarm') => handleUpdateComponent(
-                                          selectedView.id,
-                                          component.key,
-                                          { palette },
-                                        )}
-                                      />
-                                    )}
-                                  </div>
-                                  {component.template === 'icon-multi' && (
-                                    <div className="multi-state-bindings">
-                                      <Text strong>多狀態 Tag 綁定</Text>
-                                      {!iconLibrary.some((icon) =>
-                                        icon.type === 'multi-state' && icon.id === component.multiIconSetId)
-                                        && (
-                                          <Alert
-                                            type="error"
-                                            showIcon
-                                            title={`找不到多狀態圖示組「${component.multiIconSetId || ''}」。`}
-                                          />
-                                        )}
-                                      {(component.multiStateBindings ?? []).map((binding, index) => {
-                                        const iconSet = iconLibrary.find((icon) =>
-                                          icon.type === 'multi-state'
-                                          && icon.id === component.multiIconSetId)
-                                        const stateDefinition = iconSet?.type === 'multi-state'
-                                          ? iconSet.states.find((state) => state.key === binding.stateKey)
-                                          : undefined
-                                        const stateTagOptions = tags
-                                          .filter((tag) => ['bool', 'boolean'].includes(
-                                            tag.type.toLocaleLowerCase(),
-                                          ))
-                                          .map((tag) => ({
-                                            value: tag.id,
-                                            label: tagLabel(tag),
-                                            disabled: component.multiStateBindings?.some(
-                                              (candidate) => candidate.stateKey !== binding.stateKey
-                                                && candidate.tagId === tag.id,
-                                            ) ?? false,
-                                          }))
-                                        if (binding.tagId && !stateTagOptions.some(
-                                          (option) => option.value === binding.tagId,
-                                        )) {
-                                          const existingTag = tags.find((tag) => tag.id === binding.tagId)
-                                          stateTagOptions.unshift({
-                                            value: binding.tagId,
-                                            label: existingTag
-                                              ? `Tag 型別不符（${tagLabel(existingTag)}）`
-                                              : `Tag 不存在（${binding.tagId}）`,
-                                            disabled: true,
-                                          })
-                                        }
-                                        return (
-                                          <div className="multi-state-binding-row" key={binding.stateKey}>
-                                            {stateDefinition && (
-                                              <Image
-                                                src={stateDefinition.asset.dataUrl}
-                                                alt={`${stateDefinition.name} 圖示`}
-                                                width={32}
-                                                height={32}
-                                              />
-                                            )}
-                                            <Text>
-                                              優先 {index + 1} · {stateDefinition?.name ?? binding.stateKey}
-                                            </Text>
-                                            <Select
-                                              aria-label={`${stateDefinition?.name ?? binding.stateKey} 狀態 Tag`}
-                                              allowClear
-                                              showSearch
-                                              optionFilterProp="label"
-                                              value={binding.tagId || undefined}
-                                              placeholder="選擇 Boolean Tag"
-                                              options={stateTagOptions}
-                                              onChange={(tagId: string | undefined) => (
-                                                handleUpdateMultiStateBinding(
-                                                  selectedView.id,
-                                                  component,
-                                                  binding.stateKey,
-                                                  tagId ?? '',
-                                                )
-                                              )}
-                                            />
-                                          </div>
-                                        )
-                                      })}
-                                      <Text type="secondary">
-                                        優先順序依圖示庫狀態列表設定；同一元件不可重複綁定 Tag。
-                                      </Text>
-                                    </div>
-                                  )}
-                                  <Space
-                                    className="component-actions"
-                                    direction="vertical"
-                                    size={0}
-                                  >
-                                    <Button
-                                      size="small"
-                                      type="text"
-                                      aria-label={`移動 ${component.label || '元件'} 至其他 View`}
-                                      title="移動至其他 View"
-                                      onClick={() => openComponentMoveDialog(
-                                        selectedView.id,
-                                        component.key,
-                                      )}
-                                      icon={<SwapOutlined />}
-                                    />
-                                    <Button
-                                      size="small"
-                                      type="text"
-                                      aria-label={`上移 ${component.label || '元件'}`}
-                                      title="在此樓層上移"
-                                      disabled={index === 0}
-                                      onClick={() => handleMoveComponent(
-                                        selectedView.id,
-                                        component.key,
-                                        -1,
-                                      )}
-                                      icon={<UpOutlined />}
-                                    />
-                                    <Button
-                                      size="small"
-                                      type="text"
-                                      aria-label={`下移 ${component.label || '元件'}`}
-                                      title="在此樓層下移"
-                                      disabled={index === group.items.length - 1}
-                                      onClick={() => handleMoveComponent(
-                                        selectedView.id,
-                                        component.key,
-                                        1,
-                                      )}
-                                      icon={<DownOutlined />}
-                                    />
-                                    <Button
-                                      danger
-                                      size="small"
-                                      type="text"
-                                      aria-label={`刪除 ${component.label || '元件'}`}
-                                      title="刪除此元件"
-                                      onClick={() => {
-                                        if (window.confirm('刪除此元件？匯出時會從 View 的 SVG 和 items 一併移除。')) {
-                                          handleRemoveComponent(selectedView.id, component.key)
-                                        }
-                                      }}
-                                      icon={<DeleteOutlined />}
-                                    />
-                                  </Space>
-                                </div>
-                                ))}
-                              </section>
-                            ))}
-                          </div>
-                        ) : (
-                          <Empty
-                            image={Empty.PRESENTED_IMAGE_SIMPLE}
-                            description="此 View 沒有可管理的元件。"
-                          />
-                        )}
-                      </Card>
+                        ).length ?? 0}
+                        groups={managedComponentGroups}
+                        tags={tags}
+                        iconLibrary={iconLibrary}
+                        batchAddDisabled={!selectedModel || tags.length === 0}
+                        batchMoveDisabled={
+                          !selectedView
+                          || !selectedModel?.components.some(
+                            (component) => component.managed !== false,
+                          )
+                          || !config?.views.some((view) => {
+                            const id = view.id || view.key
+                            return id !== selectedView.id && models.has(id)
+                          })
+                        }
+                        onOpenBatchAdd={openBatchAddTab}
+                        onOpenBatchMove={openBatchMoveDialog}
+                        onUpdateComponent={handleUpdateComponent}
+                        onUpdateGraphic={handleUpdateGraphic}
+                        onUpdateMultiStateBinding={handleUpdateMultiStateBinding}
+                        onMoveComponent={handleMoveComponent}
+                        onOpenComponentMove={openComponentMoveDialog}
+                        onRemoveComponent={handleRemoveComponent}
+                      />
                     {(unsupported.get(selectedView.id)?.length ?? 0) > 0 && (
                       <Alert
                         type="info"
