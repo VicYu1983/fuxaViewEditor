@@ -12,20 +12,14 @@ import {
   ConfigProvider,
   Empty,
   Form,
-  Input,
   Layout,
   Modal,
   Space,
   Tag,
-  Tooltip,
   Typography,
   message,
 } from 'antd'
 import zhTW from 'antd/locale/zh_TW'
-import {
-  RedoOutlined,
-  UndoOutlined,
-} from '@ant-design/icons'
 import {
   parseFuxaConfig,
 } from './domain/config/parseFuxaConfig'
@@ -52,6 +46,7 @@ import { buildViewTargetOptions } from './domain/views/viewTargetOptions'
 import { BatchMoveDialog, type BatchMoveItem } from './ui/view/BatchMoveDialog'
 import { ComponentMoveDialog } from './ui/view/ComponentMoveDialog'
 import { DevicesTab } from './ui/device/DevicesTab'
+import { EditorHeader } from './ui/layout/EditorHeader'
 import { IconLibraryDialog, type IconAddDraft, type MultiStateIconDraft } from './ui/icons/IconLibraryDialog'
 import { MultiStateIconDialog } from './ui/icons/MultiStateIconDialog'
 import {
@@ -164,7 +159,7 @@ import {
 } from './app/store/editorHistory'
 import './App.css'
 
-const { Header, Content } = Layout
+const { Content } = Layout
 const { Text, Title } = Typography
 
 interface PreviewState {
@@ -2089,61 +2084,20 @@ function App() {
           ]}
         />
       <Layout className="editor-shell">
-        <Header className="editor-header">
-          <div className="brand">
-            <div className="brand-mark">F</div>
-            <div>
-              <Text className="brand-name">FUXA View Editor</Text>
-              <Text className="brand-caption">View 元件批次管理工具</Text>
-            </div>
-          </div>
-          <Space size="middle">
-            <Input
-              className="project-name-input"
-              aria-label="專案名稱"
-              placeholder="輸入專案名稱"
-              maxLength={120}
-              value={projectName}
-              onChange={(event) => setProjectName(event.target.value)}
-              title="載入時使用 JSON 最外層的 name；匯出時也會同步更新該欄位。"
-            />
-            <Tooltip title="復原">
-              <Button
-                aria-label="復原"
-                icon={<UndoOutlined />}
-                disabled={editor.past.length === 0}
-                onClick={() => dispatchEditor({ type: 'undo' })}
-              />
-            </Tooltip>
-            <Tooltip title="重做">
-              <Button
-                aria-label="重做"
-                icon={<RedoOutlined />}
-                disabled={editor.future.length === 0}
-                onClick={() => dispatchEditor({ type: 'redo' })}
-              />
-            </Tooltip>
-            {fuxaSyncStatus !== 'disconnected' && (
-              <Button
-                type="primary"
-                loading={fuxaSyncStatus === 'pending'}
-                disabled={!config || fuxaSyncStatus !== 'ready'}
-                onClick={handleSyncToFuxa}
-              >
-                同步至 FUXA
-              </Button>
-            )}
-            <Button disabled={!config} onClick={openDeviceManager}>
-              專案管理
-            </Button>
-            <Button disabled={!config} onClick={() => setIconLibraryOpen(true)}>
-              圖示庫
-            </Button>
-            <Button disabled={!config} onClick={openFloorFrameDialog}>
-              View 設定
-            </Button>
-          </Space>
-        </Header>
+        <EditorHeader
+          projectName={projectName}
+          onProjectNameChange={setProjectName}
+          canUndo={editor.past.length > 0}
+          canRedo={editor.future.length > 0}
+          onUndo={() => dispatchEditor({ type: 'undo' })}
+          onRedo={() => dispatchEditor({ type: 'redo' })}
+          fuxaSyncStatus={fuxaSyncStatus}
+          hasConfig={Boolean(config)}
+          onSyncToFuxa={handleSyncToFuxa}
+          onOpenProjectManager={openDeviceManager}
+          onOpenIconLibrary={() => setIconLibraryOpen(true)}
+          onOpenViewSettings={openFloorFrameDialog}
+        />
 
         <Layout className="editor-body">
           <ViewSidebar
