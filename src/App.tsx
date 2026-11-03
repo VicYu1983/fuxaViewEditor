@@ -42,6 +42,7 @@ import {
   parseFuxaConfig,
 } from './domain/config/parseFuxaConfig'
 import { normalizeProjectName } from './domain/config/serialization'
+import { getErrorMessage } from './domain/shared/getErrorMessage'
 import { isRecord } from './domain/shared/isRecord'
 import { parseUpdatedConfig } from './app/lib/parseUpdatedConfig'
 import { measureSvgBounds } from './app/lib/measureSvgBounds'
@@ -257,7 +258,7 @@ function createPreviewState(
     return {
       width: view.width || 1024,
       height: view.height || 768,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     }
   }
 }
@@ -403,7 +404,7 @@ function App() {
         } catch (error) {
           fuxaSyncRevision.current = null
           setFuxaSyncStatus('disconnected')
-          messageApi.error(`載入 FUXA 專案失敗：${error instanceof Error ? error.message : String(error)}`)
+          messageApi.error(`載入 FUXA 專案失敗：${getErrorMessage(error)}`)
         }
         return
       }
@@ -538,7 +539,7 @@ function App() {
     try {
       return { plan: previewModbusAddressFill(config.rawConfig, managedDeviceId) }
     } catch (error) {
-      return { error: error instanceof Error ? error.message : String(error) }
+      return { error: getErrorMessage(error) }
     }
   }, [config, deviceManagerMode, managedDevice, managedDeviceId])
   const addressFillPlan = addressFillState && 'plan' in addressFillState
@@ -735,7 +736,7 @@ function App() {
       }, window.location.origin)
       setFuxaSyncStatus('pending')
     } catch (error) {
-      messageApi.error(`準備同步資料失敗：${error instanceof Error ? error.message : String(error)}`)
+      messageApi.error(`準備同步資料失敗：${getErrorMessage(error)}`)
     }
   }
 
@@ -841,7 +842,7 @@ function App() {
         ? `已新增空白 View「${validation.name}」。`
         : `已將 View 名稱修改為「${validation.name}」。`)
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`View 操作失敗：${detail}`)
     }
   }
@@ -900,7 +901,7 @@ function App() {
           setSelectedViewId(fallbackId)
           messageApi.success('已刪除 View，並處理其起始頁／導覽引用。')
         } catch (error) {
-          const detail = error instanceof Error ? error.message : String(error)
+          const detail = getErrorMessage(error)
           messageApi.error(`刪除 View 失敗：${detail}`)
         }
       },
@@ -1110,7 +1111,7 @@ function App() {
         },
       })
     } catch (error) {
-      messageApi.error(`更新元件圖形失敗：${error instanceof Error ? error.message : String(error)}`)
+      messageApi.error(`更新元件圖形失敗：${getErrorMessage(error)}`)
     }
   }
 
@@ -1230,7 +1231,7 @@ function App() {
       })
       messageApi.success(`已更新 Tag「${tags.find((tag) => tag.id === tagId)?.name ?? tagId}」的告警狀態。`)
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`更新告警狀態失敗：${detail}`)
     }
   }
@@ -1249,7 +1250,7 @@ function App() {
         models,
       })
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`更新語音播放次數失敗：${detail}`)
     }
   }
@@ -1290,7 +1291,7 @@ function App() {
         `已設定 ${result.created + result.updated} 個告警（新增 ${result.created} 個、更新 ${result.updated} 個）。`,
       )
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`批次設定告警失敗：${detail}`)
     }
   }
@@ -1318,7 +1319,7 @@ function App() {
         `已更新 ${result.updated} 筆告警，新增 ${result.toastMessagesAdded} 個 toastMessage，並同步語音觸發設定。`,
       )
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`快速更新告警文字失敗：${detail}`)
     }
   }
@@ -1790,7 +1791,7 @@ function App() {
         `已為設備「${tagCreateDevice?.name || tagCreateDeviceId}」批次建立 ${result.created.length} 個 Tag${autoFillMessage}${viewMessage}。`,
       )
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`批次建立 Tag 失敗：${detail}`)
     }
   }
@@ -1848,7 +1849,7 @@ function App() {
       setBatchSelection(new Set())
       messageApi.success(`已加入 ${selectedTags.length} 筆 Tag 元件。`)
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`批次加入 Tag 失敗：${detail}`)
     }
   }
@@ -2040,7 +2041,7 @@ function App() {
       setDeviceTagDialogOpen(false)
       messageApi.success(`已更新 Tag「${values.name.trim()}」。`)
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`Tag 更新失敗：${detail}`)
     }
   }
@@ -2086,7 +2087,7 @@ function App() {
       const renameNote = renamed.length ? `，其中 ${renamed.length} 個因名稱重複已自動改名` : ''
       messageApi.success(`已移動 ${moved} 個 Tag${renameNote}。`)
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`Tag 移動失敗：${detail}`)
     }
   }
@@ -2141,7 +2142,7 @@ function App() {
             + (managedReferenceCount ? `並移除 ${managedReferenceCount} 個相關元件。` : ''),
           )
         } catch (error) {
-          const detail = error instanceof Error ? error.message : String(error)
+          const detail = getErrorMessage(error)
           messageApi.error(`Tag 刪除失敗：${detail}`)
         }
       },
@@ -2198,7 +2199,7 @@ function App() {
             + (managedReferenceCount ? `並移除 ${managedReferenceCount} 個相關元件。` : ''),
           )
         } catch (error) {
-          const detail = error instanceof Error ? error.message : String(error)
+          const detail = getErrorMessage(error)
           messageApi.error(`補位 Tag 移除失敗：${detail}`)
         }
       },
@@ -2232,7 +2233,7 @@ function App() {
         )
       }
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`設備儲存失敗：${detail}`)
     }
   }
@@ -2266,7 +2267,7 @@ function App() {
         + (shifted.skippedInvalid ? ` ${shifted.skippedInvalid} 個無效 address 未變更。` : ''),
       )
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`位址調整已取消：${detail}`)
     }
   }
@@ -2294,7 +2295,7 @@ function App() {
       })
       messageApi.success(`已建立 ${result.fill.created.length} 個補位 Tag。`)
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`Modbus 位址補位失敗：${detail}`)
     }
   }
@@ -2336,7 +2337,7 @@ function App() {
       }
       messageApi.success('已刪除設備及其系統連線 Tag。')
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`設備刪除失敗：${detail}`)
     }
   }
@@ -2367,7 +2368,7 @@ function App() {
       })
       messageApi.success(`已更新 ${result.changedCount} 個 Tag 的樓層。`)
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       messageApi.error(`更新 Tag 樓層失敗：${detail}`)
     }
   }
@@ -2409,7 +2410,7 @@ function App() {
         siteUnderline: siteSettings.underline,
       })
     } catch (error) {
-      messageApi.error(`讀取 View 屬性失敗：${error instanceof Error ? error.message : String(error)}`)
+      messageApi.error(`讀取 View 屬性失敗：${getErrorMessage(error)}`)
     }
     setViewSettingsTab('floor-frame')
     setViewSettingsOpen(true)
@@ -2442,7 +2443,7 @@ function App() {
       setViewSettingsOpen(false)
       messageApi.success('已更新所有 View 的樓層底框設定。')
     } catch (error) {
-      messageApi.error(`更新樓層底框設定失敗：${error instanceof Error ? error.message : String(error)}`)
+      messageApi.error(`更新樓層底框設定失敗：${getErrorMessage(error)}`)
     }
   }
 
@@ -2485,7 +2486,7 @@ function App() {
       setViewSettingsOpen(false)
       messageApi.success('已更新所有 View 的背景色與名稱標籤樣式。')
     } catch (error) {
-      messageApi.error(`更新 View 屬性失敗：${error instanceof Error ? error.message : String(error)}`)
+      messageApi.error(`更新 View 屬性失敗：${getErrorMessage(error)}`)
     }
   }
 
@@ -2524,7 +2525,7 @@ function App() {
       setMultiStateDrafts([{ name: '', file: null }])
       messageApi.success('已新增圖示。')
     } catch (error) {
-      messageApi.error(`新增圖示失敗：${error instanceof Error ? error.message : String(error)}`)
+      messageApi.error(`新增圖示失敗：${getErrorMessage(error)}`)
     }
   }
 
@@ -2543,7 +2544,7 @@ function App() {
       window.setTimeout(() => URL.revokeObjectURL(url), 0)
       messageApi.success('已匯出圖示庫 JSON。')
     } catch (error) {
-      messageApi.error(`圖示庫匯出失敗：${error instanceof Error ? error.message : String(error)}`)
+      messageApi.error(`圖示庫匯出失敗：${getErrorMessage(error)}`)
     }
   }
 
@@ -2562,7 +2563,7 @@ function App() {
       })
       messageApi.success(`已匯入 ${importedCount} 個圖示。`)
     } catch (error) {
-      messageApi.error(`圖示庫匯入失敗：${error instanceof Error ? error.message : String(error)}`)
+      messageApi.error(`圖示庫匯入失敗：${getErrorMessage(error)}`)
     }
   }
 
@@ -2588,7 +2589,7 @@ function App() {
       })
       messageApi.success('已刪除圖示。')
     } catch (error) {
-      messageApi.error(`刪除圖示失敗：${error instanceof Error ? error.message : String(error)}`)
+      messageApi.error(`刪除圖示失敗：${getErrorMessage(error)}`)
     }
   }
 
@@ -2637,7 +2638,7 @@ function App() {
         modifiedViewIds: modifiedIds,
       })
     } catch (error) {
-      messageApi.error(`調整狀態優先順序失敗：${error instanceof Error ? error.message : String(error)}`)
+      messageApi.error(`調整狀態優先順序失敗：${getErrorMessage(error)}`)
     }
   }
 
@@ -2723,7 +2724,7 @@ function App() {
       setMultiStateAddDrafts((current) => ({ ...current, [iconSetId]: { name: '', file: null } }))
       messageApi.success('已新增狀態；請在使用此圖示組的元件中綁定 Boolean Tag。')
     } catch (error) {
-      messageApi.error(`新增狀態失敗：${error instanceof Error ? error.message : String(error)}`)
+      messageApi.error(`新增狀態失敗：${getErrorMessage(error)}`)
     }
   }
 
@@ -2764,7 +2765,7 @@ function App() {
       })
       messageApi.success('已刪除多狀態圖示定義。')
     } catch (error) {
-      messageApi.error(`刪除狀態失敗：${error instanceof Error ? error.message : String(error)}`)
+      messageApi.error(`刪除狀態失敗：${getErrorMessage(error)}`)
     }
   }
 

@@ -1,5 +1,6 @@
 import type { FuxaConfig } from '../config/types'
 import { isRecord } from '../config/validateFuxaConfig'
+import { getErrorMessage } from '../shared/getErrorMessage'
 import { getCanvasWidth } from '../layout/floorLayout'
 import { findSvgElementById, parseSvg } from './parseSvg'
 import type { SvgParserConstructor } from './parseSvg'
@@ -55,7 +56,7 @@ function visitFloorFrameRectangles(
     try {
       doc = parseSvg(view.svgcontent, Parser)
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       const name = typeof view.name === 'string' && view.name ? view.name : String(view.id || '未知 View')
       throw new Error(`無法讀取 View「${name}」的樓層底框：${detail}`, { cause: error })
     }

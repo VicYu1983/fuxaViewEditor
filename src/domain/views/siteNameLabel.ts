@@ -1,5 +1,6 @@
 import type { FuxaConfig } from '../config/types'
 import { isRecord } from '../config/validateFuxaConfig'
+import { getErrorMessage } from '../shared/getErrorMessage'
 import { generateId } from '../ids'
 import type { RandomValuesProvider } from '../ids'
 import { parseSvg } from '../svg/parseSvg'
@@ -219,7 +220,7 @@ export function updateAllSiteNameLabels(
     try {
       if (upsertSiteNameLabel(view, name, style, usedIds, runtime)) changed = true
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       const viewName = typeof view.name === 'string' && view.name ? view.name : String(view.id || '未知 View')
       throw new Error(`無法更新 View「${viewName}」的案場名稱標籤：${detail}`, { cause: error })
     }

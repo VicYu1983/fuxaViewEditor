@@ -1,5 +1,6 @@
 import type { FuxaConfig } from '../../domain/config/types'
 import { generateId } from '../../domain/ids'
+import { getErrorMessage } from '../../domain/shared/getErrorMessage'
 import { parseSvg } from '../../domain/svg/parseSvg'
 import type { RandomValuesProvider } from '../../domain/ids'
 import type { SvgParserConstructor } from '../../domain/svg/parseSvg'
@@ -31,7 +32,7 @@ function collectUsedIds(config: FuxaConfig, Parser: SvgParserConstructor): Set<s
         if (id) usedIds.add(id)
       }
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       const name = typeof view.name === 'string' && view.name ? view.name : view.id
       throw new Error(`無法安全新增 View：View「${name}」的 SVG ID 無法檢查（${detail}）`, {
         cause: error,

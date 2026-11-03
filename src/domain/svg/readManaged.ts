@@ -1,4 +1,5 @@
 import { isRecord } from '../config/validateFuxaConfig'
+import { getErrorMessage } from '../shared/getErrorMessage'
 import { readFloorArtifacts } from './readFloorArtifacts'
 import type { SvgParserConstructor } from './parseSvg'
 import { parseSvg } from './parseSvg'
@@ -21,10 +22,6 @@ export interface ReadManagedResult {
   error?: string
 }
 
-function parseErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
-
 export function readManaged(
   view: unknown,
   Parser: SvgParserConstructor,
@@ -43,7 +40,7 @@ export function readManaged(
   try {
     doc = parseSvg(view.svgcontent, Parser)
   } catch (error) {
-    return { records, unmanaged, movableTags, error: parseErrorMessage(error) }
+    return { records, unmanaged, movableTags, error: getErrorMessage(error) }
   }
 
   const floor = readFloorArtifacts(view.items, doc, floorGroupArtifacts)

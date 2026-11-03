@@ -1,5 +1,6 @@
 import type { FuxaConfig } from './types'
 import { isRecord } from '../shared/isRecord'
+import { getErrorMessage } from '../shared/getErrorMessage'
 import { buildTagIndex } from '../tags/index'
 import { generateId, type RandomValuesProvider } from '../ids'
 import { getIconAssets, getIconLibrary, validateIconLibrary } from '../icons/iconLibrary'
@@ -78,7 +79,7 @@ function reserveExistingIds(
     try {
       doc = parseSvg(view.svgcontent, Parser)
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       const label = typeof view.name === 'string' && view.name ? view.name : view.id
       throw new Error(`無法檢查 View「${label}」的 SVG ID，無法安全匯出修改：${detail}`, {
         cause: error,
