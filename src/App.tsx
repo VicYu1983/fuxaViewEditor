@@ -68,6 +68,7 @@ import { findTagReferences } from './features/devices/findTagReferences'
 import { buildViewTargetOptions } from './domain/views/viewTargetOptions'
 import { BatchMoveDialog, type BatchMoveItem } from './ui/view/BatchMoveDialog'
 import { ComponentMoveDialog } from './ui/view/ComponentMoveDialog'
+import { PreviewPanel } from './ui/preview/PreviewPanel'
 import { ViewNameDialog } from './ui/view/ViewNameDialog'
 import {
   applyTagAlarms,
@@ -2791,63 +2792,15 @@ function App() {
   }
 
   const previewPanel = (
-    <Card
-      title="SVG 預覽"
-      extra={(
-        <Space size="small" wrap>
-          <Text type="secondary">{previewRealtime ? '即時預覽' : '手動預覽'}</Text>
-          <Switch
-            aria-label="即時更新 SVG 預覽"
-            checked={previewRealtime}
-            checkedChildren="即時"
-            unCheckedChildren="手動"
-            onChange={setPreviewRealtime}
-          />
-          <Button
-            size="small"
-            disabled={!config || !selectedView}
-            onClick={handleRefreshPreview}
-          >
-            更新預覽
-          </Button>
-          {preview && !preview.error && (
-            <>
-              <Text type="secondary">{preview.width} × {preview.height}</Text>
-              {preview.outsideCanvas && <Tag color="warning">排列超出畫布</Tag>}
-            </>
-          )}
-          {config && selectedView && previewStale && (
-            <Tag color="warning">
-              {previewRealtime ? '預覽更新中' : '預覽尚未更新'}
-            </Tag>
-          )}
-        </Space>
-      )}
-      className="view-details preview-card"
-    >
-      {preview?.error ? (
-        <Alert
-          type="warning"
-          showIcon
-          title="無法顯示預覽"
-          description={preview.error}
-        />
-      ) : preview?.svgMarkup ? (
-        <div
-          className="svg-preview"
-          role="img"
-          aria-label={`${selectedView?.name ?? 'View'} 唯讀 SVG 預覽`}
-          dangerouslySetInnerHTML={{ __html: preview.svgMarkup }}
-        />
-      ) : (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={config && selectedView
-            ? previewRealtime ? '正在產生預覽…' : '請按「更新預覽」產生預覽。'
-            : '尚無可預覽的 View。'}
-        />
-      )}
-    </Card>
+    <PreviewPanel
+      preview={preview}
+      realtime={previewRealtime}
+      onRealtimeChange={setPreviewRealtime}
+      onRefresh={handleRefreshPreview}
+      hasSelection={Boolean(config && selectedView)}
+      viewName={selectedView?.name}
+      stale={previewStale}
+    />
   )
 
   const batchMoveItems: BatchMoveItem[] = (selectedModel?.components ?? [])
