@@ -68,6 +68,8 @@ import { findTagReferences } from './features/devices/findTagReferences'
 import { buildViewTargetOptions } from './domain/views/viewTargetOptions'
 import { BatchMoveDialog, type BatchMoveItem } from './ui/view/BatchMoveDialog'
 import { ComponentMoveDialog } from './ui/view/ComponentMoveDialog'
+import { DeviceTagEditDialog } from './ui/device/DeviceTagEditDialog'
+import { DeviceTagMoveDialog } from './ui/device/DeviceTagMoveDialog'
 import { PreviewPanel } from './ui/preview/PreviewPanel'
 import { ViewSidebar } from './ui/view/ViewSidebar'
 import { ViewNameDialog } from './ui/view/ViewNameDialog'
@@ -3805,112 +3807,29 @@ function App() {
           ]}
         />
       </Modal>
-      <Modal
+      <DeviceTagMoveDialog
         open={deviceTagMoveOpen}
-        title="批次移動 Tag"
-        okText="移動"
-        cancelText="取消"
+        sourceName={typeof managedDevice?.record.name === 'string'
+          ? managedDevice.record.name
+          : managedDeviceId}
+        tagCount={selectedManagedDeviceTags.length}
+        targets={deviceTagMoveTargets.map((device) => ({
+          id: device.id,
+          name: typeof device.record.name === 'string' ? device.record.name : device.id,
+        }))}
+        targetId={deviceTagMoveTargetId}
+        onTargetChange={setDeviceTagMoveTargetId}
+        onConfirm={handleMoveDeviceTags}
         onCancel={() => setDeviceTagMoveOpen(false)}
-        onOk={handleMoveDeviceTags}
-        okButtonProps={{ disabled: !deviceTagMoveTargetId }}
-        destroyOnHidden
-      >
-        <Space orientation="vertical" className="device-tag-move-body">
-          <Text>
-            將 {selectedManagedDeviceTags.length} 個 Tag 從「{typeof managedDevice?.record.name === 'string'
-              ? managedDevice.record.name
-              : managedDeviceId}」移動到：
-          </Text>
-          {deviceTagMoveTargets.length ? (
-            <Select
-              aria-label="目標設備"
-              className="device-tag-move-target"
-              value={deviceTagMoveTargetId || undefined}
-              onChange={setDeviceTagMoveTargetId}
-              options={deviceTagMoveTargets.map((device) => ({
-                value: device.id,
-                label: typeof device.record.name === 'string' ? device.record.name : device.id,
-              }))}
-            />
-          ) : (
-            <Text type="secondary">沒有其他可用的 ModbusTCP 設備。</Text>
-          )}
-          <Text type="secondary">Tag ID 會保留；若名稱與現有 Tag 重複，會自動加上 _1、_2。</Text>
-        </Space>
-      </Modal>
-      <Modal
+      />
+      <DeviceTagEditDialog
         open={deviceTagDialogOpen}
-        title="修改 Tag"
-        okText="儲存 Tag"
-        cancelText="取消"
+        form={deviceTagForm}
+        existingTags={tags}
+        editingId={editingDeviceTagId}
+        onSave={handleUpdateDeviceTag}
         onCancel={() => setDeviceTagDialogOpen(false)}
-        onOk={() => deviceTagForm.submit()}
-        destroyOnHidden
-      >
-        <Form
-          form={deviceTagForm}
-          layout="vertical"
-          onFinish={handleUpdateDeviceTag}
-        >
-          <Form.Item
-            name="name"
-            label="Tag 名稱"
-            rules={[
-              { required: true, whitespace: true, message: 'Tag 名稱不可空白。' },
-              { max: 120, message: 'Tag 名稱不可超過 120 個字元。' },
-              {
-                validator: async (_, value: unknown) => {
-                  const name = typeof value === 'string' ? value.trim().toLocaleLowerCase() : ''
-                  if (!name) return
-                  const duplicate = tags.some((tag) => (
-                    tag.id !== editingDeviceTagId
-                    && tag.name.trim().toLocaleLowerCase() === name
-                  ))
-                  if (duplicate) throw new Error('此名稱已被其他 Tag 使用。')
-                },
-              },
-            ]}
-          >
-            <Input maxLength={120} />
-          </Form.Item>
-          <Form.Item
-            name="address"
-            label="位址 (address)"
-            rules={[
-              {
-                validator: async (_, value: unknown) => {
-                  if (value === undefined || value === null || value === '') return
-                  if (!Number.isSafeInteger(Number(value)) || Number(value) < 0 || Number(value) > 65535) {
-                    throw new Error('位址必須是 0 到 65535 之間的整數。')
-                  }
-                },
-              },
-            ]}
-          >
-            <InputNumber min={0} max={65535} precision={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item
-            name="type"
-            label="資料型別"
-            rules={[{ required: true, whitespace: true, message: 'Tag 型別不可空白。' }]}
-          >
-            <Input placeholder="例如 Bool、number、string" />
-          </Form.Item>
-          <Form.Item
-            name="memaddress"
-            label="記憶體區段 (memaddress)"
-            rules={[{ required: true, whitespace: true, message: '記憶體區段不可空白。' }]}
-          >
-            <Input placeholder="例如 000000" />
-          </Form.Item>
-          <Form.Item name="description" label="備註">
-            <Input />
-          </Form.Item>
-          <Form.Item name="floor" label="樓層">
-            <Input placeholder="例如 4F" />
-          </Form.Item>
-        </Form>
-      </Modal>
+      />
       <Layout className="editor-shell">
         <Header className="editor-header">
           <div className="brand">
