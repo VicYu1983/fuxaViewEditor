@@ -483,6 +483,19 @@
   margin-bottom: 8px;
 }
 
+.device-tag-bulk-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.device-tag-move-body,
+.device-tag-move-target {
+  width: 100%;
+}
+
 .device-tag-list {
   max-height: min(30vh, 260px);
   overflow: auto;
