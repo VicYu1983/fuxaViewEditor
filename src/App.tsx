@@ -77,6 +77,12 @@ import {
 } from './ui/view/ViewSettingsDialog'
 import { DeviceTagMoveDialog } from './ui/device/DeviceTagMoveDialog'
 import { ProjectManagerDialog } from './ui/device/ProjectManagerDialog'
+import {
+  TagCreateTab,
+  type TagCreateRequest,
+  type TagCreateStatus,
+  type TagCreateTabHandle,
+} from './ui/device/TagCreateTab'
 import { PreviewPanel } from './ui/preview/PreviewPanel'
 import { ViewSidebar } from './ui/view/ViewSidebar'
 import { ViewNameDialog } from './ui/view/ViewNameDialog'
@@ -152,8 +158,7 @@ import { applyTagFloors } from './features/floors/applyTagFloors'
 import { updateFloorGroupFrame } from './features/floors/updateFloorGroupFrame'
 import { createViewComponents } from './features/tags/createViewComponents'
 import { createTagsForDevice } from './features/tags/createTagsForDevice'
-import { getNextAvailableAddress, parseTagBatchInput } from './domain/tags/batch'
-import type { TagBatchSpec } from './domain/tags/batch'
+import { getNextAvailableAddress } from './domain/tags/batch'
 import { createBlankView } from './features/views/createBlankView'
 import { moveManagedComponent } from './features/views/moveManagedComponent'
 import {
@@ -277,15 +282,8 @@ function App() {
   const [batchSelection, setBatchSelection] = useState<Set<string>>(new Set())
   const [batchGraphic, setBatchGraphic] = useState('rect')
   const [batchCoilSwitchEnabled, setBatchCoilSwitchEnabled] = useState(true)
-  const [tagCreateDeviceId, setTagCreateDeviceId] = useState('')
-  const [tagCreateInput, setTagCreateInput] = useState('')
-  const [tagCreateNameOverrides, setTagCreateNameOverrides] = useState<Record<number, string>>({})
-  const [tagCreateStartAddress, setTagCreateStartAddress] = useState(1)
-  const [tagCreateStep, setTagCreateStep] = useState(1)
-  const [tagCreateMemaddress, setTagCreateMemaddress] = useState('000000')
-  const [tagCreateType, setTagCreateType] = useState('Bool')
-  const [tagCreateFloor, setTagCreateFloor] = useState('')
-  const [tagCreateAlsoAddView, setTagCreateAlsoAddView] = useState(true)
+  const tagCreateRef = useRef<TagCreateTabHandle>(null)
+  const [tagCreateStatus, setTagCreateStatus] = useState<TagCreateStatus>({ specCount: 0, canCreate: false })
   const [projectManagerTab, setProjectManagerTab] = useState<
     'devices' | 'floors' | 'alarms' | 'tag-create' | 'tag-add'
   >('devices')
@@ -554,70 +552,6 @@ function App() {
     ['bool', 'boolean'].includes(tag.type.toLocaleLowerCase()))
   const batchCanUseBooleanGraphic = selectedBatchTags.length > 0
     && selectedBatchTags.every((tag) => ['bool', 'boolean'].includes(tag.type.toLocaleLowerCase()))
-  const parsedTagCreateSpecs = useMemo(() => parseTagBatchInput(tagCreateInput, {
-    startAddress: tagCreateStartAddress,
-    step: tagCreateStep,
-    defaultMemAddress: tagCreateMemaddress,
-    defaultType: tagCreateType,
-    defaultFloor: tagCreateFloor,
-  }), [
-    tagCreateFloor,
-    tagCreateInput,
-    tagCreateMemaddress,
-    tagCreateStartAddress,
-    tagCreateStep,
-    tagCreateType,
-  ])
-  const tagCreateSpecs = useMemo(() => parsedTagCreateSpecs.map((spec, index) => ({
-    ...spec,
-    name: tagCreateNameOverrides[index] ?? spec.name,
-  })), [parsedTagCreateSpecs, tagCreateNameOverrides])
-  const tagCreateDevice = config && isRecord(config.rawConfig.devices[tagCreateDeviceId])
-    ? config.rawConfig.devices[tagCreateDeviceId]
-    : undefined
-  const tagCreateDuplicateNameRows = useMemo(() => {
-    const duplicateRows = new Set<number>()
-    const names = new Set<string>()
-    if (config) {
-      for (const candidate of Object.values(config.rawConfig.devices)) {
-        if (!isRecord(candidate) || !isRecord(candidate.tags)) continue
-        for (const tag of Object.values(candidate.tags)) {
-          if (!isRecord(tag)) continue
-          const name = typeof tag.name === 'string' ? tag.name.trim().toLocaleLowerCase() : ''
-          if (name) names.add(name)
-        }
-      }
-    }
-    tagCreateSpecs.forEach((spec, index) => {
-      const name = spec.name.trim().toLocaleLowerCase()
-      if (!name) return
-      if (names.has(name)) duplicateRows.add(index)
-      names.add(name)
-    })
-    return duplicateRows
-  }, [config, tagCreateSpecs])
-  const tagCreateInvalidNameRows = useMemo(() => new Set(
-    tagCreateSpecs.flatMap((spec, index) => (
-      !spec.name.trim() || spec.name.trim().length > 120 ? [index] : []
-    )),
-  ), [tagCreateSpecs])
-  const tagCreateDuplicateAddressRows = useMemo(() => {
-    const duplicateRows = new Set<number>()
-    const existingTags = tagCreateDevice && isRecord(tagCreateDevice.tags)
-      ? Object.values(tagCreateDevice.tags).filter(isRecord)
-      : []
-    const addresses = new Set(existingTags.map(
-      (tag) => `${String(tag.memaddress || '')}_${String(tag.address ?? '')}`,
-    ))
-    tagCreateSpecs.forEach((spec, index) => {
-      const address = `${spec.memaddress}_${spec.address}`
-      if (addresses.has(address)) duplicateRows.add(index)
-      addresses.add(address)
-    })
-    return duplicateRows
-  }, [tagCreateDevice, tagCreateSpecs])
-  const hasTagCreateDuplicateNames = tagCreateDuplicateNameRows.size > 0
-  const hasTagCreateInvalidNames = tagCreateInvalidNameRows.size > 0
   const usedTagIds = new Set(selectedModel?.components.map((component) => component.tagId) ?? [])
   const filteredFloorTags = useMemo(() => {
     const query = floorSearch.trim().toLocaleLowerCase()
@@ -1151,19 +1085,15 @@ function App() {
     setDeviceManagerOpen(true)
   }
 
+  const deviceIdsForTagCreate = config
+    ? Object.keys(config.rawConfig.devices).filter((id) => id !== '0')
+    : []
+  const tagCreateDefaultDeviceId = deviceIdsForTagCreate.includes(managedDeviceId)
+    ? managedDeviceId
+    : deviceIdsForTagCreate[0] ?? ''
+
   function openTagCreateTab() {
     if (!config) return
-    const deviceIds = Object.keys(config.rawConfig.devices).filter((id) => id !== '0')
-    const deviceId = deviceIds.includes(managedDeviceId)
-      ? managedDeviceId
-      : deviceIds[0] ?? ''
-    setTagCreateDeviceId(deviceId)
-    setTagCreateInput('')
-    setTagCreateNameOverrides({})
-    setTagCreateStartAddress(deviceId
-      ? getNextAvailableAddress(config.rawConfig.devices[deviceId], tagCreateMemaddress)
-      : 1)
-    setTagCreateAlsoAddView(true)
     setProjectManagerTab('tag-create')
     setDeviceManagerOpen(true)
   }
@@ -1530,212 +1460,23 @@ function App() {
     )
   }
 
-  function renderTagCreateForm() {
-    return (
-      <Space orientation="vertical" size="middle" className="tag-create-manager">
-        <Text type="secondary">
-          每行輸入一個 Tag 名稱；也可貼上逗號或 Tab 分隔資料。名稱須全專案唯一，可直接在下方預覽修改；重複位址僅提示。
-        </Text>
-        <div className="tag-create-settings">
-          <label>
-            目標設備
-            <Select
-              aria-label="批次建立 Tag 目標設備"
-              value={tagCreateDeviceId || undefined}
-              placeholder="選擇設備"
-              options={config
-                ? Object.entries(config.rawConfig.devices)
-                  .filter(([id]) => id !== '0')
-                  .map(([id, value]) => ({
-                    value: id,
-                    label: `${String(isRecord(value) ? value.name || id : id)} (${id})`,
-                  }))
-                : []}
-              onChange={(deviceId: string) => {
-                setTagCreateDeviceId(deviceId)
-                setTagCreateStartAddress(
-                  getNextAvailableAddress(
-                    config?.rawConfig.devices[deviceId],
-                    tagCreateMemaddress,
-                  ),
-                )
-              }}
-            />
-          </label>
-          <label>
-            記憶體區段
-            <Select
-              aria-label="Tag 記憶體區段"
-              value={tagCreateMemaddress}
-              options={[
-                { value: '000000', label: '000000 · Coils' },
-                { value: '100000', label: '100000 · Discrete Inputs' },
-                { value: '300000', label: '300000 · Input Registers' },
-                { value: '400000', label: '400000 · Holding Registers' },
-              ]}
-              onChange={setTagCreateMemaddress}
-            />
-          </label>
-          <label>
-            預設型別
-            <Select
-              aria-label="Tag 預設型別"
-              value={tagCreateType}
-              options={[
-                { value: 'Bool', label: 'Bool' },
-                { value: 'number', label: 'number' },
-                { value: 'string', label: 'string' },
-              ]}
-              onChange={setTagCreateType}
-            />
-          </label>
-          <label>
-            起始位址
-            <InputNumber
-              aria-label="Tag 起始位址"
-              min={0}
-              precision={0}
-              value={tagCreateStartAddress}
-              onChange={(value) => setTagCreateStartAddress(value ?? 0)}
-            />
-          </label>
-          <label>
-            遞增步長
-            <InputNumber
-              aria-label="Tag 遞增步長"
-              min={1}
-              precision={0}
-              value={tagCreateStep}
-              onChange={(value) => setTagCreateStep(value ?? 1)}
-            />
-          </label>
-          <label>
-            預設樓層
-            <Input
-              aria-label="Tag 批次預設樓層"
-              value={tagCreateFloor}
-              placeholder="例如：4F"
-              onChange={(event) => setTagCreateFloor(event.target.value)}
-            />
-          </label>
-        </div>
-        <Input.TextArea
-          aria-label="批次 Tag 資料"
-          rows={6}
-          value={tagCreateInput}
-          onChange={(event) => {
-            setTagCreateInput(event.target.value)
-            setTagCreateNameOverrides({})
-          }}
-          placeholder={'泵浦運轉\n風機告警\n也可用欄位：名稱, 位址, 型別, 區段, 備註, 樓層'}
-        />
-        <div className="tag-create-preview-heading">
-          <Text strong>建立預覽</Text>
-          <Text type="secondary">{tagCreateSpecs.length} 筆 Tag</Text>
-        </div>
-        {tagCreateSpecs.length ? (
-          <div className="tag-create-preview">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Tag 名稱</th>
-                  <th>位址</th>
-                  <th>區段</th>
-                  <th>型別</th>
-                  <th>樓層</th>
-                  <th>名稱檢查</th>
-                  <th>位址檢查</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tagCreateSpecs.map((spec: TagBatchSpec, index) => (
-                  <tr key={`${spec.name}-${index}`}>
-                    <td>{index + 1}</td>
-                    <td>
-                      <Input
-                        aria-label={`第 ${index + 1} 筆 Tag 名稱`}
-                        status={tagCreateDuplicateNameRows.has(index)
-                          || tagCreateInvalidNameRows.has(index) ? 'error' : undefined}
-                        maxLength={120}
-                        value={spec.name}
-                        onChange={(event) => setTagCreateNameOverrides((current) => ({
-                          ...current,
-                          [index]: event.target.value,
-                        }))}
-                      />
-                    </td>
-                    <td>{spec.address}</td>
-                    <td>{spec.memaddress}</td>
-                    <td>{spec.type}</td>
-                    <td>{spec.floor || '未設定'}</td>
-                    <td>
-                      {tagCreateInvalidNameRows.has(index)
-                        ? <Text type="danger">名稱不可空白或過長</Text>
-                        : tagCreateDuplicateNameRows.has(index)
-                        ? <Text type="danger">名稱重複</Text>
-                        : <Text type="success">正常</Text>}
-                    </td>
-                    <td>
-                      {tagCreateDuplicateAddressRows.has(index)
-                        ? <Text type="warning">位址重複</Text>
-                        : <Text type="success">正常</Text>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="輸入或貼上 Tag 名稱以預覽。" />
-        )}
-        <Checkbox
-          checked={tagCreateAlsoAddView}
-          disabled={!selectedView || !selectedModel}
-          onChange={(event) => setTagCreateAlsoAddView(event.target.checked)}
-        >
-          同時將建立的 Tag 作為元件加入目前 View
-        </Checkbox>
-        {tagCreateAlsoAddView && tagCreateSpecs.some((spec) =>
-          spec.memaddress.trim() === '000000'
-          && ['bool', 'boolean'].includes(spec.type.toLocaleLowerCase())) && (
-          <Text type="secondary">
-            Boolean Coil Tag 會建立為 Switch，並顯示 Tag 名稱標籤。
-          </Text>
-        )}
-      </Space>
-    )
-  }
-
-  function handleCreateTags() {
-    if (!config || !tagCreateDeviceId) {
-      messageApi.warning('請先選取目標設備。')
-      return
-    }
-    if (!tagCreateSpecs.length) {
-      messageApi.warning('未解析出任何有效的 Tag 項目。')
-      return
-    }
-    if (hasTagCreateInvalidNames) {
-      messageApi.warning('Tag 名稱不可空白或超過 120 個字元。')
-      return
-    }
-    if (hasTagCreateDuplicateNames) {
-      messageApi.warning('Tag 名稱不可重複，請先修改預覽中標示的名稱。')
-      return
-    }
+  function handleCreateTags(request: TagCreateRequest): number | null {
+    if (!config) return null
+    const { deviceId, memaddress, specs, alsoAddView } = request
+    const device = config.rawConfig.devices[deviceId]
+    const deviceName = isRecord(device) && typeof device.name === 'string' ? device.name : ''
 
     try {
       const result = createTagsForDevice(
         config.rawConfig,
-        tagCreateDeviceId,
-        tagCreateSpecs,
+        deviceId,
+        specs,
         window.crypto,
       )
       const document = parseUpdatedConfig(result.config, config)
       const nextModels = new Map(models)
       let addedToViewCount = 0
-      if (tagCreateAlsoAddView && selectedView && selectedModel) {
+      if (alsoAddView && selectedView && selectedModel) {
         const createdIds = new Set(result.created.map((tag) => tag.id))
         const createdTags = [...buildTagIndex(result.config).values()]
           .filter((tag) => createdIds.has(tag.id))
@@ -1756,11 +1497,6 @@ function App() {
         addedToViewCount = createdTags.length
       }
       dispatchEditor({ type: 'document-edit', document, models: nextModels })
-      setTagCreateInput('')
-      setTagCreateNameOverrides({})
-      setTagCreateStartAddress(
-        getNextAvailableAddress(result.config.devices[tagCreateDeviceId], tagCreateMemaddress),
-      )
       const autoFillMessage = result.autoFilled.length
         ? `，並自動補齊 ${result.autoFilled.length} 個地址`
         : ''
@@ -1768,11 +1504,13 @@ function App() {
         ? `，並加入目前 View ${addedToViewCount} 個元件`
         : ''
       messageApi.success(
-        `已為設備「${tagCreateDevice?.name || tagCreateDeviceId}」批次建立 ${result.created.length} 個 Tag${autoFillMessage}${viewMessage}。`,
+        `已為設備「${deviceName || deviceId}」批次建立 ${result.created.length} 個 Tag${autoFillMessage}${viewMessage}。`,
       )
+      return getNextAvailableAddress(result.config.devices[deviceId], memaddress)
     } catch (error) {
       const detail = getErrorMessage(error)
       messageApi.error(`批次建立 Tag 失敗：${detail}`)
+      return null
     }
   }
 
@@ -2923,13 +2661,10 @@ function App() {
                 <Button
                   key="create-tags"
                   type="primary"
-                  disabled={!tagCreateDeviceId
-                    || tagCreateSpecs.length === 0
-                    || hasTagCreateDuplicateNames
-                    || hasTagCreateInvalidNames}
-                  onClick={handleCreateTags}
+                  disabled={!tagCreateStatus.canCreate}
+                  onClick={() => tagCreateRef.current?.submit()}
                 >
-                  建立 {tagCreateSpecs.length} 個 Tag
+                  建立 {tagCreateStatus.specCount} 個 Tag
                 </Button>,
               ]
               : projectManagerTab === 'tag-add'
@@ -2955,7 +2690,7 @@ function App() {
         onOk={projectManagerTab === 'devices'
           ? () => deviceManagerForm.submit()
           : projectManagerTab === 'tag-create'
-            ? handleCreateTags
+            ? () => tagCreateRef.current?.submit()
             : projectManagerTab === 'tag-add'
               ? handleBatchAdd
             : undefined}
@@ -3229,7 +2964,15 @@ function App() {
             {
               key: 'tag-create',
               label: '批次建立 Tag',
-              children: renderTagCreateForm(),
+              children: <TagCreateTab
+                ref={tagCreateRef}
+                config={config}
+                initialDeviceId={tagCreateDefaultDeviceId}
+                canAddToView={Boolean(selectedView && selectedModel)}
+                onCreate={handleCreateTags}
+                onWarning={(warning) => messageApi.warning(warning)}
+                onStatusChange={setTagCreateStatus}
+              />,
             },
             {
               key: 'tag-add',
