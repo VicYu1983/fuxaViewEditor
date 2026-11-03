@@ -69,6 +69,7 @@ import { buildViewTargetOptions } from './domain/views/viewTargetOptions'
 import { BatchMoveDialog, type BatchMoveItem } from './ui/view/BatchMoveDialog'
 import { ComponentMoveDialog } from './ui/view/ComponentMoveDialog'
 import { PreviewPanel } from './ui/preview/PreviewPanel'
+import { ViewSidebar } from './ui/view/ViewSidebar'
 import { ViewNameDialog } from './ui/view/ViewNameDialog'
 import {
   applyTagAlarms,
@@ -175,7 +176,7 @@ import {
 } from './app/store/editorHistory'
 import './App.css'
 
-const { Header, Sider, Content } = Layout
+const { Header, Content } = Layout
 const { Text, Title } = Typography
 
 interface MultiStateIconDraft {
@@ -3968,68 +3969,14 @@ function App() {
         </Header>
 
         <Layout className="editor-body">
-          <Sider width={260} theme="light" className="view-sidebar">
-            <div className="sidebar-heading">
-              <div className="sidebar-title">
-                <Text strong>Views</Text>
-                <Tag>{config?.views.length ?? 0}</Tag>
-              </div>
-              <Space size={4} wrap>
-                <Button
-                  size="small"
-                  onClick={() => openViewDialog('create')}
-                  disabled={!config}
-                  aria-label="新增 View"
-                >
-                  新增
-                </Button>
-                <Button
-                  size="small"
-                  onClick={() => openViewDialog('rename')}
-                  disabled={!selectedView?.id}
-                  aria-label="修改 View 名稱"
-                >
-                  改名
-                </Button>
-                <Button
-                  size="small"
-                  danger
-                  onClick={handleDeleteSelectedView}
-                  disabled={!selectedView?.id || (config?.views.length ?? 0) <= 1}
-                  aria-label="刪除 View"
-                >
-                  刪除
-                </Button>
-              </Space>
-            </div>
-            {config ? (
-              config.views.length > 0 ? (
-                <nav className="view-list" aria-label="View 清單">
-                  {config.views.map((view) => (
-                    <Button
-                      key={view.key}
-                      type="text"
-                      block
-                      className={(view.id || view.key) === (selectedView?.id || selectedView?.key) ? 'view-item selected' : 'view-item'}
-                      aria-current={(view.id || view.key) === (selectedView?.id || selectedView?.key) ? 'page' : undefined}
-                      onClick={() => setSelectedViewId(view.id || view.key)}
-                    >
-                      <Text ellipsis title={view.name}>{view.name}</Text>
-                      <Text className="view-id" ellipsis title={view.id}>{view.id || '無 ID'}</Text>
-                    </Button>
-                  ))}
-                </nav>
-              ) : (
-                <div className="sidebar-empty">
-                  <Text type="secondary">配置中沒有 View。</Text>
-                </div>
-              )
-            ) : (
-              <div className="sidebar-empty">
-                <Text type="secondary">等待 FUXA 傳送專案資料後，View 清單會顯示於此。</Text>
-              </div>
-            )}
-          </Sider>
+          <ViewSidebar
+            views={config?.views ?? null}
+            selectedView={selectedView}
+            onSelectView={setSelectedViewId}
+            onCreateView={() => openViewDialog('create')}
+            onRenameView={() => openViewDialog('rename')}
+            onDeleteView={handleDeleteSelectedView}
+          />
 
           <Content className="workspace">
             {!config ? (
