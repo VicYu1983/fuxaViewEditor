@@ -23,7 +23,6 @@ import {
   Select,
   Space,
   Switch,
-  Tabs,
   Tag,
   Tooltip,
   Typography,
@@ -77,6 +76,7 @@ import {
   type ViewPropertiesFormValues,
 } from './ui/view/ViewSettingsDialog'
 import { DeviceTagMoveDialog } from './ui/device/DeviceTagMoveDialog'
+import { ProjectManagerDialog } from './ui/device/ProjectManagerDialog'
 import { PreviewPanel } from './ui/preview/PreviewPanel'
 import { ViewSidebar } from './ui/view/ViewSidebar'
 import { ViewNameDialog } from './ui/view/ViewNameDialog'
@@ -2915,11 +2915,11 @@ function App() {
         onRemoveState={handleRemoveMultiStateIconState}
         onAddState={handleAddMultiStateIconState}
       />
-      <Modal
+      <ProjectManagerDialog
         open={deviceManagerOpen}
-        title="專案管理"
+        tab={projectManagerTab}
+        onTabChange={setProjectManagerTab}
         okText={deviceManagerMode === 'create' ? '建立設備' : '儲存設備'}
-        cancelText="關閉"
         footer={projectManagerTab === 'devices'
           ? undefined
           : projectManagerTab === 'alarms'
@@ -2983,16 +2983,7 @@ function App() {
               ? handleBatchAdd
             : undefined}
         width={projectManagerTab === 'tag-create' ? 1000 : 900}
-        destroyOnHidden
-      >
-        <Tabs
-          activeKey={projectManagerTab}
-          onChange={(key) => setProjectManagerTab(
-            key === 'floors' || key === 'alarms' || key === 'tag-create' || key === 'tag-add'
-              ? key
-              : 'devices',
-          )}
-          items={[
+        items={[
             {
               key: 'devices',
               label: '設備與 Tag',
@@ -3381,7 +3372,6 @@ function App() {
             },
           ]}
         />
-      </Modal>
       <DeviceTagMoveDialog
         open={deviceTagMoveOpen}
         sourceName={typeof managedDevice?.record.name === 'string'
