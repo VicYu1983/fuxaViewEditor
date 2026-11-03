@@ -1009,7 +1009,7 @@ function App() {
     setProjectManagerTab('tag-create')
     setDeviceManagerOpen(true)
   }
-
+
   function handleCreateTags(request: TagCreateRequest): number | null {
     if (!config) return null
     const { deviceId, memaddress, specs, alsoAddView } = request
