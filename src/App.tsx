@@ -68,7 +68,7 @@ import { buildViewTargetOptions } from './domain/views/viewTargetOptions'
 import { BatchMoveDialog, type BatchMoveItem } from './ui/view/BatchMoveDialog'
 import { ComponentMoveDialog } from './ui/view/ComponentMoveDialog'
 import { DeviceTagEditDialog } from './ui/device/DeviceTagEditDialog'
-import { IconLibraryDialog, type IconLibraryType, type MultiStateIconDraft } from './ui/icons/IconLibraryDialog'
+import { IconLibraryDialog, type IconAddDraft, type MultiStateIconDraft } from './ui/icons/IconLibraryDialog'
 import { MultiStateIconDialog } from './ui/icons/MultiStateIconDialog'
 import {
   ViewSettingsDialog,
@@ -295,14 +295,6 @@ function App() {
   const [bulkFloor, setBulkFloor] = useState('')
   const [iconLibraryOpen, setIconLibraryOpen] = useState(false)
   const [editingMultiStateIconId, setEditingMultiStateIconId] = useState('')
-  const [iconName, setIconName] = useState('')
-  const [iconType, setIconType] = useState<IconLibraryType>('single')
-  const [singleIconFile, setSingleIconFile] = useState<File | null>(null)
-  const [normalIconFile, setNormalIconFile] = useState<File | null>(null)
-  const [alarmIconFile, setAlarmIconFile] = useState<File | null>(null)
-  const [multiStateDrafts, setMultiStateDrafts] = useState<MultiStateIconDraft[]>([
-    { name: '', file: null },
-  ])
   const [multiStateAddDrafts, setMultiStateAddDrafts] = useState<
     Record<string, MultiStateIconDraft>
   >({})
@@ -2478,25 +2470,25 @@ function App() {
     }
   }
 
-  async function handleAddIcon() {
-    if (!config) return
+  async function handleAddIcon(draft: IconAddDraft): Promise<boolean> {
+    if (!config) return false
     try {
-      const stateNames = iconType === 'multi-state'
-        ? multiStateDrafts.map((state) => state.name.trim())
+      const stateNames = draft.type === 'multi-state'
+        ? draft.multiStateDrafts.map((state) => state.name.trim())
         : []
-      const files = iconType === 'single'
-        ? singleIconFile ? [singleIconFile] : []
-        : iconType === 'pair'
-          ? [normalIconFile, alarmIconFile].filter((file): file is File => file !== null)
-          : [normalIconFile, ...multiStateDrafts.map((state) => state.file)]
+      const files = draft.type === 'single'
+        ? draft.singleFile ? [draft.singleFile] : []
+        : draft.type === 'pair'
+          ? [draft.normalFile, draft.alarmFile].filter((file): file is File => file !== null)
+          : [draft.normalFile, ...draft.multiStateDrafts.map((state) => state.file)]
             .filter((file): file is File => file !== null)
       const images = await Promise.all(files.map(async (file) => (
         new Uint8Array(await file.arrayBuffer())
       )))
       const nextConfig = addIconLibraryEntry(
         config.rawConfig,
-        iconName,
-        iconType,
+        draft.name,
+        draft.type,
         images,
         window.crypto,
         stateNames,
@@ -2506,14 +2498,11 @@ function App() {
         document: parseUpdatedConfig(nextConfig, config),
         models,
       })
-      setIconName('')
-      setSingleIconFile(null)
-      setNormalIconFile(null)
-      setAlarmIconFile(null)
-      setMultiStateDrafts([{ name: '', file: null }])
       messageApi.success('已新增圖示。')
+      return true
     } catch (error) {
       messageApi.error(`新增圖示失敗：${getErrorMessage(error)}`)
+      return false
     }
   }
 
@@ -2888,18 +2877,6 @@ function App() {
         onClose={() => setIconLibraryOpen(false)}
         canEdit={Boolean(config)}
         iconLibrary={iconLibrary}
-        iconName={iconName}
-        setIconName={setIconName}
-        iconType={iconType}
-        setIconType={setIconType}
-        singleIconFile={singleIconFile}
-        setSingleIconFile={setSingleIconFile}
-        normalIconFile={normalIconFile}
-        setNormalIconFile={setNormalIconFile}
-        alarmIconFile={alarmIconFile}
-        setAlarmIconFile={setAlarmIconFile}
-        multiStateDrafts={multiStateDrafts}
-        setMultiStateDrafts={setMultiStateDrafts}
         onExport={handleExportIconLibrary}
         onImport={handleImportIconLibrary}
         onAddIcon={handleAddIcon}

@@ -1,4 +1,4 @@
-import { useRef, type ChangeEvent, type Dispatch, type SetStateAction } from 'react'
+import { useRef, useState, type ChangeEvent } from 'react'
 import { Button, Card, Empty, Image, Input, Modal, Radio, Space, Typography } from 'antd'
 import {
   getIconAssets,
@@ -15,47 +15,35 @@ export interface MultiStateIconDraft {
 
 export type IconLibraryType = 'single' | 'pair' | 'multi-state'
 
+export interface IconAddDraft {
+  name: string
+  type: IconLibraryType
+  singleFile: File | null
+  normalFile: File | null
+  alarmFile: File | null
+  multiStateDrafts: MultiStateIconDraft[]
+}
+
 export interface IconLibraryDialogProps {
   open: boolean
   onClose: () => void
   canEdit: boolean
   iconLibrary: IconLibraryEntry[]
-  iconName: string
-  setIconName: Dispatch<SetStateAction<string>>
-  iconType: IconLibraryType
-  setIconType: Dispatch<SetStateAction<IconLibraryType>>
-  singleIconFile: File | null
-  setSingleIconFile: Dispatch<SetStateAction<File | null>>
-  normalIconFile: File | null
-  setNormalIconFile: Dispatch<SetStateAction<File | null>>
-  alarmIconFile: File | null
-  setAlarmIconFile: Dispatch<SetStateAction<File | null>>
-  multiStateDrafts: MultiStateIconDraft[]
-  setMultiStateDrafts: Dispatch<SetStateAction<MultiStateIconDraft[]>>
   onExport: () => void
   onImport: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>
-  onAddIcon: () => void | Promise<void>
+  /** Resolves true when the icon was added; the form is cleared only on success. */
+  onAddIcon: (draft: IconAddDraft) => Promise<boolean>
   onRemoveIcon: (iconId: string) => void
   onEditMultiStateIcon: (iconId: string) => void
 }
+
+const EMPTY_MULTI_STATE_DRAFTS: MultiStateIconDraft[] = [{ name: '', file: null }]
 
 export function IconLibraryDialog({
   open,
   onClose,
   canEdit,
   iconLibrary,
-  iconName,
-  setIconName,
-  iconType,
-  setIconType,
-  singleIconFile,
-  setSingleIconFile,
-  normalIconFile,
-  setNormalIconFile,
-  alarmIconFile,
-  setAlarmIconFile,
-  multiStateDrafts,
-  setMultiStateDrafts,
   onExport,
   onImport,
   onAddIcon,
@@ -63,6 +51,31 @@ export function IconLibraryDialog({
   onEditMultiStateIcon,
 }: IconLibraryDialogProps) {
   const importRef = useRef<HTMLInputElement>(null)
+  const [iconName, setIconName] = useState('')
+  const [iconType, setIconType] = useState<IconLibraryType>('single')
+  const [singleIconFile, setSingleIconFile] = useState<File | null>(null)
+  const [normalIconFile, setNormalIconFile] = useState<File | null>(null)
+  const [alarmIconFile, setAlarmIconFile] = useState<File | null>(null)
+  const [multiStateDrafts, setMultiStateDrafts] = useState<MultiStateIconDraft[]>(
+    EMPTY_MULTI_STATE_DRAFTS,
+  )
+
+  async function handleAdd() {
+    const added = await onAddIcon({
+      name: iconName,
+      type: iconType,
+      singleFile: singleIconFile,
+      normalFile: normalIconFile,
+      alarmFile: alarmIconFile,
+      multiStateDrafts,
+    })
+    if (!added) return
+    setIconName('')
+    setSingleIconFile(null)
+    setNormalIconFile(null)
+    setAlarmIconFile(null)
+    setMultiStateDrafts(EMPTY_MULTI_STATE_DRAFTS)
+  }
 
   return (
     <Modal
@@ -235,7 +248,7 @@ export function IconLibraryDialog({
                   || multiStateDrafts.some((state) => !state.file || !state.name.trim())
                   || new Set(multiStateDrafts.map((state) =>
                     state.name.trim().toLocaleLowerCase())).size !== multiStateDrafts.length)}
-          onClick={() => void onAddIcon()}
+          onClick={() => void handleAdd()}
         >
           新增至圖示庫
         </Button>
