@@ -69,6 +69,8 @@ import { buildViewTargetOptions } from './domain/views/viewTargetOptions'
 import { BatchMoveDialog, type BatchMoveItem } from './ui/view/BatchMoveDialog'
 import { ComponentMoveDialog } from './ui/view/ComponentMoveDialog'
 import { DeviceTagEditDialog } from './ui/device/DeviceTagEditDialog'
+import { IconLibraryDialog, type IconLibraryType, type MultiStateIconDraft } from './ui/icons/IconLibraryDialog'
+import { MultiStateIconDialog } from './ui/icons/MultiStateIconDialog'
 import {
   ViewSettingsDialog,
   type FloorGroupFrameFormValues,
@@ -123,7 +125,7 @@ import { groupByFloor, normalizeFloor } from './domain/tags/floor'
 import {
   deviceTagsNeedAddressSorting,
 } from './domain/devices/deviceTagAddressSort'
-import { getIconAssets, getIconLibrary, MAX_MULTI_STATE_COUNT } from './domain/icons/iconLibrary'
+import { getIconLibrary } from './domain/icons/iconLibrary'
 import type { MultiStateIconSet } from './domain/icons/iconLibrary'
 import { generateId } from './domain/ids'
 import {
@@ -184,11 +186,6 @@ import './App.css'
 
 const { Header, Content } = Layout
 const { Text, Title } = Typography
-
-interface MultiStateIconDraft {
-  name: string
-  file: File | null
-}
 
 interface PreviewState {
   width: number
@@ -297,10 +294,9 @@ function App() {
   const [floorSelection, setFloorSelection] = useState<Set<string>>(new Set())
   const [bulkFloor, setBulkFloor] = useState('')
   const [iconLibraryOpen, setIconLibraryOpen] = useState(false)
-  const iconLibraryImportRef = useRef<HTMLInputElement>(null)
   const [editingMultiStateIconId, setEditingMultiStateIconId] = useState('')
   const [iconName, setIconName] = useState('')
-  const [iconType, setIconType] = useState<'single' | 'pair' | 'multi-state'>('single')
+  const [iconType, setIconType] = useState<IconLibraryType>('single')
   const [singleIconFile, setSingleIconFile] = useState<File | null>(null)
   const [normalIconFile, setNormalIconFile] = useState<File | null>(null)
   const [alarmIconFile, setAlarmIconFile] = useState<File | null>(null)
@@ -2887,315 +2883,38 @@ function App() {
         onViewPropertiesSubmit={handleViewPropertiesSubmit}
         onCancel={() => setViewSettingsOpen(false)}
       />
-      <Modal
+      <IconLibraryDialog
         open={iconLibraryOpen}
-        title="圖示庫管理"
-        footer={null}
-        onCancel={() => setIconLibraryOpen(false)}
-        width={760}
-        destroyOnHidden
-      >
-        <Space orientation="vertical" size="middle" className="icon-library-manager">
-          <Space wrap>
-            <Button
-              disabled={!config || !iconLibrary.length}
-              onClick={handleExportIconLibrary}
-            >
-              匯出圖示庫
-            </Button>
-            <Button
-              disabled={!config}
-              onClick={() => iconLibraryImportRef.current?.click()}
-            >
-              匯入圖示庫
-            </Button>
-            <input
-              ref={iconLibraryImportRef}
-              type="file"
-              accept="application/json,.json"
-              aria-label="匯入圖示庫 JSON"
-              hidden
-              onChange={(event) => void handleImportIconLibrary(event)}
-            />
-            <Text type="secondary">匯入會合併圖示；若名稱或 ID 衝突，整批匯入將被拒絕。</Text>
-          </Space>
-          <Space wrap>
-            <Input
-              aria-label="圖示名稱（必填）"
-              placeholder="圖示名稱（必填）"
-              maxLength={120}
-              value={iconName}
-              onChange={(event) => setIconName(event.target.value)}
-            />
-            <Radio.Group
-              aria-label="圖示類型"
-              value={iconType}
-              onChange={(event) => setIconType(event.target.value)}
-              options={[
-                { label: '一般圖示', value: 'single' },
-                { label: '正常／告警圖示組', value: 'pair' },
-                { label: '多狀態圖示組', value: 'multi-state' },
-              ]}
-            />
-          </Space>
-          {!iconName.trim() && (
-            <Text type="secondary">請先輸入圖示名稱，才能新增至圖示庫。</Text>
-          )}
-          {iconType === 'single' ? (
-            <label className="icon-file-field">
-              一般圖示圖片
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/gif"
-                onChange={(event) => setSingleIconFile(event.target.files?.[0] ?? null)}
-              />
-            </label>
-          ) : iconType === 'pair' ? (
-            <Space wrap>
-              <label className="icon-file-field">
-                正常狀態圖片
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/gif"
-                  onChange={(event) => setNormalIconFile(event.target.files?.[0] ?? null)}
-                />
-              </label>
-              <label className="icon-file-field">
-                告警狀態圖片
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/gif"
-                  onChange={(event) => setAlarmIconFile(event.target.files?.[0] ?? null)}
-                />
-              </label>
-            </Space>
-          ) : (
-            <Space orientation="vertical" className="icon-state-draft-list">
-              <label className="icon-file-field">
-                預設／正常狀態圖片
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/gif"
-                  onChange={(event) => setNormalIconFile(event.target.files?.[0] ?? null)}
-                />
-              </label>
-              <Text type="secondary">狀態依列表順序設定優先權，第一項優先權最高；最多 {MAX_MULTI_STATE_COUNT} 項。</Text>
-              {multiStateDrafts.map((state, index) => (
-                <Space key={`state-draft-${index}`} wrap>
-                  <Text>優先 {index + 1}</Text>
-                  <Input
-                    aria-label={`狀態 ${index + 1} 名稱`}
-                    placeholder="狀態名稱"
-                    maxLength={80}
-                    value={state.name}
-                    onChange={(event) => setMultiStateDrafts((current) => current.map(
-                      (candidate, candidateIndex) => candidateIndex === index
-                        ? { ...candidate, name: event.target.value }
-                        : candidate,
-                    ))}
-                  />
-                  <label className="icon-file-field">
-                    狀態圖片
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/gif"
-                      onChange={(event) => setMultiStateDrafts((current) => current.map(
-                        (candidate, candidateIndex) => candidateIndex === index
-                          ? { ...candidate, file: event.target.files?.[0] ?? null }
-                          : candidate,
-                      ))}
-                    />
-                  </label>
-                  <Button
-                    aria-label={`狀態 ${index + 1} 上移`}
-                    disabled={index === 0}
-                    onClick={() => setMultiStateDrafts((current) => {
-                      const next = [...current]
-                      ;[next[index - 1], next[index]] = [next[index]!, next[index - 1]!]
-                      return next
-                    })}
-                  >
-                    上移
-                  </Button>
-                  <Button
-                    aria-label={`狀態 ${index + 1} 下移`}
-                    disabled={index === multiStateDrafts.length - 1}
-                    onClick={() => setMultiStateDrafts((current) => {
-                      const next = [...current]
-                      ;[next[index], next[index + 1]] = [next[index + 1]!, next[index]!]
-                      return next
-                    })}
-                  >
-                    下移
-                  </Button>
-                  <Button
-                    danger
-                    disabled={multiStateDrafts.length <= 1}
-                    onClick={() => setMultiStateDrafts((current) =>
-                      current.filter((_candidate, candidateIndex) => candidateIndex !== index))}
-                  >
-                    移除
-                  </Button>
-                </Space>
-              ))}
-              <Button
-                disabled={multiStateDrafts.length >= MAX_MULTI_STATE_COUNT}
-                onClick={() => setMultiStateDrafts((current) => [...current, { name: '', file: null }])}
-              >
-                新增狀態
-              </Button>
-            </Space>
-          )}
-          <Button
-            type="primary"
-            disabled={!config || !iconName.trim()
-              || (iconType === 'single'
-                ? !singleIconFile
-                : iconType === 'pair'
-                  ? !normalIconFile || !alarmIconFile
-                  : !normalIconFile
-                    || multiStateDrafts.some((state) => !state.file || !state.name.trim())
-                    || new Set(multiStateDrafts.map((state) =>
-                      state.name.trim().toLocaleLowerCase())).size !== multiStateDrafts.length)}
-            onClick={() => void handleAddIcon()}
-          >
-            新增至圖示庫
-          </Button>
-          {iconLibrary.length ? (
-            <div className="icon-library-list">
-              {iconLibrary.map((icon) => {
-                const assets = getIconAssets(icon)
-                return (
-                  <Card
-                    key={icon.id}
-                    size="small"
-                    title={icon.name}
-                    extra={(
-                      <Space size="small">
-                        {icon.type === 'multi-state' && (
-                          <Button
-                            size="small"
-                            onClick={() => setEditingMultiStateIconId(icon.id)}
-                          >
-                            修改
-                          </Button>
-                        )}
-                        <Button danger size="small" onClick={() => handleRemoveIcon(icon.id)}>刪除</Button>
-                      </Space>
-                    )}
-                  >
-                    <Space wrap>
-                      {assets.map((asset, index) => (
-                        <Space key={asset.id} orientation="vertical" align="center" size="small">
-                          <Image src={asset.dataUrl} alt={`${icon.name} ${index + 1}`} width={64} height={64} />
-                          <Text type="secondary">
-                            {icon.type === 'pair'
-                              ? (index === 0 ? '正常' : '告警')
-                              : icon.type === 'multi-state'
-                                ? index === 0 ? '預設／正常' : icon.states[index - 1]?.name
-                                : '預覽'}
-                          </Text>
-                        </Space>
-                      ))}
-                    </Space>
-                  </Card>
-                )
-              })}
-            </div>
-          ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="圖示庫目前沒有項目。" />
-          )}
-        </Space>
-      </Modal>
-      <Modal
-        open={Boolean(editingMultiStateIcon)}
-        title={editingMultiStateIcon ? `修改多狀態圖示組：${editingMultiStateIcon.name}` : '修改多狀態圖示組'}
-        footer={null}
-        onCancel={() => setEditingMultiStateIconId('')}
-        width={640}
-        destroyOnHidden
-      >
-        {editingMultiStateIcon && (
-          <Space orientation="vertical" size="middle" className="multi-state-library-order">
-            <Text strong>狀態優先順序（第一項最高）</Text>
-            {editingMultiStateIcon.states.map((state, index) => (
-              <Space key={state.key} wrap>
-                <Text>{index + 1}. {state.name}</Text>
-                <Button
-                  aria-label={`${state.name} 狀態上移`}
-                  disabled={index === 0}
-                  onClick={() => handleMoveMultiStateIconState(
-                    editingMultiStateIcon.id,
-                    state.key,
-                    -1,
-                  )}
-                >
-                  上移
-                </Button>
-                <Button
-                  aria-label={`${state.name} 狀態下移`}
-                  disabled={index === editingMultiStateIcon.states.length - 1}
-                  onClick={() => handleMoveMultiStateIconState(
-                    editingMultiStateIcon.id,
-                    state.key,
-                    1,
-                  )}
-                >
-                  下移
-                </Button>
-                <Button
-                  danger
-                  disabled={editingMultiStateIcon.states.length <= 1}
-                  onClick={() => handleRemoveMultiStateIconState(
-                    editingMultiStateIcon.id,
-                    state.key,
-                  )}
-                >
-                  刪除狀態
-                </Button>
-              </Space>
-            ))}
-            {editingMultiStateIcon.states.length < MAX_MULTI_STATE_COUNT && (
-              <Space wrap>
-                <Input
-                  aria-label={`${editingMultiStateIcon.name} 新增狀態名稱`}
-                  placeholder="新增狀態名稱"
-                  maxLength={80}
-                  value={multiStateAddDrafts[editingMultiStateIcon.id]?.name ?? ''}
-                  onChange={(event) => setMultiStateAddDrafts((current) => ({
-                    ...current,
-                    [editingMultiStateIcon.id]: {
-                      name: event.target.value,
-                      file: current[editingMultiStateIcon.id]?.file ?? null,
-                    },
-                  }))}
-                />
-                <label className="icon-file-field">
-                  狀態圖片
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/gif"
-                    onChange={(event) => setMultiStateAddDrafts((current) => ({
-                      ...current,
-                      [editingMultiStateIcon.id]: {
-                        name: current[editingMultiStateIcon.id]?.name ?? '',
-                        file: event.target.files?.[0] ?? null,
-                      },
-                    }))}
-                  />
-                </label>
-                <Button
-                  disabled={!multiStateAddDrafts[editingMultiStateIcon.id]?.name.trim()
-                    || !multiStateAddDrafts[editingMultiStateIcon.id]?.file}
-                  onClick={() => void handleAddMultiStateIconState(editingMultiStateIcon.id)}
-                >
-                  新增狀態
-                </Button>
-              </Space>
-            )}
-          </Space>
-        )}
-      </Modal>
+        onClose={() => setIconLibraryOpen(false)}
+        canEdit={Boolean(config)}
+        iconLibrary={iconLibrary}
+        iconName={iconName}
+        setIconName={setIconName}
+        iconType={iconType}
+        setIconType={setIconType}
+        singleIconFile={singleIconFile}
+        setSingleIconFile={setSingleIconFile}
+        normalIconFile={normalIconFile}
+        setNormalIconFile={setNormalIconFile}
+        alarmIconFile={alarmIconFile}
+        setAlarmIconFile={setAlarmIconFile}
+        multiStateDrafts={multiStateDrafts}
+        setMultiStateDrafts={setMultiStateDrafts}
+        onExport={handleExportIconLibrary}
+        onImport={handleImportIconLibrary}
+        onAddIcon={handleAddIcon}
+        onRemoveIcon={handleRemoveIcon}
+        onEditMultiStateIcon={setEditingMultiStateIconId}
+      />
+      <MultiStateIconDialog
+        icon={editingMultiStateIcon}
+        addDrafts={multiStateAddDrafts}
+        setAddDrafts={setMultiStateAddDrafts}
+        onClose={() => setEditingMultiStateIconId('')}
+        onMoveState={handleMoveMultiStateIconState}
+        onRemoveState={handleRemoveMultiStateIconState}
+        onAddState={handleAddMultiStateIconState}
+      />
       <Modal
         open={deviceManagerOpen}
         title="專案管理"
