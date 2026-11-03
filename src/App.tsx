@@ -64,6 +64,10 @@ import {
   planComponentsMove,
 } from './features/views/moveComponentsBetweenViews'
 import { findTagReferences } from './features/devices/findTagReferences'
+import { buildViewTargetOptions } from './domain/views/viewTargetOptions'
+import { BatchMoveDialog, type BatchMoveItem } from './ui/view/BatchMoveDialog'
+import { ComponentMoveDialog } from './ui/view/ComponentMoveDialog'
+import { ViewNameDialog } from './ui/view/ViewNameDialog'
 import {
   applyTagAlarms,
   updateExistingTagAlarmTexts,
@@ -744,6 +748,18 @@ function App() {
     viewNameForm.setFieldsValue({
       name: mode === 'rename' ? selectedView?.name ?? '' : '',
     })
+  }
+
+  function validateViewNameInput(value: unknown) {
+    if (!config) throw new Error('請先載入配置。')
+    const validation = validateViewName(
+      config.rawConfig.hmi.views,
+      value,
+      viewDialogMode === 'rename' ? viewDialogTargetId : undefined,
+    )
+    if (!validation.valid && validation.reason === 'duplicate') {
+      throw new Error('此 View 名稱已存在，請使用不同名稱。')
+    }
   }
 
   function handleViewNameSubmit(values: { name: string }) {
@@ -2833,6 +2849,16 @@ function App() {
     </Card>
   )
 
+  const batchMoveItems: BatchMoveItem[] = (selectedModel?.components ?? [])
+    .filter((component) => component.managed !== false)
+    .map((component) => {
+      const tagName = tags.find((tag) => tag.id === component.tagId)?.name
+      return {
+        key: component.key,
+        label: `${component.label || tagName || '未命名元件'}${tagName ? ` · ${tagName}` : ''}`,
+      }
+    })
+
   return (
     <ConfigProvider
       locale={zhTW}
@@ -2853,47 +2879,32 @@ function App() {
       }}
     >
       {contextHolder}
-      <Modal
+      <ComponentMoveDialog
         open={componentMoveSource !== null}
-        title="移動元件至 View"
-        okText="移動"
-        cancelText="取消"
-        okButtonProps={{ disabled: !componentMoveTargetId }}
+        targetOptions={buildViewTargetOptions(config?.views ?? [], models, componentMoveSource?.viewId)}
+        targetId={componentMoveTargetId}
+        onTargetChange={setComponentMoveTargetId}
         onCancel={() => {
           setComponentMoveSource(null)
           setComponentMoveTargetId('')
         }}
         onOk={handleMoveComponentToView}
-        destroyOnHidden
-      >
-        <Text type="secondary">
-          選擇要移入此元件的目標 View；元件會從目前 View 移除。
-        </Text>
-        <Select
-          aria-label="移動至 View"
-          style={{ marginTop: 16, width: '100%' }}
-          value={componentMoveTargetId || undefined}
-          placeholder="選擇目標 View"
-          options={config?.views
-            .filter((view) => {
-              const id = view.id || view.key
-              return id !== componentMoveSource?.viewId && models.has(id)
-            })
-            .map((view) => ({
-              value: view.id || view.key,
-              label: view.name || view.id || view.key,
-            })) ?? []}
-          onChange={setComponentMoveTargetId}
-        />
-      </Modal>
-      <Modal
+      />
+      <BatchMoveDialog
         open={batchMoveDialogOpen}
-        title="批次移動元件"
-        okText={`移動 ${batchMoveSelection.size} 個`}
-        cancelText="取消"
-        okButtonProps={{
-          disabled: batchMoveSelection.size === 0 || !componentMoveTargetId,
+        items={batchMoveItems}
+        selectedKeys={batchMoveSelection}
+        onToggleItem={(key, checked) => {
+          setBatchMoveSelection((current) => {
+            const next = new Set(current)
+            if (checked) next.add(key)
+            else next.delete(key)
+            return next
+          })
         }}
+        targetOptions={buildViewTargetOptions(config?.views ?? [], models, selectedView?.id)}
+        targetId={componentMoveTargetId}
+        onTargetChange={setComponentMoveTargetId}
         onCancel={() => {
           setBatchMoveDialogOpen(false)
           setBatchMoveSelection(new Set())
@@ -2912,97 +2923,15 @@ function App() {
             setComponentMoveTargetId('')
           }
         }}
-        width={640}
-        destroyOnHidden
-      >
-        <Text type="secondary">
-          選擇要移動的已管理元件及目標 View。元件會從目前 View 移除。
-        </Text>
-        <Select
-          aria-label="批次移動至 View"
-          style={{ margin: '16px 0', width: '100%' }}
-          value={componentMoveTargetId || undefined}
-          placeholder="選擇目標 View"
-          options={config?.views
-            .filter((view) => {
-              const id = view.id || view.key
-              return id !== selectedView?.id && models.has(id)
-            })
-            .map((view) => ({
-              value: view.id || view.key,
-              label: view.name || view.id || view.key,
-            })) ?? []}
-          onChange={setComponentMoveTargetId}
-        />
-        <div className="batch-tag-list" role="group" aria-label="選擇要移動的元件">
-          {selectedModel?.components
-            .filter((component) => component.managed !== false)
-            .map((component) => {
-              const tagName = tags.find((tag) => tag.id === component.tagId)?.name
-              return (
-                <Checkbox
-                  key={component.key}
-                  checked={batchMoveSelection.has(component.key)}
-                  onChange={(event) => {
-                    setBatchMoveSelection((current) => {
-                      const next = new Set(current)
-                      if (event.target.checked) next.add(component.key)
-                      else next.delete(component.key)
-                      return next
-                    })
-                  }}
-                >
-                  {component.label || tagName || '未命名元件'}
-                  {tagName ? ` · ${tagName}` : ''}
-                </Checkbox>
-              )
-            })}
-        </div>
-      </Modal>
-      <Modal
-        open={viewDialogMode !== null}
-        title={viewDialogMode === 'rename' ? '修改 View 名稱' : '新增空白 View'}
-        okText={viewDialogMode === 'rename' ? '儲存名稱' : '建立 View'}
-        cancelText="取消"
+      />
+      <ViewNameDialog
+        mode={viewDialogMode}
+        form={viewNameForm}
+        validateName={validateViewNameInput}
+        onSubmit={handleViewNameSubmit}
         onCancel={() => setViewDialogMode(null)}
         onOk={() => viewNameForm.submit()}
-        destroyOnHidden
-      >
-        <Text type="secondary">
-          {viewDialogMode === 'rename'
-            ? '修改名稱不會變更 View ID 或其導覽連結。'
-            : '建立空白畫布，之後可新增 Tag 元件。'}
-        </Text>
-        <Form
-          form={viewNameForm}
-          layout="vertical"
-          onFinish={handleViewNameSubmit}
-          style={{ marginTop: 16 }}
-        >
-          <Form.Item
-            label="View 名稱"
-            name="name"
-            rules={[
-              { required: true, whitespace: true, message: 'View 名稱不可空白。' },
-              {
-                validator: async (_, value: unknown) => {
-                  if (!config) throw new Error('請先載入配置。')
-                  const validation = validateViewName(
-                    config.rawConfig.hmi.views,
-                    value,
-                    viewDialogMode === 'rename' ? viewDialogTargetId : undefined,
-                  )
-                  if (!validation.valid && validation.reason === 'duplicate') {
-                    throw new Error('此 View 名稱已存在，請使用不同名稱。')
-                  }
-                },
-              },
-            ]}
-          >
-            <Input autoFocus maxLength={120} />
-          </Form.Item>
-        </Form>
-      </Modal>
+      />
       <Modal
         open={viewSettingsOpen}
         title="View 設定"
