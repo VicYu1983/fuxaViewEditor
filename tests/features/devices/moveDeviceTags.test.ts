@@ -83,6 +83,44 @@ describe('moveModbusDeviceTags', () => {
     expect(result.moved).toBe(2)
   })
 
+  it('rejects a tag whose memaddress and address already exist in the target device', () => {
+    const source = createConfig()
+    source.devices.target = {
+      id: 'target',
+      type: 'ModbusTCP',
+      tags: { 'tag-9': { id: 'tag-9', name: 'Valve', type: 'Bool', address: 2, memaddress: '000000' } },
+    }
+
+    expect(() => moveModbusDeviceTags(source, 'source', 'target', ['tag-2'])).toThrow('目標設備已有相同位址的 Tag')
+    expect(tagsOf(source, 'source')['tag-2']).toBeDefined()
+  })
+
+  it('allows the same address when the memaddress differs', () => {
+    const source = createConfig()
+    source.devices.target = {
+      id: 'target',
+      type: 'ModbusTCP',
+      tags: { 'tag-9': { id: 'tag-9', name: 'Valve', type: 'Bool', address: 2, memaddress: '000001' } },
+    }
+    const result = moveModbusDeviceTags(source, 'source', 'target', ['tag-2'])
+
+    expect(result.moved).toBe(1)
+  })
+
+  it('rejects when the selection itself contains two tags with the same address', () => {
+    const source = createConfig()
+    source.devices.source = {
+      id: 'source',
+      type: 'ModbusTCP',
+      tags: {
+        'tag-1': { id: 'tag-1', name: 'Pump', type: 'Bool', address: 5, memaddress: '000000' },
+        'tag-2': { id: 'tag-2', name: 'Fan', type: 'Bool', address: 5, memaddress: '000000' },
+      },
+    }
+
+    expect(() => moveModbusDeviceTags(source, 'source', 'target', ['tag-1', 'tag-2'])).toThrow('目標設備已有相同位址的 Tag')
+  })
+
   it('rejects same source and target, empty selection, unknown tags and non-Modbus devices', () => {
     const source = createConfig()
     source.devices.plc = { id: 'plc', type: 'Siemens', tags: {} }
