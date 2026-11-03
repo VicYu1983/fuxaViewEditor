@@ -90,6 +90,7 @@ import { PreviewPanel } from './ui/preview/PreviewPanel'
 import { FloorsTab } from './ui/device/FloorsTab'
 import { ViewSidebar } from './ui/view/ViewSidebar'
 import { ViewNameDialog } from './ui/view/ViewNameDialog'
+import { GridSettingsCard } from './ui/view/GridSettingsCard'
 import {
   findLegacySwitchViewIds,
   needsVoiceBridgeUpdate,
@@ -134,7 +135,7 @@ import {
 } from './features/devices/manageDeviceTags'
 import type { DeviceTagUpdate } from './features/devices/manageDeviceTags'
 import { moveModbusDeviceTags } from './features/devices/moveDeviceTags'
-import { DEFAULT_GRID, ICON_SCALE_MAX, ICON_SCALE_MIN } from './domain/layout/gridSettings'
+import { DEFAULT_GRID } from './domain/layout/gridSettings'
 import { groupComponentsByFloor } from './domain/layout/floorLayout'
 import { getFloorGroupFrameSettings } from './domain/layout/floorGroupFrame'
 import { hasCurrentFloorFrameLayout } from './domain/layout/floorGroupFrame'
@@ -2378,136 +2379,11 @@ function App() {
                         <div className="editor-columns">
                           <div className="editor-controls">
                         {selectedModel && (
-                          <Card title="Grid 排版設定" className="view-details">
-                            <div className="grid-settings">
-                              <label>
-                                <Text>每列元件數</Text>
-                                <InputNumber
-                                  aria-label="每列元件數"
-                                  min={1}
-                                  max={24}
-                                  step={1}
-                                  value={selectedModel.grid.columns}
-                                  onChange={(columns) => {
-                                    if (columns !== null) {
-                                      handleUpdateGrid(selectedView.id, { columns })
-                                    }
-                                  }}
-                                />
-                              </label>
-                              <label>
-                                <Text>起點 X</Text>
-                                <InputNumber
-                                  aria-label="起點 X"
-                                  min={0}
-                                  value={selectedModel.grid.originX}
-                                  onChange={(originX) => {
-                                    if (originX !== null) {
-                                      handleUpdateGrid(selectedView.id, { originX })
-                                    }
-                                  }}
-                                />
-                              </label>
-                              <label>
-                                <Text>起點 Y</Text>
-                                <InputNumber
-                                  aria-label="起點 Y"
-                                  min={0}
-                                  value={selectedModel.grid.originY}
-                                  onChange={(originY) => {
-                                    if (originY !== null) {
-                                      handleUpdateGrid(selectedView.id, { originY })
-                                    }
-                                  }}
-                                />
-                              </label>
-                              <label>
-                                <Text>水平間距</Text>
-                                <InputNumber
-                                  aria-label="水平間距"
-                                  min={0}
-                                  value={selectedModel.grid.gapX}
-                                  onChange={(gapX) => {
-                                    if (gapX !== null) {
-                                      handleUpdateGrid(selectedView.id, { gapX })
-                                    }
-                                  }}
-                                />
-                              </label>
-                              <label>
-                                <Text>垂直間距</Text>
-                                <InputNumber
-                                  aria-label="垂直間距"
-                                  min={0}
-                                  value={selectedModel.grid.gapY}
-                                  onChange={(gapY) => {
-                                    if (gapY !== null) {
-                                      handleUpdateGrid(selectedView.id, { gapY })
-                                    }
-                                  }}
-                                />
-                              </label>
-                              <label>
-                                <Text>圖示大小（%）</Text>
-                                <InputNumber
-                                  aria-label="圖示大小"
-                                  min={ICON_SCALE_MIN}
-                                  max={ICON_SCALE_MAX}
-                                  step={5}
-                                  addonAfter="%"
-                                  value={selectedModel.grid.iconScale}
-                                  onChange={(iconScale) => {
-                                    if (iconScale !== null) {
-                                      handleUpdateGrid(selectedView.id, { iconScale })
-                                    }
-                                  }}
-                                />
-                              </label>
-                              <label>
-                                <Text>標籤位置</Text>
-                                <Select
-                                  aria-label="標籤位置"
-                                  value={selectedModel.grid.labelPosition}
-                                  options={[
-                                    { value: 'above', label: '上方' },
-                                    { value: 'below', label: '下方' },
-                                    { value: 'left', label: '左側' },
-                                    { value: 'right', label: '右側' },
-                                  ]}
-                                  onChange={(labelPosition: GridSettings['labelPosition']) => (
-                                    handleUpdateGrid(selectedView.id, { labelPosition })
-                                  )}
-                                />
-                              </label>
-                              <label>
-                                <Text>標籤與圖示距離</Text>
-                                <InputNumber
-                                  aria-label="標籤與圖示距離"
-                                  min={0}
-                                  value={selectedModel.grid.labelOffset}
-                                  onChange={(labelOffset) => {
-                                    if (labelOffset !== null) {
-                                      handleUpdateGrid(selectedView.id, { labelOffset })
-                                    }
-                                  }}
-                                />
-                              </label>
-                              <label>
-                                <Text>標籤字級</Text>
-                                <InputNumber
-                                  aria-label="標籤字級"
-                                  min={8}
-                                  max={72}
-                                  value={selectedModel.grid.labelFontSize}
-                                  onChange={(labelFontSize) => {
-                                    if (labelFontSize !== null) {
-                                      handleUpdateGrid(selectedView.id, { labelFontSize })
-                                    }
-                                  }}
-                                />
-                              </label>
-                            </div>
-                          </Card>
+                          <GridSettingsCard
+                            viewId={selectedView.id}
+                            grid={selectedModel.grid}
+                            onUpdateGrid={handleUpdateGrid}
+                          />
                         )}
                       <Card
                         title="已管理元件"
