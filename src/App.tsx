@@ -9,15 +9,12 @@ import {
 import {
   Alert,
   Button,
-  Checkbox,
   ConfigProvider,
   Empty,
   Form,
   Input,
-  InputNumber,
   Layout,
   Modal,
-  Select,
   Space,
   Tag,
   Tooltip,
@@ -54,7 +51,7 @@ import { findTagReferences } from './features/devices/findTagReferences'
 import { buildViewTargetOptions } from './domain/views/viewTargetOptions'
 import { BatchMoveDialog, type BatchMoveItem } from './ui/view/BatchMoveDialog'
 import { ComponentMoveDialog } from './ui/view/ComponentMoveDialog'
-import { DeviceTagManager } from './ui/device/DeviceTagManager'
+import { DevicesTab } from './ui/device/DevicesTab'
 import { IconLibraryDialog, type IconAddDraft, type MultiStateIconDraft } from './ui/icons/IconLibraryDialog'
 import { MultiStateIconDialog } from './ui/icons/MultiStateIconDialog'
 import {
@@ -409,6 +406,8 @@ function App() {
     ? addressFillState.error
     : null
   const batchableTags = useMemo(() => tags.filter((tag) => !isAutoFilledTag(tag)), [tags])
+  const canBatchCreateTags = Boolean(config)
+    && !Object.keys(config?.rawConfig.devices ?? {}).every((id) => id === '0')
   const usedTagIds = new Set(selectedModel?.components.map((component) => component.tagId) ?? [])
   const preview = previewSnapshot && selectedView
     && previewSnapshot.viewId === selectedView.id
@@ -1257,6 +1256,19 @@ function App() {
     })
   }
 
+  function startCreateModbusDevice() {
+    setDeviceManagerMode('create')
+    setManagedDeviceId('')
+    deviceManagerForm.setFieldsValue({
+      name: '',
+      address: '127.0.0.1:502',
+      addressCount: 0,
+      slaveid: 1,
+      enabled: true,
+      polling: 200,
+    })
+  }
+
   function handleModbusDeviceSave(values: ModbusDeviceFormValues) {
     if (!config) return
     try {
@@ -1989,202 +2001,40 @@ function App() {
             {
               key: 'devices',
               label: '設備與 Tag',
-              children: <>
-        <div className="device-manager-toolbar">
-          <Select
-            aria-label="選擇 ModbusTCP 設備"
-            value={deviceManagerMode === 'create' ? undefined : managedDeviceId}
-            placeholder="選擇 ModbusTCP 設備"
-            options={modbusDevices.map(({ id, record }) => ({
-              value: id,
-              label: `${String(record.name || id)} (${id})`,
-            }))}
-            onChange={selectManagedDevice}
-          />
-          <Button
-            onClick={() => {
-              setDeviceManagerMode('create')
-              setManagedDeviceId('')
-              deviceManagerForm.setFieldsValue({
-                name: '',
-                address: '127.0.0.1:502',
-                addressCount: 0,
-                slaveid: 1,
-                enabled: true,
-                polling: 200,
-              })
-            }}
-          >
-            新增 ModbusTCP 設備
-          </Button>
-          <Button
-            disabled={!selectedModel || batchableTags.length === 0}
-            onClick={() => {
-              openBatchAddTab()
-            }}
-          >
-            批次加入 Tag
-          </Button>
-          <Button
-            disabled={!config || Object.keys(config.rawConfig.devices).every((id) => id === '0')}
-            onClick={openTagCreateTab}
-          >
-            批次建立 Tag
-          </Button>
-        </div>
-        {deviceManagerMode === 'edit' && (
-          <Alert
-            showIcon
-            type={duplicateTagGroups.length ? 'warning' : 'success'}
-            message={duplicateTagGroups.length
-              ? `全專案名稱檢查：發現 ${duplicateTagGroups.length} 組重複名稱，共 ${duplicateTagGroups.reduce((count, group) => count + group.length, 0)} 個 Tag`
-              : '全專案名稱檢查：目前沒有重複的 Tag 名稱'}
-            description={duplicateTagGroups.length ? (
-              <Space wrap>
-                {duplicateTagGroups.slice(0, 8).map((group) => {
-                  const firstTag = group[0]
-                  if (!firstTag) return null
-                  return (
-                    <Tag key={firstTag.name.trim().toLocaleLowerCase()}>
-                      {firstTag.name}：{group.map((tag) => tag.deviceName).join('、')}
-                    </Tag>
-                  )
-                })}
-                {duplicateTagGroups.length > 8
-                  ? <Text type="secondary">另有 {duplicateTagGroups.length - 8} 組未顯示</Text>
-                  : null}
-              </Space>
-            ) : undefined}
-            style={{ marginTop: 12 }}
-          />
-        )}
-        {deviceManagerMode === 'edit' && managedDevice && (
-          <div className="device-manager-summary">
-            <Text type="secondary">
-              {managedDeviceTags.length} 個 Tag
-              {addressFillPlan?.hasAnchor
-                ? ` · 位址 ${addressFillPlan.startAddress}–${addressFillPlan.endAddress}，缺漏 ${addressFillPlan.missing.length} 個`
-                : addressFillError
-                  ? ` · ${addressFillError}`
-                  : ' · 尚無可補位的起始 Tag'}
-            </Text>
-            <Space wrap>
-              <Button onClick={() => handleShiftDeviceAddresses(1)}>
-                Tag address 全部 +{deviceAddressShiftStep ?? ''}
-              </Button>
-              <Button onClick={() => handleShiftDeviceAddresses(-1)}>
-                Tag address 全部 -{deviceAddressShiftStep ?? ''}
-              </Button>
-              <InputNumber
-                aria-label="Tag address 調整數值"
-                min={1}
-                max={65535}
-                precision={0}
-                value={deviceAddressShiftStep}
-                onChange={setDeviceAddressShiftStep}
-                style={{ width: 90 }}
-              />
-              <Button
-                onClick={handleFillDeviceAddresses}
-                disabled={!addressFillPlan?.hasAnchor || addressFillPlan.missing.length === 0}
-              >
-                補齊缺漏位址
-              </Button>
-              <Button
-                danger
-                disabled={autoFilledManagedDeviceTags.length === 0}
-                onClick={handleDeleteAutoFilledDeviceTags}
-              >
-                移除補位 Tag ({autoFilledManagedDeviceTags.length})
-              </Button>
-              {managedDeviceId !== '0' && (
-                <Button danger onClick={handleDeleteManagedDevice}>刪除此設備</Button>
-              )}
-            </Space>
-          </div>
-        )}
-        {deviceManagerMode === 'edit' && managedDevice && (
-          <DeviceTagManager
-            key={deviceTagSession}
-            sourceName={typeof managedDevice.record.name === 'string'
-              ? managedDevice.record.name
-              : managedDeviceId}
-            tags={managedDeviceTags}
-            duplicateTagIds={duplicateTagIds}
-            moveTargets={deviceTagMoveTargets.map((device) => ({
-              id: device.id,
-              name: typeof device.record.name === 'string' ? device.record.name : device.id,
-            }))}
-            existingTags={tags}
-            editForm={deviceTagForm}
-            onPrepareEdit={openDeviceTagEditor}
-            onUpdateTag={handleUpdateDeviceTag}
-            onMoveTags={handleMoveDeviceTags}
-            onDeleteTag={handleDeleteDeviceTag}
-          />
-        )}
-        <Form
-          form={deviceManagerForm}
-          layout="vertical"
-          onFinish={handleModbusDeviceSave}
-          className="device-manager-form"
-        >
-          <Form.Item
-            name="name"
-            label="設備名稱"
-            rules={[
-              { required: true, whitespace: true, message: '設備名稱不可空白。' },
-              { max: 120, message: '設備名稱不可超過 120 個字元。' },
-            ]}
-          >
-            <Input maxLength={120} />
-          </Form.Item>
-          <Form.Item name="address" label="連線位址 (IP:Port)">
-            <Input placeholder="127.0.0.1:502" />
-          </Form.Item>
-          <Form.Item
-            name="addressCount"
-            label="地址數量（0 表示不自動補位）"
-            rules={[
-              { required: true, message: '請輸入地址數量。' },
-              {
-                validator: async (_, value: unknown) => {
-                  if (!Number.isSafeInteger(Number(value)) || Number(value) < 0 || Number(value) > 65536) {
-                    throw new Error('地址數量必須是 0 到 65536 之間的整數。')
-                  }
-                },
-              },
-            ]}
-          >
-            <InputNumber min={0} max={65536} precision={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item
-            name="slaveid"
-            label="站號 (Unit ID)"
-            rules={[
-              { required: true, message: '請輸入站號。' },
-              {
-                validator: async (_, value: unknown) => {
-                  if (!Number.isSafeInteger(Number(value)) || Number(value) < 1 || Number(value) > 247) {
-                    throw new Error('站號必須是 1 到 247 之間的整數。')
-                  }
-                },
-              },
-            ]}
-          >
-            <InputNumber min={1} max={247} precision={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="polling" label="輪詢週期 (ms)">
-            <InputNumber min={10} step={10} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="enabled" valuePropName="checked">
-            <Checkbox>啟用設備</Checkbox>
-          </Form.Item>
-        </Form>
-        <Text type="secondary">
-          儲存 addressCount 時會以目前最小有效位址為起點，複製其 Tag 範本補齊相同 memaddress 區段的缺漏；位址 +/- 調整會先檢查整台設備的所有 Tag，超出 0–65535 時整批取消。
-        </Text>
-              </>,
+              children: <DevicesTab
+                mode={deviceManagerMode}
+                managedDeviceId={managedDeviceId}
+                devices={modbusDevices}
+                managedDevice={managedDevice}
+                managedDeviceTags={managedDeviceTags}
+                autoFilledTagCount={autoFilledManagedDeviceTags.length}
+                duplicateTagGroups={duplicateTagGroups}
+                duplicateTagIds={duplicateTagIds}
+                moveTargets={deviceTagMoveTargets}
+                existingTags={tags}
+                canBatchAddTags={Boolean(selectedModel) && batchableTags.length > 0}
+                canBatchCreateTags={canBatchCreateTags}
+                addressFillPlan={addressFillPlan ?? null}
+                addressFillError={addressFillError ?? null}
+                addressShiftStep={deviceAddressShiftStep}
+                deviceManagerForm={deviceManagerForm}
+                deviceTagForm={deviceTagForm}
+                deviceTagSession={deviceTagSession}
+                onSelectDevice={selectManagedDevice}
+                onCreateDevice={startCreateModbusDevice}
+                onOpenBatchAddTags={openBatchAddTab}
+                onOpenTagCreate={openTagCreateTab}
+                onAddressShiftStepChange={setDeviceAddressShiftStep}
+                onShiftAddresses={handleShiftDeviceAddresses}
+                onFillAddresses={handleFillDeviceAddresses}
+                onDeleteAutoFilledTags={handleDeleteAutoFilledDeviceTags}
+                onDeleteDevice={handleDeleteManagedDevice}
+                onSaveDevice={handleModbusDeviceSave}
+                onPrepareTagEdit={openDeviceTagEditor}
+                onUpdateTag={handleUpdateDeviceTag}
+                onMoveTags={handleMoveDeviceTags}
+                onDeleteTag={handleDeleteDeviceTag}
+              />,
             },
             {
               key: 'alarms',
