@@ -127,7 +127,7 @@ import { groupComponentsByFloor } from './domain/layout/floorLayout'
 import { getFloorGroupFrameSettings } from './domain/layout/floorGroupFrame'
 import { hasCurrentFloorFrameLayout } from './domain/layout/floorGroupFrame'
 import { findSvgElementById, parseSvg } from './domain/svg/parseSvg'
-import { prepareViewPreview } from './features/preview/prepareViewPreview'
+import { usePreview } from './features/preview/usePreview'
 import { applyTagFloors } from './features/floors/applyTagFloors'
 import { updateFloorGroupFrame } from './features/floors/updateFloorGroupFrame'
 import { createViewComponents } from './features/tags/createViewComponents'
@@ -162,21 +162,6 @@ import './App.css'
 const { Content } = Layout
 const { Text, Title } = Typography
 
-interface PreviewState {
-  width: number
-  height: number
-  outsideCanvas?: boolean
-  svgMarkup?: string
-  error?: string
-}
-
-interface PreviewSnapshot {
-  result: PreviewState
-  config: ParsedFuxaConfig
-  models: Map<string, ExportViewModel>
-  viewId: string
-}
-
 type ModbusTagFormValues = DeviceTagUpdate
 
 function getSelectedView(
@@ -184,26 +169,6 @@ function getSelectedView(
   selectedViewId: string,
 ): FuxaViewSummary | undefined {
   return views.find((view) => (view.id || view.key) === selectedViewId) ?? views[0]
-}
-
-function createPreviewState(
-  config: ParsedFuxaConfig,
-  view: FuxaViewSummary,
-  models: Map<string, ExportViewModel>,
-): PreviewState {
-  try {
-    return prepareViewPreview(config.rawConfig, view.id, [...models.values()], {
-      Parser: DOMParser,
-      serialize: (doc) => new XMLSerializer().serializeToString(doc),
-      crypto: window.crypto,
-    })
-  } catch (error) {
-    return {
-      width: view.width || 1024,
-      height: view.height || 768,
-      error: getErrorMessage(error),
-    }
-  }
 }
 
 function App() {
@@ -215,8 +180,6 @@ function App() {
   const [messageApi, contextHolder] = message.useMessage()
   const [projectName, setProjectName] = useState('新專案')
   const [selectedViewId, setSelectedViewId] = useState('')
-  const [previewRealtime, setPreviewRealtime] = useState(true)
-  const [previewSnapshot, setPreviewSnapshot] = useState<PreviewSnapshot | null>(null)
   const [viewDialogMode, setViewDialogMode] = useState<'create' | 'rename' | null>(null)
   const [viewDialogTargetId, setViewDialogTargetId] = useState('')
   const [componentMoveSource, setComponentMoveSource] = useState<{
@@ -404,39 +367,13 @@ function App() {
   const canBatchCreateTags = Boolean(config)
     && !Object.keys(config?.rawConfig.devices ?? {}).every((id) => id === '0')
   const usedTagIds = new Set(selectedModel?.components.map((component) => component.tagId) ?? [])
-  const preview = previewSnapshot && selectedView
-    && previewSnapshot.viewId === selectedView.id
-    ? previewSnapshot.result
-    : null
-  const previewStale = !config || !selectedView
-    ? false
-    : !previewSnapshot
-      || previewSnapshot.config !== config
-      || previewSnapshot.models !== models
-      || previewSnapshot.viewId !== selectedView.id
-
-  useEffect(() => {
-    if (!previewRealtime || !config || !selectedView) return
-    const timeout = window.setTimeout(() => {
-      setPreviewSnapshot({
-        result: createPreviewState(config, selectedView, models),
-        config,
-        models,
-        viewId: selectedView.id,
-      })
-    }, 180)
-    return () => window.clearTimeout(timeout)
-  }, [config, models, previewRealtime, selectedView])
-
-  function handleRefreshPreview() {
-    if (!config || !selectedView) return
-    setPreviewSnapshot({
-      result: createPreviewState(config, selectedView, models),
-      config,
-      models,
-      viewId: selectedView.id,
-    })
-  }
+  const {
+    preview,
+    realtime: previewRealtime,
+    setRealtime: setPreviewRealtime,
+    stale: previewStale,
+    refresh: handleRefreshPreview,
+  } = usePreview({ config, models, selectedView })
 
   function prepareCurrentExport() {
     if (!config) return null
