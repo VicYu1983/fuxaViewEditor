@@ -1,4 +1,5 @@
 import type { FuxaConfig } from './types'
+import { isRecord } from '../shared/isRecord'
 import { buildTagIndex } from '../tags/index'
 import { generateId, type RandomValuesProvider } from '../ids'
 import { getIconAssets, getIconLibrary, validateIconLibrary } from '../icons/iconLibrary'
@@ -38,10 +39,6 @@ function isGeneratedView(value: unknown): value is GeneratedView {
   return isRecord(value)
     && typeof value.id === 'string'
     && typeof value.svgcontent === 'string'
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function iconResolver(config: FuxaConfig, iconLibrary: unknown): IconAssetResolver {

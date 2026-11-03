@@ -42,6 +42,7 @@ import {
   parseFuxaConfig,
 } from './domain/config/parseFuxaConfig'
 import { normalizeProjectName } from './domain/config/serialization'
+import { isRecord } from './domain/shared/isRecord'
 import {
   applyTagAlarms,
   updateExistingTagAlarmTexts,
@@ -218,10 +219,6 @@ interface ViewPropertiesFormValues {
   siteBold: boolean
   siteItalic: boolean
   siteUnderline: boolean
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function getSelectedView(
