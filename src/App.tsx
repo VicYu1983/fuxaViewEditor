@@ -60,7 +60,7 @@ import { findTagReferences } from './features/devices/findTagReferences'
 import { buildViewTargetOptions } from './domain/views/viewTargetOptions'
 import { BatchMoveDialog, type BatchMoveItem } from './ui/view/BatchMoveDialog'
 import { ComponentMoveDialog } from './ui/view/ComponentMoveDialog'
-import { DeviceTagEditDialog } from './ui/device/DeviceTagEditDialog'
+import { DeviceTagManager } from './ui/device/DeviceTagManager'
 import { IconLibraryDialog, type IconAddDraft, type MultiStateIconDraft } from './ui/icons/IconLibraryDialog'
 import { MultiStateIconDialog } from './ui/icons/MultiStateIconDialog'
 import {
@@ -68,7 +68,6 @@ import {
   type FloorGroupFrameFormValues,
   type ViewPropertiesFormValues,
 } from './ui/view/ViewSettingsDialog'
-import { DeviceTagMoveDialog } from './ui/device/DeviceTagMoveDialog'
 import { ProjectManagerDialog } from './ui/device/ProjectManagerDialog'
 import {
   TagCreateTab,
@@ -264,13 +263,8 @@ function App() {
   const [viewSettingsTab, setViewSettingsTab] = useState<'floor-frame' | 'view-properties'>('floor-frame')
   const [deviceManagerMode, setDeviceManagerMode] = useState<'create' | 'edit'>('edit')
   const [managedDeviceId, setManagedDeviceId] = useState('')
-  const [deviceTagSearch, setDeviceTagSearch] = useState('')
-  const [selectedDeviceTagIds, setSelectedDeviceTagIds] = useState<string[]>([])
-  const [deviceTagMoveOpen, setDeviceTagMoveOpen] = useState(false)
-  const [deviceTagMoveTargetId, setDeviceTagMoveTargetId] = useState('')
-  const [editingDeviceTagId, setEditingDeviceTagId] = useState('')
+  const [deviceTagSession, setDeviceTagSession] = useState(0)
   const [deviceAddressShiftStep, setDeviceAddressShiftStep] = useState<number | null>(1)
-  const [deviceTagDialogOpen, setDeviceTagDialogOpen] = useState(false)
   const [fuxaSyncStatus, setFuxaSyncStatus] = useState<'disconnected' | 'ready' | 'pending'>('disconnected')
   const fuxaSyncRevision = useRef<string | null>(null)
   const [editor, dispatchEditor] = useReducer(
@@ -405,20 +399,6 @@ function App() {
   const autoFilledManagedDeviceTags = managedDeviceTags.filter(
     (tag) => tag.description === AUTO_FILLED_TAG_DESCRIPTION,
   )
-  const filteredManagedDeviceTags = useMemo(() => {
-    const query = deviceTagSearch.trim().toLocaleLowerCase()
-    return managedDeviceTags.filter((tag) => (
-      `${tag.name} ${tag.type} ${String(tag.address ?? '')} ${tag.memaddress} ${tag.floor}`
-        .toLocaleLowerCase()
-        .includes(query)
-    ))
-  }, [deviceTagSearch, managedDeviceTags])
-  const selectedManagedDeviceTags = useMemo(() => (
-    managedDeviceTags.filter((tag) => selectedDeviceTagIds.includes(tag.id))
-  ), [managedDeviceTags, selectedDeviceTagIds])
-  const visibleSelectedDeviceTagCount = filteredManagedDeviceTags.filter((tag) => (
-    selectedDeviceTagIds.includes(tag.id)
-  )).length
   const deviceTagMoveTargets = useMemo(() => (
     modbusDevices.filter((device) => device.id !== managedDeviceId && device.id !== '0')
   ), [managedDeviceId, modbusDevices])
@@ -1069,8 +1049,7 @@ function App() {
 
   function openDeviceManager() {
     setProjectManagerTab('devices')
-    setDeviceTagSearch('')
-    setSelectedDeviceTagIds([])
+    setDeviceTagSession((value) => value + 1)
     setFloorSession((value) => value + 1)
     const firstDevice = modbusDevices[0]
     if (firstDevice) {
@@ -1097,19 +1076,17 @@ function App() {
     if (!device) return
     setDeviceManagerMode('edit')
     setManagedDeviceId(device.id)
-    setDeviceTagSearch('')
-    setSelectedDeviceTagIds([])
+    setDeviceTagSession((value) => value + 1)
     deviceManagerForm.setFieldsValue(readDeviceFormValues(device.record))
   }
 
-  function openDeviceTagEditor(tagId: string) {
+  function openDeviceTagEditor(tagId: string): boolean {
     const tag = managedDeviceTags.find((candidate) => candidate.id === tagId)
     if (!tag) {
       messageApi.error('找不到要修改的 Tag。')
-      return
+      return false
     }
     const address = Number(tag.address)
-    setEditingDeviceTagId(tagId)
     deviceTagForm.setFieldsValue({
       name: tag.name,
       address: Number.isSafeInteger(address) && address >= 0 && address <= 65535
@@ -1120,16 +1097,16 @@ function App() {
       description: tag.description,
       floor: tag.floor,
     })
-    setDeviceTagDialogOpen(true)
+    return true
   }
 
-  function handleUpdateDeviceTag(values: ModbusTagFormValues) {
-    if (!config) return
+  function handleUpdateDeviceTag(values: ModbusTagFormValues, tagId: string): boolean {
+    if (!config) return false
     try {
       const nextConfig = updateModbusDeviceTag(
         config.rawConfig,
         managedDeviceId,
-        editingDeviceTagId,
+        tagId,
         values,
       )
       dispatchEditor({
@@ -1137,57 +1114,40 @@ function App() {
         document: parseUpdatedConfig(nextConfig, config),
         models,
       })
-      setDeviceTagDialogOpen(false)
       messageApi.success(`已更新 Tag「${values.name.trim()}」。`)
+      return true
     } catch (error) {
       const detail = getErrorMessage(error)
       messageApi.error(`Tag 更新失敗：${detail}`)
+      return false
     }
   }
 
-  function toggleDeviceTagSelection(tagId: string, checked: boolean) {
-    setSelectedDeviceTagIds((current) => checked
-      ? [...current.filter((id) => id !== tagId), tagId]
-      : current.filter((id) => id !== tagId))
-  }
-
-  function toggleVisibleDeviceTagSelection(checked: boolean) {
-    const visibleIds = filteredManagedDeviceTags.map((tag) => tag.id)
-    setSelectedDeviceTagIds((current) => checked
-      ? [...new Set([...current, ...visibleIds])]
-      : current.filter((id) => !visibleIds.includes(id)))
-  }
-
-  function openDeviceTagMoveDialog() {
-    setDeviceTagMoveTargetId(deviceTagMoveTargets[0]?.id ?? '')
-    setDeviceTagMoveOpen(true)
-  }
-
-  function handleMoveDeviceTags() {
-    if (!config || !managedDevice) return
-    if (!deviceTagMoveTargetId) {
+  function handleMoveDeviceTags(targetId: string, tagIds: string[]): boolean {
+    if (!config || !managedDevice) return false
+    if (!targetId) {
       messageApi.error('請選擇目標設備。')
-      return
+      return false
     }
     try {
       const { config: nextConfig, moved, renamed } = moveModbusDeviceTags(
         config.rawConfig,
         managedDeviceId,
-        deviceTagMoveTargetId,
-        selectedManagedDeviceTags.map((tag) => tag.id),
+        targetId,
+        tagIds,
       )
       dispatchEditor({
         type: 'document-edit',
         document: parseUpdatedConfig(nextConfig, config),
         models,
       })
-      setDeviceTagMoveOpen(false)
-      setSelectedDeviceTagIds([])
       const renameNote = renamed.length ? `，其中 ${renamed.length} 個因名稱重複已自動改名` : ''
       messageApi.success(`已移動 ${moved} 個 Tag${renameNote}。`)
+      return true
     } catch (error) {
       const detail = getErrorMessage(error)
       messageApi.error(`Tag 移動失敗：${detail}`)
+      return false
     }
   }
 
@@ -2173,84 +2133,24 @@ function App() {
           </div>
         )}
         {deviceManagerMode === 'edit' && managedDevice && (
-          <section className="device-tag-manager" aria-label="所選設備的 Tag 清單">
-            <div className="device-tag-manager-heading">
-              <Text strong>設備 Tag</Text>
-              <Text type="secondary">
-                {filteredManagedDeviceTags.length} / {managedDeviceTags.length} 個
-              </Text>
-            </div>
-            <Input
-              aria-label="搜尋設備 Tag"
-              allowClear
-              placeholder="搜尋 Tag 名稱、位址、型別或樓層"
-              value={deviceTagSearch}
-              onChange={(event) => setDeviceTagSearch(event.target.value)}
-              className="device-tag-search"
-            />
-            <div className="device-tag-bulk-toolbar">
-              <Checkbox
-                checked={filteredManagedDeviceTags.length > 0
-                  && visibleSelectedDeviceTagCount === filteredManagedDeviceTags.length}
-                indeterminate={visibleSelectedDeviceTagCount > 0
-                  && visibleSelectedDeviceTagCount < filteredManagedDeviceTags.length}
-                disabled={!filteredManagedDeviceTags.length}
-                onChange={(event) => toggleVisibleDeviceTagSelection(event.target.checked)}
-              >
-                全選可見 Tag
-              </Checkbox>
-              <Button
-                size="small"
-                disabled={!selectedManagedDeviceTags.length}
-                onClick={openDeviceTagMoveDialog}
-              >
-                批次移動 Tag（{selectedManagedDeviceTags.length}）
-              </Button>
-            </div>
-            <div className="device-tag-list">
-              {filteredManagedDeviceTags.length ? filteredManagedDeviceTags.map((tag) => (
-                <div className="device-tag-row" key={tag.id}>
-                  <Checkbox
-                    aria-label={`選取 Tag ${tag.name}`}
-                    checked={selectedDeviceTagIds.includes(tag.id)}
-                    onChange={(event) => toggleDeviceTagSelection(tag.id, event.target.checked)}
-                  />
-                  <div className="device-tag-info">
-                    <Text strong ellipsis title={tag.name}>{tag.name}</Text>
-                    {duplicateTagIds.has(tag.id) && (
-                      <Text type="danger">名稱重複，請修改 Tag 名稱</Text>
-                    )}
-                    <Text type="secondary" ellipsis title={`${tag.type} · ${tag.memaddress}`}>
-                      {tag.type || '未設定型別'} · {tag.memaddress || '未設定區段'}
-                    </Text>
-                    <Text type="secondary">
-                      位址 {tag.address === undefined || tag.address === null || tag.address === ''
-                        ? '—'
-                        : String(tag.address)}
-                      {tag.floor ? ` · ${tag.floor}` : ''}
-                    </Text>
-                  </div>
-                  <Space size={4}>
-                    <Button size="small" onClick={() => openDeviceTagEditor(tag.id)}>
-                      修改
-                    </Button>
-                    <Button
-                      size="small"
-                      danger
-                      onClick={() => handleDeleteDeviceTag(tag.id)}
-                    >
-                      刪除
-                    </Button>
-                  </Space>
-                </div>
-              )) : (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description={managedDeviceTags.length ? '沒有符合搜尋條件的 Tag。' : '此設備尚無 Tag。'}
-                />
-              )}
-            </div>
-          </section>
+          <DeviceTagManager
+            key={deviceTagSession}
+            sourceName={typeof managedDevice.record.name === 'string'
+              ? managedDevice.record.name
+              : managedDeviceId}
+            tags={managedDeviceTags}
+            duplicateTagIds={duplicateTagIds}
+            moveTargets={deviceTagMoveTargets.map((device) => ({
+              id: device.id,
+              name: typeof device.record.name === 'string' ? device.record.name : device.id,
+            }))}
+            existingTags={tags}
+            editForm={deviceTagForm}
+            onPrepareEdit={openDeviceTagEditor}
+            onUpdateTag={handleUpdateDeviceTag}
+            onMoveTags={handleMoveDeviceTags}
+            onDeleteTag={handleDeleteDeviceTag}
+          />
         )}
         <Form
           form={deviceManagerForm}
@@ -2367,29 +2267,6 @@ function App() {
             },
           ]}
         />
-      <DeviceTagMoveDialog
-        open={deviceTagMoveOpen}
-        sourceName={typeof managedDevice?.record.name === 'string'
-          ? managedDevice.record.name
-          : managedDeviceId}
-        tagCount={selectedManagedDeviceTags.length}
-        targets={deviceTagMoveTargets.map((device) => ({
-          id: device.id,
-          name: typeof device.record.name === 'string' ? device.record.name : device.id,
-        }))}
-        targetId={deviceTagMoveTargetId}
-        onTargetChange={setDeviceTagMoveTargetId}
-        onConfirm={handleMoveDeviceTags}
-        onCancel={() => setDeviceTagMoveOpen(false)}
-      />
-      <DeviceTagEditDialog
-        open={deviceTagDialogOpen}
-        form={deviceTagForm}
-        existingTags={tags}
-        editingId={editingDeviceTagId}
-        onSave={handleUpdateDeviceTag}
-        onCancel={() => setDeviceTagDialogOpen(false)}
-      />
       <Layout className="editor-shell">
         <Header className="editor-header">
           <div className="brand">
