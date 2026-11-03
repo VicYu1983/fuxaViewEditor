@@ -22,7 +22,6 @@ import {
   Radio,
   Select,
   Space,
-  Switch,
   Tag,
   Tooltip,
   Typography,
@@ -83,6 +82,12 @@ import {
   type TagAlarmStatus,
   type TagAlarmsTabHandle,
 } from './ui/device/TagAlarmsTab'
+import {
+  TagAddTab,
+  type TagAddRequest,
+  type TagAddStatus,
+  type TagAddTabHandle,
+} from './ui/device/TagAddTab'
 import { PreviewPanel } from './ui/preview/PreviewPanel'
 import { ViewSidebar } from './ui/view/ViewSidebar'
 import { ViewNameDialog } from './ui/view/ViewNameDialog'
@@ -239,15 +244,13 @@ function App() {
   const [componentMoveTargetId, setComponentMoveTargetId] = useState('')
   const [batchMoveDialogOpen, setBatchMoveDialogOpen] = useState(false)
   const [batchMoveSelection, setBatchMoveSelection] = useState<Set<string>>(new Set())
-  const [batchSearch, setBatchSearch] = useState('')
-  const [batchOnlyUnused, setBatchOnlyUnused] = useState(false)
-  const [batchSelection, setBatchSelection] = useState<Set<string>>(new Set())
-  const [batchGraphic, setBatchGraphic] = useState('rect')
-  const [batchCoilSwitchEnabled, setBatchCoilSwitchEnabled] = useState(true)
   const tagCreateRef = useRef<TagCreateTabHandle>(null)
   const [tagCreateStatus, setTagCreateStatus] = useState<TagCreateStatus>({ specCount: 0, canCreate: false })
   const tagAlarmRef = useRef<TagAlarmsTabHandle>(null)
   const [tagAlarmStatus, setTagAlarmStatus] = useState<TagAlarmStatus>({ selectedCount: 0, canSubmit: false })
+  const tagAddRef = useRef<TagAddTabHandle>(null)
+  const [tagAddStatus, setTagAddStatus] = useState<TagAddStatus>({ selectedCount: 0 })
+  const [tagAddSession, setTagAddSession] = useState(0)
   const [projectManagerTab, setProjectManagerTab] = useState<
     'devices' | 'floors' | 'alarms' | 'tag-create' | 'tag-add'
   >('devices')
@@ -297,8 +300,7 @@ function App() {
     })
     setModelErrors(editorModels.errors)
     setUnsupported(editorModels.unsupported)
-    setBatchSearch('')
-    setBatchSelection(new Set())
+    setTagAddSession((session) => session + 1)
     const firstView = parsed.views[0]
     setSelectedViewId(firstView ? firstView.id || firstView.key : '')
   }
@@ -439,31 +441,6 @@ function App() {
     ? addressFillState.error
     : null
   const batchableTags = useMemo(() => tags.filter((tag) => !isAutoFilledTag(tag)), [tags])
-  const filteredBatchTags = useMemo(() => {
-    const query = batchSearch.trim().toLocaleLowerCase()
-    const used = new Set<string>()
-    for (const model of models.values()) {
-      for (const component of model.components) {
-        if (component.tagId) used.add(component.tagId)
-        for (const binding of component.multiStateBindings ?? []) {
-          if (binding.tagId) used.add(binding.tagId)
-        }
-      }
-    }
-    return batchableTags.filter((tag) => (
-      (!batchOnlyUnused || !used.has(tag.id))
-      && `${tag.deviceName} ${tag.name} ${tag.type} ${tag.memaddress} ${tag.id} ${tag.floor}`
-        .toLocaleLowerCase()
-        .includes(query)
-    ))
-  }, [batchSearch, batchableTags, batchOnlyUnused, models])
-  const selectedBatchCount = filteredBatchTags.filter((tag) => batchSelection.has(tag.id)).length
-  const selectedBatchTags = batchableTags.filter((tag) => batchSelection.has(tag.id))
-  const selectedCoilTags = selectedBatchTags.filter(isCoilTag)
-  const selectedCoilSwitchTags = selectedCoilTags.filter((tag) =>
-    ['bool', 'boolean'].includes(tag.type.toLocaleLowerCase()))
-  const batchCanUseBooleanGraphic = selectedBatchTags.length > 0
-    && selectedBatchTags.every((tag) => ['bool', 'boolean'].includes(tag.type.toLocaleLowerCase()))
   const usedTagIds = new Set(selectedModel?.components.map((component) => component.tagId) ?? [])
   const filteredFloorTags = useMemo(() => {
     const query = floorSearch.trim().toLocaleLowerCase()
@@ -989,10 +966,7 @@ function App() {
   }
 
   function openBatchAddTab() {
-    setBatchSelection(new Set())
-    setBatchSearch('')
-    setBatchGraphic('rect')
-    setBatchCoilSwitchEnabled(true)
+    setTagAddSession((session) => session + 1)
     setProjectManagerTab('tag-add')
     setDeviceManagerOpen(true)
   }
@@ -1064,30 +1038,22 @@ function App() {
     }
   }
 
-  function handleBatchSelectAll(checked: boolean) {
-    setBatchSelection((current) => {
-      const next = new Set(current)
-      for (const tag of filteredBatchTags) {
-        if (checked) next.add(tag.id)
-        else next.delete(tag.id)
-      }
-      return next
-    })
-  }
-
-  function handleBatchAdd() {
+  function handleBatchAdd({ tagIds, graphic, coilSwitchEnabled }: TagAddRequest) {
     if (!config || !selectedView || !selectedModel) return
-    const selectedTags = tags.filter((tag) => batchSelection.has(tag.id))
+    const selectedTags = tags.filter((tag) => tagIds.has(tag.id))
+    const selectedCoilTags = selectedTags.filter(isCoilTag)
+    const selectedCoilSwitchTags = selectedCoilTags.filter((tag) =>
+      ['bool', 'boolean'].includes(tag.type.toLocaleLowerCase()))
     if (!selectedTags.length) {
       messageApi.warning('請至少選取一個 Tag。')
       return
     }
-    if (batchGraphic.startsWith('multi:')
+    if (graphic.startsWith('multi:')
         && selectedTags.some((tag) => !['bool', 'boolean'].includes(tag.type.toLocaleLowerCase()))) {
       messageApi.warning('多狀態圖示組只能套用至 Boolean Tag；請調整選取的 Tag。')
       return
     }
-    if (batchCoilSwitchEnabled
+    if (coilSwitchEnabled
         && selectedCoilTags.some((tag) =>
           !['bool', 'boolean'].includes(tag.type.toLocaleLowerCase()))) {
       messageApi.warning('Coil Switch 需要 Boolean Tag；請取消選取型別不符的 Coil Tag，或關閉 Coil Switch 選項。')
@@ -1095,7 +1061,7 @@ function App() {
     }
 
     try {
-      const switchTagIds = batchCoilSwitchEnabled
+      const switchTagIds = coilSwitchEnabled
         ? new Set(selectedCoilSwitchTags.map((tag) => tag.id))
         : new Set<string>()
       const nextModels = createViewComponents(
@@ -1104,7 +1070,7 @@ function App() {
         models,
         selectedTags,
         { Parser: DOMParser, crypto: window.crypto },
-        batchGraphic,
+        graphic,
         iconLibrary,
         switchTagIds,
       )
@@ -1114,123 +1080,11 @@ function App() {
         model: nextModels,
       })
       setDeviceManagerOpen(false)
-      setBatchSelection(new Set())
       messageApi.success(`已加入 ${selectedTags.length} 筆 Tag 元件。`)
     } catch (error) {
       const detail = getErrorMessage(error)
       messageApi.error(`批次加入 Tag 失敗：${detail}`)
     }
-  }
-
-  function renderBatchAddForm() {
-    return (
-      <>
-        <Text type="secondary">
-          Tag 會沿用配置中的樓層；未設定樓層的 Tag 會歸入「未設定樓層」。
-        </Text>
-        <Select
-          aria-label="批次圖形"
-          value={batchGraphic}
-          options={getComponentGraphicChoices(
-            iconLibrary,
-            {
-              key: 'batch',
-              seq: 0,
-              tagId: selectedBatchTags[0]?.id ?? '',
-              label: '',
-              template: 'rect',
-              shapeId: '',
-              managed: true,
-            },
-            batchCanUseBooleanGraphic,
-          )}
-          onChange={setBatchGraphic}
-          style={{ width: '100%', marginTop: 12 }}
-        />
-        {selectedCoilTags.length > 0 && (
-          <Space orientation="vertical" size={4} style={{ marginTop: 12 }}>
-            <Checkbox
-              checked={batchCoilSwitchEnabled}
-              onChange={(event) => setBatchCoilSwitchEnabled(event.target.checked)}
-            >
-              Coil Tag 建立為 Switch，並顯示 Tag 名稱標籤
-            </Checkbox>
-            <Text type="secondary">
-              {batchCoilSwitchEnabled
-                ? `將建立 ${selectedCoilSwitchTags.length} 個 Switch、${selectedBatchTags.length - selectedCoilSwitchTags.length} 個一般元件。`
-                : `將建立 ${selectedBatchTags.length} 個一般元件。`}
-            </Text>
-            {selectedCoilSwitchTags.length < selectedCoilTags.length && (
-              <Text type="warning">
-                非 Boolean 型別的 Coil 不可轉為 Switch。
-              </Text>
-            )}
-          </Space>
-        )}
-        {batchGraphic.startsWith('multi:') && (
-          <Text type="secondary">
-            每筆 Tag 各建立一個元件，並綁定至所選多狀態圖示組的最高優先狀態。
-          </Text>
-        )}
-        <Input
-          aria-label="搜尋 Tag"
-          allowClear
-          placeholder="搜尋設備、Tag 名稱、型別或 ID"
-          value={batchSearch}
-          onChange={(event) => setBatchSearch(event.target.value)}
-          style={{ margin: '16px 0 12px' }}
-        />
-        <Space style={{ marginBottom: 12 }}>
-          <Switch
-            aria-label="只顯示尚未加入任何 View 的 Tag"
-            checked={batchOnlyUnused}
-            onChange={setBatchOnlyUnused}
-          />
-          <Text>只顯示還沒有加入任何 View 的 Tag</Text>
-        </Space>
-        <div className="batch-tag-toolbar">
-          <Checkbox
-            checked={filteredBatchTags.length > 0 && selectedBatchCount === filteredBatchTags.length}
-            indeterminate={selectedBatchCount > 0 && selectedBatchCount < filteredBatchTags.length}
-            disabled={filteredBatchTags.length === 0}
-            onChange={(event) => handleBatchSelectAll(event.target.checked)}
-          >
-            全選目前搜尋結果
-          </Checkbox>
-          <Text type="secondary">
-            已選 {batchSelection.size} 筆 / {batchableTags.length} 筆
-          </Text>
-        </div>
-        <div className="batch-tag-list" role="group" aria-label="可加入的 Tag">
-          {filteredBatchTags.length ? filteredBatchTags.map((tag) => (
-            <Checkbox
-              key={tag.id}
-              checked={batchSelection.has(tag.id)}
-              onChange={(event) => {
-                setBatchSelection((current) => {
-                  const next = new Set(current)
-                  if (event.target.checked) next.add(tag.id)
-                  else next.delete(tag.id)
-                  return next
-                })
-              }}
-            >
-              <span className="batch-tag-option">
-                <span>{tag.deviceName} / {tag.name} ({tag.type || '未設定型別'})</span>
-                <Text type="secondary">
-                  {tag.floor || '未設定樓層'} · {tag.memaddress || '未設定區段'}
-                  {isCoilTag(tag) ? ' · Coil' : ''}
-                  {' · '}{tag.id}
-                  {usedTagIds.has(tag.id) ? ' · 此 View 已使用' : ''}
-                </Text>
-              </span>
-            </Checkbox>
-          )) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="沒有符合的 Tag。" />
-          )}
-        </div>
-      </>
-    )
   }
 
   function openDeviceManager() {
@@ -2223,10 +2077,10 @@ function App() {
                   <Button
                     key="add-tags"
                     type="primary"
-                    disabled={batchSelection.size === 0}
-                    onClick={handleBatchAdd}
+                    disabled={tagAddStatus.selectedCount === 0}
+                    onClick={() => tagAddRef.current?.submit()}
                   >
-                    加入 {batchSelection.size} 筆
+                    加入 {tagAddStatus.selectedCount} 筆
                   </Button>,
                 ]
             : [
@@ -2240,7 +2094,7 @@ function App() {
           : projectManagerTab === 'tag-create'
             ? () => tagCreateRef.current?.submit()
             : projectManagerTab === 'tag-add'
-              ? handleBatchAdd
+              ? () => tagAddRef.current?.submit()
             : undefined}
         width={projectManagerTab === 'tag-create' ? 1000 : 900}
         items={[
@@ -2533,7 +2387,16 @@ function App() {
             {
               key: 'tag-add',
               label: '批次加入 Tag',
-              children: renderBatchAddForm(),
+              children: <TagAddTab
+                key={tagAddSession}
+                ref={tagAddRef}
+                tags={batchableTags}
+                models={models}
+                currentViewTagIds={usedTagIds}
+                iconLibrary={iconLibrary}
+                onSubmit={handleBatchAdd}
+                onStatusChange={setTagAddStatus}
+              />,
             },
             {
               key: 'floors',
