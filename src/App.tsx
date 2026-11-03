@@ -175,6 +175,7 @@ interface ModbusDeviceFormValues {
   name: string
   address: string
   addressCount: number
+  slaveid: number
   enabled: boolean
   polling: number
 }
@@ -2120,6 +2121,9 @@ function App() {
         addressCount: isRecord(firstDevice.record.property)
           ? Number(firstDevice.record.property.addressCount) || 0
           : 0,
+        slaveid: isRecord(firstDevice.record.property)
+          ? Number(firstDevice.record.property.slaveid) || 1
+          : 1,
         enabled: Boolean(firstDevice.record.enabled),
         polling: Number(firstDevice.record.polling) || 200,
       })
@@ -2130,6 +2134,7 @@ function App() {
         name: '',
         address: '127.0.0.1:502',
         addressCount: 0,
+        slaveid: 1,
         enabled: true,
         polling: 200,
       })
@@ -2152,6 +2157,9 @@ function App() {
       addressCount: isRecord(device.record.property)
         ? Number(device.record.property.addressCount) || 0
         : 0,
+      slaveid: isRecord(device.record.property)
+        ? Number(device.record.property.slaveid) || 1
+        : 1,
       enabled: Boolean(device.record.enabled),
       polling: Number(device.record.polling) || 200,
     })
@@ -2444,6 +2452,7 @@ function App() {
           name: '',
           address: '127.0.0.1:502',
           addressCount: 0,
+          slaveid: 1,
           enabled: true,
           polling: 200,
         })
@@ -3685,6 +3694,7 @@ function App() {
                 name: '',
                 address: '127.0.0.1:502',
                 addressCount: 0,
+                slaveid: 1,
                 enabled: true,
                 polling: 200,
               })
@@ -3855,6 +3865,22 @@ function App() {
             ]}
           >
             <InputNumber min={0} max={65536} precision={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
+            name="slaveid"
+            label="站號 (Unit ID)"
+            rules={[
+              { required: true, message: '請輸入站號。' },
+              {
+                validator: async (_, value: unknown) => {
+                  if (!Number.isSafeInteger(Number(value)) || Number(value) < 1 || Number(value) > 247) {
+                    throw new Error('站號必須是 1 到 247 之間的整數。')
+                  }
+                },
+              },
+            ]}
+          >
+            <InputNumber min={1} max={247} precision={0} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="polling" label="輪詢週期 (ms)">
             <InputNumber min={10} step={10} style={{ width: '100%' }} />
