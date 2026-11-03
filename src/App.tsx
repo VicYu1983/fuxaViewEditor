@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useMemo,
   useReducer,
   useRef,
@@ -20,9 +19,6 @@ import {
   message,
 } from 'antd'
 import zhTW from 'antd/locale/zh_TW'
-import {
-  parseFuxaConfig,
-} from './domain/config/parseFuxaConfig'
 import { normalizeProjectName } from './domain/config/serialization'
 import { getErrorMessage } from './domain/shared/getErrorMessage'
 import { isRecord } from './domain/shared/isRecord'
@@ -128,6 +124,7 @@ import { getFloorGroupFrameSettings } from './domain/layout/floorGroupFrame'
 import { hasCurrentFloorFrameLayout } from './domain/layout/floorGroupFrame'
 import { findSvgElementById, parseSvg } from './domain/svg/parseSvg'
 import { usePreview } from './features/preview/usePreview'
+import { useFuxaHost } from './features/fuxa/useFuxaHost'
 import { applyTagFloors } from './features/floors/applyTagFloors'
 import { updateFloorGroupFrame } from './features/floors/updateFloorGroupFrame'
 import { createViewComponents } from './features/tags/createViewComponents'
@@ -212,8 +209,20 @@ function App() {
   const [managedDeviceId, setManagedDeviceId] = useState('')
   const [deviceTagSession, setDeviceTagSession] = useState(0)
   const [deviceAddressShiftStep, setDeviceAddressShiftStep] = useState<number | null>(1)
-  const [fuxaSyncStatus, setFuxaSyncStatus] = useState<'disconnected' | 'ready' | 'pending'>('disconnected')
-  const fuxaSyncRevision = useRef<string | null>(null)
+  const fuxaSync = useFuxaHost({
+    messageApi,
+    loadProject: (parsed) => {
+      replaceWorkspace(parsed)
+      const configuredName = parsed.rawConfig.name
+      setProjectName(typeof configuredName === 'string' && configuredName.trim()
+        ? normalizeProjectName(configuredName)
+        : '新專案')
+    },
+    buildSyncProject: () => {
+      const prepared = prepareCurrentExport()
+      return prepared ? JSON.parse(prepared.text) as unknown : null
+    },
+  })
   const [editor, dispatchEditor] = useReducer(
     editorHistoryReducer<ExportViewModel, ParsedFuxaConfig>,
     createEditorHistoryState<ExportViewModel, ParsedFuxaConfig>(),
@@ -242,61 +251,6 @@ function App() {
     setSelectedViewId(firstView ? firstView.id || firstView.key : '')
   }
 
-  useEffect(() => {
-    const hostWindow = window.parent !== window ? window.parent : window.opener
-    if (!hostWindow) return
-
-    function handleFuxaMessage(event: MessageEvent) {
-      if (event.origin !== window.location.origin || event.source !== hostWindow) return
-      const data: unknown = event.data
-      if (!isRecord(data) || data.source !== 'fuxa-host' || data.protocol !== 1) return
-
-      if (data.type === 'project' || (data.type === 'sync-result' && data.ok === true)) {
-        if (typeof data.revision !== 'string') {
-          setFuxaSyncStatus('disconnected')
-          messageApi.error('FUXA 傳回的同步版本無效。')
-          return
-        }
-        try {
-          const projectText = JSON.stringify(data.project)
-          if (typeof projectText !== 'string') throw new Error('專案資料不是有效的 JSON。')
-          const parsed = parseFuxaConfig(projectText)
-          replaceWorkspace(parsed)
-          const configuredName = parsed.rawConfig.name
-          setProjectName(typeof configuredName === 'string' && configuredName.trim()
-            ? normalizeProjectName(configuredName)
-            : '新專案')
-          fuxaSyncRevision.current = data.revision
-          setFuxaSyncStatus('ready')
-          if (data.type === 'sync-result') {
-            messageApi.success('專案已同步並儲存至 FUXA。')
-            if (window.parent === window && window.opener && !window.opener.closed) {
-              window.opener.focus()
-              window.close()
-            }
-          }
-        } catch (error) {
-          fuxaSyncRevision.current = null
-          setFuxaSyncStatus('disconnected')
-          messageApi.error(`載入 FUXA 專案失敗：${getErrorMessage(error)}`)
-        }
-        return
-      }
-
-      if (data.type === 'sync-result') {
-        setFuxaSyncStatus('ready')
-        messageApi.error(typeof data.error === 'string' ? data.error : 'FUXA 拒絕了這次同步。')
-      }
-    }
-
-    window.addEventListener('message', handleFuxaMessage)
-    hostWindow.postMessage({
-      source: 'fuxa-view-editor',
-      protocol: 1,
-      type: 'ready',
-    }, window.location.origin)
-    return () => window.removeEventListener('message', handleFuxaMessage)
-  }, [messageApi])
 
   const selectedView = useMemo(
     () => config ? getSelectedView(config.views, selectedViewId) : undefined,
@@ -404,26 +358,6 @@ function App() {
         modifiedViewIds,
         tags: buildTagIndex(config.rawConfig),
       }, dependencies)
-  }
-
-  function handleSyncToFuxa() {
-    const hostWindow = window.parent !== window ? window.parent : window.opener
-    if (!config || fuxaSyncStatus !== 'ready' || !fuxaSyncRevision.current || !hostWindow) return
-    try {
-      const prepared = prepareCurrentExport()
-      if (!prepared) return
-      const project = JSON.parse(prepared.text) as unknown
-      hostWindow.postMessage({
-        source: 'fuxa-view-editor',
-        protocol: 1,
-        type: 'sync-project',
-        revision: fuxaSyncRevision.current,
-        project,
-      }, window.location.origin)
-      setFuxaSyncStatus('pending')
-    } catch (error) {
-      messageApi.error(`準備同步資料失敗：${getErrorMessage(error)}`)
-    }
   }
 
   function openViewDialog(mode: 'create' | 'rename') {
@@ -2028,9 +1962,9 @@ function App() {
           canRedo={editor.future.length > 0}
           onUndo={() => dispatchEditor({ type: 'undo' })}
           onRedo={() => dispatchEditor({ type: 'redo' })}
-          fuxaSyncStatus={fuxaSyncStatus}
+          fuxaSyncStatus={fuxaSync.status}
           hasConfig={Boolean(config)}
-          onSyncToFuxa={handleSyncToFuxa}
+          onSyncToFuxa={fuxaSync.sync}
           onOpenProjectManager={openDeviceManager}
           onOpenIconLibrary={() => setIconLibraryOpen(true)}
           onOpenViewSettings={openFloorFrameDialog}
