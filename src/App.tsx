@@ -23,6 +23,7 @@ import { getErrorMessage } from './domain/shared/getErrorMessage'
 import { isRecord } from './domain/shared/isRecord'
 import { parseUpdatedConfig } from './app/lib/parseUpdatedConfig'
 import { measureSvgBounds } from './app/lib/measureSvgBounds'
+import { createBrowserSvgDeps } from './app/lib/browserSvgDeps'
 import {
   buildDuplicateTagGroups,
 } from './domain/tags/tagViews'
@@ -117,11 +118,10 @@ import {
 } from './features/devices/manageDeviceTags'
 import type { DeviceTagUpdate } from './features/devices/manageDeviceTags'
 import { moveModbusDeviceTags } from './features/devices/moveDeviceTags'
-import { DEFAULT_GRID } from './domain/layout/gridSettings'
 import { groupComponentsByFloor } from './domain/layout/floorLayout'
 import { getFloorGroupFrameSettings } from './domain/layout/floorGroupFrame'
 import { hasCurrentFloorFrameLayout } from './domain/layout/floorGroupFrame'
-import { findSvgElementById, parseSvg } from './domain/svg/parseSvg'
+import { parseSvg } from './domain/svg/parseSvg'
 import { usePreview } from './app/hooks/usePreview'
 import { useFuxaHost } from './app/hooks/useFuxaHost'
 import { applyTagFloors } from './features/floors/applyTagFloors'
@@ -130,6 +130,8 @@ import { createViewComponents } from './features/tags/createViewComponents'
 import { createTagsForDevice } from './features/tags/createTagsForDevice'
 import { getNextAvailableAddress } from './domain/tags/batch'
 import { createBlankView } from './features/views/createBlankView'
+import { createEmptyViewModel } from './features/views/createViewModel'
+import { syncViewTitleText } from './features/views/syncViewTitleText'
 import { moveManagedComponent } from './features/views/moveManagedComponent'
 import {
   addMultiStateIconState,
@@ -339,11 +341,7 @@ function EditorWorkspace() {
       || needsVoiceBridgeUpdate(config.rawConfig)
       || navigationNeedsSync(config.rawConfig)
     const dependencies = exportDirty
-      ? createFuxaConfigExportDependencies(config.rawConfig, {
-        Parser: DOMParser,
-        serialize: (doc) => new XMLSerializer().serializeToString(doc),
-        crypto: window.crypto,
-      })
+      ? createFuxaConfigExportDependencies(config.rawConfig, createBrowserSvgDeps())
       : undefined
     return prepareFuxaConfigExport({
         config: config.rawConfig,
@@ -406,27 +404,12 @@ function EditorWorkspace() {
           nextRaw,
           validation.name,
           selectedView?.id ?? '',
-          {
-            Parser: DOMParser,
-            serialize: (doc) => new XMLSerializer().serializeToString(doc),
-            crypto: window.crypto,
-          },
+          createBrowserSvgDeps(),
         )
         const viewId = view.id
         if (typeof viewId !== 'string') throw new Error('新增 View 缺少有效 ID。')
         nextRaw.hmi.views.push(view)
-        nextModels.set(viewId, {
-          viewId,
-          components: [],
-          originalComponents: [],
-          grid: { ...DEFAULT_GRID },
-          floorGroupFrame: getFloorGroupFrameSettings(nextRaw),
-          floorTitles: {},
-          floorTitleIds: {},
-          floorFrames: {},
-          floorFrameIds: {},
-          floorFrameShapeIds: {},
-        })
+        nextModels.set(viewId, createEmptyViewModel(nextRaw, viewId))
         selectedId = viewId
       } else {
         const result = renameView(nextRaw.hmi.views, viewDialogTargetId, validation.name)
@@ -435,16 +418,7 @@ function EditorWorkspace() {
           setViewDialogMode(null)
           return
         }
-        const titleEntry = Object.entries(isRecord(result.view.items) ? result.view.items : {})
-          .find(([, item]) => isRecord(item) && item.name === 'view_title')
-        if (titleEntry && typeof result.view.svgcontent === 'string') {
-          const doc = parseSvg(result.view.svgcontent, DOMParser)
-          const titleNode = findSvgElementById(doc, titleEntry[0])
-          if (titleNode) {
-            titleNode.textContent = validation.name
-            result.view.svgcontent = new XMLSerializer().serializeToString(doc)
-          }
-        }
+        syncViewTitleText(result.view, validation.name, createBrowserSvgDeps())
       }
 
       commitDocumentEdit(config, nextRaw, nextModels)
@@ -1297,11 +1271,7 @@ function EditorWorkspace() {
           italic: values.siteItalic,
           underline: values.siteUnderline,
         },
-        {
-          Parser: DOMParser,
-          serialize: (doc) => new XMLSerializer().serializeToString(doc),
-          crypto: window.crypto,
-        },
+        createBrowserSvgDeps(),
       )
       if (!backgroundResult.changed && !titleResult.changed && !siteResult.changed) {
         setViewSettingsOpen(false)
