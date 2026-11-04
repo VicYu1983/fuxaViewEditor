@@ -1,0 +1,352 @@
+{
+    "devices": {
+        "0": {
+            "id": "0",
+            "name": "FUXA",
+            "enabled": true,
+            "property": {
+                "delay": 10
+            },
+            "type": "FuxaServer",
+            "polling": 1000,
+            "tags": {}
+        }
+    },
+    "hmi": {
+        "views": [
+            {
+                "id": "v_01313641395-13849",
+                "name": "MainView",
+                "profile": {
+                    "width": 1024,
+                    "height": 768,
+                    "bkcolor": "#ffffffff",
+                    "margin": 10,
+                    "align": "topCenter",
+                    "gridType": "fixed",
+                    "viewRenderDelay": 0
+                },
+                "items": {},
+                "variables": {},
+                "svgcontent": "<svg width=\"1024\" height=\"768\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\">\n <filter id=\"blur-filter\" x=\"-3\" y=\"-3\" width=\"200\" height=\"200\">\n  <feGaussianBlur stdDeviation=\"3\"/>\n </filter>\n <g>\n  <title>Layer 1</title>\n </g>\n</svg>",
+                "type": "svg"
+            },
+            {
+                "id": "v_61312041081-10064",
+                "name": "排風系統/2F",
+                "profile": {
+                    "width": 1024,
+                    "height": 768,
+                    "bkcolor": "#ffffffff",
+                    "margin": 10,
+                    "align": "topCenter",
+                    "gridType": "fixed",
+                    "viewRenderDelay": 0
+                },
+                "items": {
+                    "OXC_e292e9e2-be20417e": {
+                        "id": "OXC_e292e9e2-be20417e",
+                        "type": "svg-ext-own_ctrl-image",
+                        "name": "",
+                        "property": {
+                            "events": [],
+                            "actions": [],
+                            "address": "resources/Drawing2.svg"
+                        },
+                        "label": "HtmlImage",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "HXB_c2412b90-8dc840d2": {
+                        "id": "HXB_c2412b90-8dc840d2",
+                        "type": "svg-ext-html_button",
+                        "name": "button_1",
+                        "property": {
+                            "events": [
+                                {
+                                    "type": "click",
+                                    "action": "onpage",
+                                    "actparam": "v_61312041081-10064",
+                                    "actoptions": {}
+                                }
+                            ],
+                            "actions": [],
+                            "address": "resources/Drawing2.svg",
+                            "text": "2F",
+                            "ranges": [
+                                {
+                                    "min": 20,
+                                    "max": 80,
+                                    "color": "",
+                                    "type": 2,
+                                    "stroke": ""
+                                }
+                            ]
+                        },
+                        "label": "HtmlButton",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "HXB_89c9b5d3-b0874a51": {
+                        "id": "HXB_89c9b5d3-b0874a51",
+                        "type": "svg-ext-html_button",
+                        "name": "button_2",
+                        "property": {
+                            "events": [
+                                {
+                                    "type": "click",
+                                    "action": "onpage",
+                                    "actparam": "v_28b5410a9-1335a",
+                                    "actoptions": {}
+                                }
+                            ],
+                            "actions": [],
+                            "address": "resources/Drawing2.svg",
+                            "text": "3F",
+                            "ranges": [
+                                {
+                                    "min": 20,
+                                    "max": 80,
+                                    "color": "",
+                                    "type": 2,
+                                    "stroke": ""
+                                }
+                            ]
+                        },
+                        "label": "HtmlButton",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "svg_ec0f72fc-e8d341ec": {
+                        "id": "svg_ec0f72fc-e8d341ec",
+                        "type": "svg-ext-shapes-text",
+                        "name": "shape_1",
+                        "property": {
+                            "ranges": [
+                                {
+                                    "min": 20,
+                                    "max": 80,
+                                    "color": "",
+                                    "type": 2,
+                                    "stroke": ""
+                                }
+                            ],
+                            "events": [],
+                            "actions": [],
+                            "text": "排風系統/2F"
+                        },
+                        "label": "Shapes",
+                        "hide": false,
+                        "lock": false
+                    }
+                },
+                "variables": {},
+                "svgcontent": "<svg width=\"1024\" height=\"768\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:html=\"http://www.w3.org/1999/xhtml\">\n <filter id=\"blur-filter\" x=\"-3\" y=\"-3\" width=\"200\" height=\"200\">\n  <feGaussianBlur stdDeviation=\"3\"/>\n </filter>\n <g>\n  <title>Layer 1</title>\n  <g stroke=\"#000000\" text-anchor=\"right\" font-family=\"sans-serif\" font-size=\"14\" fill=\"#FFFFFF\" type=\"svg-ext-own_ctrl-image\" id=\"OXC_e292e9e2-be20417e\">\n   <rect stroke=\"null\" id=\"svg_4f354d26-f4f54baa\" height=\"482.99999\" width=\"991.99996\" y=\"117.99999\" x=\"22.00001\" stroke-width=\"0\"/>\n   <foreignObject id=\"H-OXC_4403b091-893742bf\" width=\"991.99996\" height=\"482.99999\" y=\"117.99999\" x=\"22.00001\">\n    <DIV style=\"width: 100%; height: 100%; vector-effect: non-scaling-stroke;\" id=\"D-OXC_4403b091-893742bf\">\n     <IMG style=\"width: 100%; height: 100%; border-width: medium; border-style: none; border-color: currentcolor; border-image: none;\" src=\"resources/Drawing2.svg\"/>\n    </DIV>\n   </foreignObject>\n  </g>\n  <g stroke=\"rgba(0,0,0,0)\" fill=\"rgba(0,0,0,0)\" type=\"svg-ext-html_button\" id=\"HXB_c2412b90-8dc840d2\">\n   <rect id=\"svg_62d44fc4-751a4db3\" height=\"32\" width=\"80\" y=\"19\" x=\"42\" stroke-width=\"0\"/>\n   <foreignObject id=\"H-HXB_fce3fc98-e4e04fa2\" width=\"80\" height=\"32\" y=\"19\" x=\"42\">\n    <BUTTON style=\"width:calc(100% - 6px);height:calc(100% - 6px);text-align:center;background-color:#FFFFFF;color:#000000;font-size:14px;font-family:sans-serif;\" class=\"md-btn  md-btn-raised\" id=\"B-HXB_fce3fc98-e4e04fa2\">2F</BUTTON>\n   </foreignObject>\n  </g>\n  <g stroke=\"rgba(0,0,0,0)\" fill=\"rgba(0,0,0,0)\" type=\"svg-ext-html_button\" id=\"HXB_89c9b5d3-b0874a51\">\n   <rect id=\"svg_97d1e6da-25b5411a\" height=\"32\" width=\"80\" y=\"17\" x=\"138\" stroke-width=\"0\"/>\n   <foreignObject id=\"H-HXB_ded0a0d7-def14b32\" width=\"80\" height=\"32\" y=\"17\" x=\"138\">\n    <BUTTON style=\"width:calc(100% - 6px);height:calc(100% - 6px);text-align:center;background-color:#FFFFFF;color:#000000;font-size:14px;font-family:sans-serif;\" class=\"md-btn  md-btn-raised\" id=\"B-HXB_ded0a0d7-def14b32\">3F</BUTTON>\n   </foreignObject>\n  </g>\n </g>\n</svg>",
+                "type": "svg"
+            },
+            {
+                "id": "v_28b5410a9-1335a",
+                "name": "排風系統/3F",
+                "profile": {
+                    "width": 1024,
+                    "height": 768,
+                    "bkcolor": "#ffffffff",
+                    "margin": 10,
+                    "align": "topCenter",
+                    "gridType": "fixed",
+                    "viewRenderDelay": 0
+                },
+                "items": {
+                    "HXB_8cb4c310-53b44ab7": {
+                        "id": "HXB_8cb4c310-53b44ab7",
+                        "type": "svg-ext-html_button",
+                        "name": "button_1",
+                        "property": {
+                            "events": [
+                                {
+                                    "type": "click",
+                                    "action": "onpage",
+                                    "actparam": "v_28b5410a9-1335a",
+                                    "actoptions": {}
+                                }
+                            ],
+                            "actions": [],
+                            "address": "resources/Drawing2.svg",
+                            "text": "3F",
+                            "ranges": [
+                                {
+                                    "min": 20,
+                                    "max": 80,
+                                    "color": "",
+                                    "type": 2,
+                                    "stroke": ""
+                                }
+                            ]
+                        },
+                        "label": "HtmlButton",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "svg_46fbfd5a-b6a145d6": {
+                        "id": "svg_46fbfd5a-b6a145d6",
+                        "type": "svg-ext-shapes-rect",
+                        "name": "shape_1",
+                        "property": null,
+                        "label": "Shapes",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "HXB_7978ce2a-fae744ed": {
+                        "id": "HXB_7978ce2a-fae744ed",
+                        "type": "svg-ext-html_button",
+                        "name": "button_1",
+                        "property": {
+                            "events": [
+                                {
+                                    "type": "click",
+                                    "action": "onpage",
+                                    "actparam": "v_61312041081-10064",
+                                    "actoptions": {}
+                                }
+                            ],
+                            "actions": [],
+                            "address": "resources/Drawing2.svg",
+                            "text": "2F",
+                            "ranges": [
+                                {
+                                    "min": 20,
+                                    "max": 80,
+                                    "color": "",
+                                    "type": 2,
+                                    "stroke": ""
+                                }
+                            ]
+                        },
+                        "label": "HtmlButton",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "svg_e2de1431-7c3640cc": {
+                        "id": "svg_e2de1431-7c3640cc",
+                        "type": "svg-ext-shapes-rect",
+                        "name": "shape_1",
+                        "property": null,
+                        "label": "Shapes",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "OXC_6661d8f4-0d584d24": {
+                        "id": "OXC_6661d8f4-0d584d24",
+                        "type": "svg-ext-own_ctrl-image",
+                        "name": "shape_1",
+                        "property": {
+                            "events": [],
+                            "actions": [],
+                            "address": "resources/Drawing2.svg"
+                        },
+                        "label": "HtmlImage",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "svg_becca461-cf184d65": {
+                        "id": "svg_becca461-cf184d65",
+                        "type": "svg-ext-shapes-rect",
+                        "name": "shape_1",
+                        "property": null,
+                        "label": "Shapes",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "svg_127f6afb-db5049a3": {
+                        "id": "svg_127f6afb-db5049a3",
+                        "type": "svg-ext-shapes-text",
+                        "name": "shape_2",
+                        "property": {
+                            "ranges": [
+                                {
+                                    "min": 20,
+                                    "max": 80,
+                                    "color": "",
+                                    "type": 2,
+                                    "stroke": ""
+                                }
+                            ],
+                            "events": [],
+                            "actions": [],
+                            "text": "排風系統/3F"
+                        },
+                        "label": "Shapes",
+                        "hide": false,
+                        "lock": false
+                    }
+                },
+                "variables": {},
+                "svgcontent": "<svg width=\"1024\" height=\"768\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:html=\"http://www.w3.org/1999/xhtml\">\n <filter id=\"blur-filter\" x=\"-3\" y=\"-3\" width=\"200\" height=\"200\">\n  <feGaussianBlur stdDeviation=\"3\"/>\n </filter>\n <g>\n  <title>Layer 1</title>\n  <g data-name=\"shape_1\" id=\"OXC_6661d8f4-0d584d24\" stroke=\"#000000\" text-anchor=\"right\" font-family=\"sans-serif\" font-size=\"14\" fill=\"#FFFFFF\" type=\"svg-ext-own_ctrl-image\">\n   <rect data-name=\"shape_1\" id=\"svg_becca461-cf184d65\" stroke=\"null\" height=\"482.99999\" width=\"991.99996\" y=\"123.10002\" x=\"15.79997\" stroke-width=\"0\"/>\n   <foreignObject id=\"H-OXC_1458578d-6dc748ee\" width=\"991.99996\" height=\"482.99999\" y=\"123.10002\" x=\"15.79997\">\n    <DIV id=\"D-OXC_c2a6ef27-52b843fb\" style=\"width: 100%; height: 100%; vector-effect: non-scaling-stroke;\">\n     <IMG style=\"width: 100%; height: 100%; border-width: medium; border-style: none; border-color: currentcolor; border-image: none;\" src=\"resources/Drawing2.svg\"/>\n    </DIV>\n   </foreignObject>\n  </g>\n  <g id=\"HXB_7978ce2a-fae744ed\" stroke=\"rgba(0,0,0,0)\" fill=\"rgba(0,0,0,0)\" type=\"svg-ext-html_button\">\n   <rect data-name=\"shape_1\" id=\"svg_e2de1431-7c3640cc\" height=\"32\" width=\"80\" y=\"68.10003\" x=\"43.79996\" stroke-width=\"0\"/>\n   <foreignObject id=\"H-HXB_1ba038a4-edc24d78\" width=\"80\" height=\"32\" y=\"68.10003\" x=\"43.79996\">\n    <BUTTON id=\"B-HXB_60b2da70-274c4ad0\" style=\"width:calc(100% - 6px);height:calc(100% - 6px);text-align:center;background-color:#FFFFFF;color:#000000;font-size:14px;font-family:sans-serif;\" class=\"md-btn  md-btn-raised\">2F</BUTTON>\n   </foreignObject>\n  </g>\n  <g id=\"HXB_8cb4c310-53b44ab7\" stroke=\"rgba(0,0,0,0)\" fill=\"rgba(0,0,0,0)\" type=\"svg-ext-html_button\">\n   <rect data-name=\"shape_1\" id=\"svg_46fbfd5a-b6a145d6\" height=\"32\" width=\"80\" y=\"69.10003\" x=\"133.79996\" stroke-width=\"0\"/>\n   <foreignObject id=\"H-HXB_db225821-746f4efe\" width=\"80\" height=\"32\" y=\"69.10003\" x=\"133.79996\">\n    <BUTTON id=\"B-HXB_44213571-7bc44646\" style=\"width:calc(100% - 6px);height:calc(100% - 6px);text-align:center;background-color:#FFFFFF;color:#000000;font-size:14px;font-family:sans-serif;\" class=\"md-btn  md-btn-raised\">3F</BUTTON>\n   </foreignObject>\n  </g>\n  <text xml:space=\"preserve\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"14\" id=\"svg_127f6afb-db5049a3\" y=\"40\" x=\"87\" stroke-width=\"0\" stroke=\"#000000\" fill=\"#000000\">排風系統/3F</text>\n </g>\n</svg>",
+                "type": "svg"
+            }
+        ],
+        "layout": {
+            "autoresize": false,
+            "start": "v_01313641395-13849",
+            "navigation": {
+                "mode": "over",
+                "type": "block",
+                "bkcolor": "#F4F5F7",
+                "fgcolor": "#1D1D1D",
+                "items": [
+                    {
+                        "text": "排風系統",
+                        "view": "v_61312041081-10064",
+                        "icon": "wind_power",
+                        "image": "",
+                        "permission": 0,
+                        "children": []
+                    }
+                ],
+                "logo": false
+            },
+            "header": {
+                "bkcolor": "#ffffff",
+                "fgcolor": "#000000",
+                "height": 46,
+                "buttonHeight": 36,
+                "fontSize": 13,
+                "itemsAnchor": "left"
+            },
+            "showdev": true,
+            "inputdialog": "false",
+            "hidenavigation": false,
+            "theme": "",
+            "loginonstart": false,
+            "loginoverlaycolor": "none",
+            "show_connection_error": true,
+            "customStyles": ""
+        }
+    },
+    "recipes": [],
+    "ar": {
+        "enabled": false,
+        "markers": []
+    },
+    "version": "1.01",
+    "charts": [],
+    "graphs": [],
+    "languages": {
+        "options": []
+    },
+    "plugin": [],
+    "clientAccess": {
+        "scriptSystemFunctions": []
+    },
+    "name": "測試樓層demo",
+    "server": {
+        "id": "0",
+        "name": "FUXA",
+        "enabled": true,
+        "property": {
+            "delay": 10
+        },
+        "type": "FuxaServer",
+        "polling": 1000
+    }
+}

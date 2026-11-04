@@ -1,0 +1,711 @@
+{
+    "version": "1.01",
+    "name": "測試樓層demo2",
+    "server": {
+        "id": "0",
+        "name": "FUXA",
+        "enabled": true,
+        "property": {
+            "delay": 10
+        },
+        "type": "FuxaServer",
+        "polling": 1000
+    },
+    "hmi": {
+        "views": [
+            {
+                "id": "v_11060410b1-811212",
+                "name": "MainView",
+                "profile": {
+                    "width": 1024,
+                    "height": 768,
+                    "bkcolor": "#ffffffff",
+                    "margin": 10,
+                    "align": "topCenter",
+                    "gridType": "fixed",
+                    "viewRenderDelay": 0
+                },
+                "items": {},
+                "variables": {},
+                "svgcontent": "<svg width=\"1024\" height=\"768\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\">\n <filter id=\"blur-filter\" x=\"-3\" y=\"-3\" width=\"200\" height=\"200\">\n  <feGaussianBlur stdDeviation=\"3\"/>\n </filter>\n <g>\n  <title>Layer 1</title>\n </g>\n</svg>",
+                "type": "svg"
+            },
+            {
+                "id": "v_e1747cfd-3c64ddbd",
+                "name": "排風/2F",
+                "profile": {
+                    "width": 1024,
+                    "height": 768,
+                    "bkcolor": "#ffffffff",
+                    "margin": 10,
+                    "align": "topCenter",
+                    "gridType": "fixed",
+                    "viewRenderDelay": 0
+                },
+                "items": {
+                    "svg_b7219c06-f18feded": {
+                        "id": "svg_b7219c06-f18feded",
+                        "type": "svg-ext-shapes-text",
+                        "name": "view_title",
+                        "property": null,
+                        "label": "Shapes",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "svg_2ddb1d47-40bf1f52": {
+                        "id": "svg_2ddb1d47-40bf1f52",
+                        "type": "svg-ext-shapes-text",
+                        "name": "fuxa_floor_section_title",
+                        "property": null,
+                        "label": "Shapes",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "SHE_e837b996-9dd8a71e": {
+                        "id": "SHE_e837b996-9dd8a71e",
+                        "type": "svg-ext-html_switch",
+                        "name": "tc_1",
+                        "property": {
+                            "variableId": null,
+                            "events": [
+                                {
+                                    "type": "click",
+                                    "action": "onToggleValue",
+                                    "actoptions": {
+                                        "variable": {
+                                            "variableId": "t_ceae9d94-acf7cb19",
+                                            "variableRaw": {
+                                                "id": "t_ceae9d94-acf7cb19",
+                                                "name": "A",
+                                                "type": "boolean",
+                                                "memaddress": "000000",
+                                                "address": 1,
+                                                "divisor": null,
+                                                "daq": {
+                                                    "enabled": false,
+                                                    "interval": 60,
+                                                    "changed": false,
+                                                    "restored": false
+                                                },
+                                                "description": null,
+                                                "timestamp": 1793769762398,
+                                                "value": false
+                                            },
+                                            "bitmask": null
+                                        }
+                                    }
+                                }
+                            ],
+                            "actions": [],
+                            "options": {
+                                "offValue": 0,
+                                "onValue": 1,
+                                "offBackground": "#ccc",
+                                "onBackground": "#ccc",
+                                "offText": "",
+                                "onText": "",
+                                "offSliderColor": "#fff",
+                                "onSliderColor": "#0CC868",
+                                "offTextColor": "#000",
+                                "onTextColor": "#fff",
+                                "fontSize": 12,
+                                "fontFamily": "",
+                                "radius": 0,
+                                "height": 22
+                            }
+                        },
+                        "label": "HtmlSwitch",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "svg_85888b72-ec3cee0e": {
+                        "id": "svg_85888b72-ec3cee0e",
+                        "type": "svg-ext-shapes-text",
+                        "name": "tc_1_label",
+                        "property": null,
+                        "label": "Shapes",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "SHE_996d8e6e-046eabba": {
+                        "id": "SHE_996d8e6e-046eabba",
+                        "type": "svg-ext-html_switch",
+                        "name": "tc_2",
+                        "property": {
+                            "variableId": null,
+                            "events": [
+                                {
+                                    "type": "click",
+                                    "action": "onToggleValue",
+                                    "actoptions": {
+                                        "variable": {
+                                            "variableId": "t_eecdec37-3b50ac7b",
+                                            "variableRaw": {
+                                                "id": "t_eecdec37-3b50ac7b",
+                                                "name": "B",
+                                                "type": "boolean",
+                                                "memaddress": "000000",
+                                                "address": 2,
+                                                "divisor": null,
+                                                "daq": {
+                                                    "enabled": false,
+                                                    "interval": 60,
+                                                    "changed": false,
+                                                    "restored": false
+                                                },
+                                                "description": null,
+                                                "timestamp": 1793769762398,
+                                                "value": false
+                                            },
+                                            "bitmask": null
+                                        }
+                                    }
+                                }
+                            ],
+                            "actions": [],
+                            "options": {
+                                "offValue": 0,
+                                "onValue": 1,
+                                "offBackground": "#ccc",
+                                "onBackground": "#ccc",
+                                "offText": "",
+                                "onText": "",
+                                "offSliderColor": "#fff",
+                                "onSliderColor": "#0CC868",
+                                "offTextColor": "#000",
+                                "onTextColor": "#fff",
+                                "fontSize": 12,
+                                "fontFamily": "",
+                                "radius": 0,
+                                "height": 22
+                            }
+                        },
+                        "label": "HtmlSwitch",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "svg_0b8355e3-1f4c4750": {
+                        "id": "svg_0b8355e3-1f4c4750",
+                        "type": "svg-ext-shapes-text",
+                        "name": "tc_2_label",
+                        "property": null,
+                        "label": "Shapes",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "SHE_df8a3e6c-8ee4156c": {
+                        "id": "SHE_df8a3e6c-8ee4156c",
+                        "type": "svg-ext-html_switch",
+                        "name": "tc_3",
+                        "property": {
+                            "variableId": null,
+                            "events": [
+                                {
+                                    "type": "click",
+                                    "action": "onToggleValue",
+                                    "actoptions": {
+                                        "variable": {
+                                            "variableId": "t_04ca231f-96f9c43a",
+                                            "variableRaw": {
+                                                "id": "t_04ca231f-96f9c43a",
+                                                "name": "C",
+                                                "type": "boolean",
+                                                "memaddress": "000000",
+                                                "address": 3,
+                                                "divisor": null,
+                                                "daq": {
+                                                    "enabled": false,
+                                                    "interval": 60,
+                                                    "changed": false,
+                                                    "restored": false
+                                                },
+                                                "description": null,
+                                                "timestamp": 1793769762398,
+                                                "value": false
+                                            },
+                                            "bitmask": null
+                                        }
+                                    }
+                                }
+                            ],
+                            "actions": [],
+                            "options": {
+                                "offValue": 0,
+                                "onValue": 1,
+                                "offBackground": "#ccc",
+                                "onBackground": "#ccc",
+                                "offText": "",
+                                "onText": "",
+                                "offSliderColor": "#fff",
+                                "onSliderColor": "#0CC868",
+                                "offTextColor": "#000",
+                                "onTextColor": "#fff",
+                                "fontSize": 12,
+                                "fontFamily": "",
+                                "radius": 0,
+                                "height": 22
+                            }
+                        },
+                        "label": "HtmlSwitch",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "svg_f4184d2a-653d1c2a": {
+                        "id": "svg_f4184d2a-653d1c2a",
+                        "type": "svg-ext-shapes-text",
+                        "name": "tc_3_label",
+                        "property": null,
+                        "label": "Shapes",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "HXB_114ada49-8da5420d": {
+                        "id": "HXB_114ada49-8da5420d",
+                        "type": "svg-ext-html_button",
+                        "name": "fuxa_building_floor_button",
+                        "property": {
+                            "events": [
+                                {
+                                    "type": "click",
+                                    "action": "onpage",
+                                    "actparam": "v_e1747cfd-3c64ddbd",
+                                    "actoptions": {}
+                                }
+                            ],
+                            "actions": [],
+                            "text": "2F",
+                            "ranges": [
+                                {
+                                    "min": 20,
+                                    "max": 80,
+                                    "color": "",
+                                    "type": 2,
+                                    "stroke": ""
+                                }
+                            ]
+                        },
+                        "label": "HtmlButton",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "HXB_56e4cabc-a1467f0d": {
+                        "id": "HXB_56e4cabc-a1467f0d",
+                        "type": "svg-ext-html_button",
+                        "name": "fuxa_building_floor_button",
+                        "property": {
+                            "events": [
+                                {
+                                    "type": "click",
+                                    "action": "onpage",
+                                    "actparam": "v_18f0b8d6-c9165808",
+                                    "actoptions": {}
+                                }
+                            ],
+                            "actions": [],
+                            "text": "3F",
+                            "ranges": [
+                                {
+                                    "min": 20,
+                                    "max": 80,
+                                    "color": "",
+                                    "type": 2,
+                                    "stroke": ""
+                                }
+                            ]
+                        },
+                        "label": "HtmlButton",
+                        "hide": false,
+                        "lock": false
+                    }
+                },
+                "variables": {},
+                "svgcontent": "<svg width=\"1024\" height=\"768\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:html=\"http://www.w3.org/1999/xhtml\">\n <g>\n  <title>Layer 1</title>\n  <text data-name=\"view_title\" xml:space=\"preserve\" text-anchor=\"start\" font-family=\"sans-serif\" font-size=\"24\" stroke-width=\"0\" stroke=\"#000000\" fill=\"#000000\" y=\"36\" x=\"20\" id=\"svg_b7219c06-f18feded\">排風/2F</text>\n  <text data-name=\"fuxa_floor_section_title\" id=\"svg_2ddb1d47-40bf1f52\" x=\"60\" y=\"94\" fill=\"#1d4ed8\" stroke=\"#1d4ed8\" stroke-width=\"0\" font-size=\"14\" font-family=\"sans-serif\" font-weight=\"bold\" text-anchor=\"start\" xml:space=\"preserve\">未設定樓層</text>\n  <g data-name=\"tc_1\" id=\"SHE_e837b996-9dd8a71e\" type=\"svg-ext-html_switch\" fill=\"rgba(0,0,0,0)\" stroke=\"rgba(0,0,0,0)\">\n   <rect id=\"SHE_e8fc10e0-12654430\" x=\"58.5\" y=\"220\" width=\"50\" height=\"28\" stroke-width=\"0\"/>\n   <foreignObject id=\"H-HXT_95a994b0-a40cab06\" x=\"58.5\" y=\"220\" width=\"50\" height=\"28\">\n    <LABEL id=\"T-HXT_646ae329-1c48d0aa\" class=\"md-switch\" style=\"width:calc(100% - 6px);height:calc(100% - 6px);text-align:center;background-color:#FFFFFF;color:#000000;margin: 3px 3px 3px 3px;\">\n     <NGX-SWITCH class=\"ng-star-inserted\">\n      <LABEL style=\"border-radius: 0px;\" class=\"md-switch\">\n       <DIV style=\"background-color: rgb(204, 204, 204); opacity: 1; pointer-events: auto;\" class=\"toggle-button\">\n        <INPUT type=\"checkbox\"/>\n        <DIV style=\"text-align: center; line-height: 22px; font-size: 12px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);\" class=\"inner-circle\"></DIV>\n       </DIV>\n      </LABEL>\n     </NGX-SWITCH>\n    </LABEL>\n   </foreignObject>\n  </g>\n  <text data-name=\"tc_1_label\" id=\"svg_85888b72-ec3cee0e\" x=\"83.5\" y=\"210\" fill=\"#000000\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"14\" font-family=\"sans-serif\" text-anchor=\"middle\" xml:space=\"preserve\">A</text>\n  <g data-name=\"tc_2\" id=\"SHE_996d8e6e-046eabba\" type=\"svg-ext-html_switch\" fill=\"rgba(0,0,0,0)\" stroke=\"rgba(0,0,0,0)\">\n   <rect id=\"SHE_0fde19c2-f85aa7a3\" x=\"196.7\" y=\"247\" width=\"50\" height=\"28\" stroke-width=\"0\"/>\n   <foreignObject id=\"H-HXT_de550e7a-449f670a\" x=\"196.7\" y=\"247\" width=\"50\" height=\"28\">\n    <LABEL id=\"T-HXT_d18d53ed-bfa5f1b7\" class=\"md-switch\" style=\"width:calc(100% - 6px);height:calc(100% - 6px);text-align:center;background-color:#FFFFFF;color:#000000;margin: 3px 3px 3px 3px;\">\n     <NGX-SWITCH class=\"ng-star-inserted\">\n      <LABEL style=\"border-radius: 0px;\" class=\"md-switch\">\n       <DIV style=\"background-color: rgb(204, 204, 204); opacity: 1; pointer-events: auto;\" class=\"toggle-button\">\n        <INPUT type=\"checkbox\"/>\n        <DIV style=\"text-align: center; line-height: 22px; font-size: 12px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);\" class=\"inner-circle\"></DIV>\n       </DIV>\n      </LABEL>\n     </NGX-SWITCH>\n    </LABEL>\n   </foreignObject>\n  </g>\n  <text data-name=\"tc_2_label\" id=\"svg_0b8355e3-1f4c4750\" x=\"221.7\" y=\"237\" fill=\"#000000\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"14\" font-family=\"sans-serif\" text-anchor=\"middle\" xml:space=\"preserve\">B</text>\n  <g data-name=\"tc_3\" id=\"SHE_df8a3e6c-8ee4156c\" type=\"svg-ext-html_switch\" fill=\"rgba(0,0,0,0)\" stroke=\"rgba(0,0,0,0)\">\n   <rect id=\"SHE_c268bd9f-0b244210\" x=\"415\" y=\"198.1\" width=\"50\" height=\"28\" stroke-width=\"0\"/>\n   <foreignObject id=\"H-HXT_7e1beb5d-702de029\" x=\"415\" y=\"198.1\" width=\"50\" height=\"28\">\n    <LABEL id=\"T-HXT_a923d441-7667e091\" class=\"md-switch\" style=\"width:calc(100% - 6px);height:calc(100% - 6px);text-align:center;background-color:#FFFFFF;color:#000000;margin: 3px 3px 3px 3px;\">\n     <NGX-SWITCH class=\"ng-star-inserted\">\n      <LABEL style=\"border-radius: 0px;\" class=\"md-switch\">\n       <DIV style=\"background-color: rgb(204, 204, 204); opacity: 1; pointer-events: auto;\" class=\"toggle-button\">\n        <INPUT type=\"checkbox\"/>\n        <DIV style=\"text-align: center; line-height: 22px; font-size: 12px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);\" class=\"inner-circle\"></DIV>\n       </DIV>\n      </LABEL>\n     </NGX-SWITCH>\n    </LABEL>\n   </foreignObject>\n  </g>\n  <text data-name=\"tc_3_label\" id=\"svg_f4184d2a-653d1c2a\" x=\"440\" y=\"188.1\" fill=\"#000000\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"14\" font-family=\"sans-serif\" text-anchor=\"middle\" xml:space=\"preserve\">C</text>\n  <g id=\"HXB_114ada49-8da5420d\" stroke=\"rgba(0,0,0,0)\" fill=\"rgba(0,0,0,0)\" type=\"svg-ext-html_button\">\n   <rect id=\"svg_b41b029d-e253215d\" height=\"32\" width=\"80\" y=\"50\" x=\"42\" stroke-width=\"0\"/>\n   <foreignObject id=\"H-HXB_e45790de-c59f95db\" width=\"80\" height=\"32\" y=\"50\" x=\"42\">2F</foreignObject>\n  </g>\n  <g id=\"HXB_56e4cabc-a1467f0d\" stroke=\"rgba(0,0,0,0)\" fill=\"rgba(0,0,0,0)\" type=\"svg-ext-html_button\">\n   <rect id=\"svg_6737b7ee-d4242bf6\" height=\"32\" width=\"80\" y=\"50\" x=\"138\" stroke-width=\"0\"/>\n   <foreignObject id=\"H-HXB_8d130714-78105377\" width=\"80\" height=\"32\" y=\"50\" x=\"138\">3F</foreignObject>\n  </g>\n </g>\n</svg>",
+                "type": "svg"
+            },
+            {
+                "id": "v_18f0b8d6-c9165808",
+                "name": "排風/3F",
+                "profile": {
+                    "width": 1024,
+                    "height": 768,
+                    "bkcolor": "#ffffffff",
+                    "margin": 10,
+                    "align": "topCenter",
+                    "gridType": "fixed",
+                    "viewRenderDelay": 0
+                },
+                "items": {
+                    "svg_acdbf695-f8fed559": {
+                        "id": "svg_acdbf695-f8fed559",
+                        "type": "svg-ext-shapes-text",
+                        "name": "view_title",
+                        "property": null,
+                        "label": "Shapes",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "HXB_883c7d5f-d13d856b": {
+                        "id": "HXB_883c7d5f-d13d856b",
+                        "type": "svg-ext-html_button",
+                        "name": "fuxa_building_floor_button",
+                        "property": {
+                            "events": [
+                                {
+                                    "type": "click",
+                                    "action": "onpage",
+                                    "actparam": "v_e1747cfd-3c64ddbd",
+                                    "actoptions": {}
+                                }
+                            ],
+                            "actions": [],
+                            "text": "2F",
+                            "ranges": [
+                                {
+                                    "min": 20,
+                                    "max": 80,
+                                    "color": "",
+                                    "type": 2,
+                                    "stroke": ""
+                                }
+                            ]
+                        },
+                        "label": "HtmlButton",
+                        "hide": false,
+                        "lock": false
+                    },
+                    "HXB_7a1e2545-78a2a02b": {
+                        "id": "HXB_7a1e2545-78a2a02b",
+                        "type": "svg-ext-html_button",
+                        "name": "fuxa_building_floor_button",
+                        "property": {
+                            "events": [
+                                {
+                                    "type": "click",
+                                    "action": "onpage",
+                                    "actparam": "v_18f0b8d6-c9165808",
+                                    "actoptions": {}
+                                }
+                            ],
+                            "actions": [],
+                            "text": "3F",
+                            "ranges": [
+                                {
+                                    "min": 20,
+                                    "max": 80,
+                                    "color": "",
+                                    "type": 2,
+                                    "stroke": ""
+                                }
+                            ]
+                        },
+                        "label": "HtmlButton",
+                        "hide": false,
+                        "lock": false
+                    }
+                },
+                "variables": {},
+                "svgcontent": "<svg width=\"1024\" height=\"768\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:html=\"http://www.w3.org/1999/xhtml\">\n <g>\n  <title>Layer 1</title>\n  <text data-name=\"view_title\" id=\"svg_acdbf695-f8fed559\" x=\"20\" y=\"36\" fill=\"#000000\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"24\" font-family=\"sans-serif\" text-anchor=\"start\" xml:space=\"preserve\">排風/3F</text>\n  <g id=\"HXB_883c7d5f-d13d856b\" stroke=\"rgba(0,0,0,0)\" fill=\"rgba(0,0,0,0)\" type=\"svg-ext-html_button\">\n   <rect id=\"svg_1f2baf2d-bfc3d64d\" height=\"32\" width=\"80\" y=\"50\" x=\"42\" stroke-width=\"0\"/>\n   <foreignObject id=\"H-HXB_ded8a793-b4453fe6\" width=\"80\" height=\"32\" y=\"50\" x=\"42\">\n    <BUTTON style=\"width:calc(100% - 6px);height:calc(100% - 6px);text-align:center;background-color:#FFFFFF;color:#000000;font-size:14px;font-family:sans-serif;\" class=\"md-btn  md-btn-raised\" id=\"B-HXB_fcb5fb13-790dca6a\">2F</BUTTON>\n   </foreignObject>\n  </g>\n  <g id=\"HXB_7a1e2545-78a2a02b\" stroke=\"rgba(0,0,0,0)\" fill=\"rgba(0,0,0,0)\" type=\"svg-ext-html_button\">\n   <rect id=\"svg_1e1df98a-f961c80a\" height=\"32\" width=\"80\" y=\"50\" x=\"138\" stroke-width=\"0\"/>\n   <foreignObject id=\"H-HXB_6dc1d47d-d71b6647\" width=\"80\" height=\"32\" y=\"50\" x=\"138\">\n    <BUTTON style=\"width:calc(100% - 6px);height:calc(100% - 6px);text-align:center;background-color:#1d4ed8;color:#FFFFFF;font-size:14px;font-family:sans-serif;\" class=\"md-btn  md-btn-raised\" id=\"B-HXB_d14d1703-380b129f\">3F</BUTTON>\n   </foreignObject>\n  </g>\n </g>\n</svg>",
+                "type": "svg"
+            }
+        ],
+        "layout": {
+            "autoresize": false,
+            "start": "v_11060410b1-811212",
+            "navigation": {
+                "mode": "over",
+                "type": "block",
+                "bkcolor": "#F4F5F7",
+                "fgcolor": "#1D1D1D",
+                "items": [
+                    {
+                        "text": "MainView",
+                        "view": "v_11060410b1-811212",
+                        "icon": "dashboard",
+                        "image": "",
+                        "permission": 0,
+                        "children": []
+                    },
+                    {
+                        "text": "排風",
+                        "view": "v_e1747cfd-3c64ddbd",
+                        "icon": "dashboard",
+                        "image": "",
+                        "permission": 0,
+                        "children": []
+                    }
+                ],
+                "logo": false
+            },
+            "header": {
+                "bkcolor": "#ffffff",
+                "fgcolor": "#000000",
+                "height": 46,
+                "buttonHeight": 36,
+                "fontSize": 13,
+                "itemsAnchor": "left"
+            },
+            "showdev": true,
+            "inputdialog": "false",
+            "hidenavigation": false,
+            "theme": "",
+            "loginonstart": false,
+            "loginoverlaycolor": "none",
+            "show_connection_error": true,
+            "customStyles": ""
+        }
+    },
+    "devices": {
+        "0": {
+            "id": "0",
+            "name": "FUXA",
+            "enabled": true,
+            "property": {
+                "delay": 10
+            },
+            "type": "FuxaServer",
+            "polling": 1000,
+            "tags": {
+                "t_50844632-c75f2ad2": {
+                    "id": "t_50844632-c75f2ad2",
+                    "name": "AA Connection Status",
+                    "label": "AA Connection Status",
+                    "type": "number",
+                    "memaddress": "d_3c2811f0-0940248e",
+                    "daq": {
+                        "enabled": false,
+                        "interval": 60,
+                        "changed": false,
+                        "restored": false
+                    },
+                    "init": "",
+                    "sysType": 1,
+                    "timestamp": 1793769754566
+                },
+                "t_5376140e-37d1b535": {
+                    "id": "t_5376140e-37d1b535",
+                    "name": "voiceOn",
+                    "type": "boolean",
+                    "daq": {
+                        "enabled": false,
+                        "interval": 60,
+                        "changed": false,
+                        "restored": false
+                    },
+                    "init": "0",
+                    "description": null,
+                    "timestamp": 1793769800690
+                },
+                "t_ef1bd472-12dca2fb": {
+                    "id": "t_ef1bd472-12dca2fb",
+                    "name": "voiceMessage",
+                    "type": "string",
+                    "daq": {
+                        "enabled": false,
+                        "interval": 60,
+                        "changed": false,
+                        "restored": false
+                    },
+                    "init": null,
+                    "description": null,
+                    "timestamp": 1793769800690
+                },
+                "t_8abc20ae-e2eaa7a8": {
+                    "id": "t_8abc20ae-e2eaa7a8",
+                    "name": "voiceRepeat",
+                    "type": "number",
+                    "daq": {
+                        "enabled": false,
+                        "interval": 60,
+                        "changed": false,
+                        "restored": false
+                    },
+                    "init": "1",
+                    "description": null,
+                    "timestamp": 1793769800690
+                }
+            }
+        },
+        "d_3c2811f0-0940248e": {
+            "id": "d_3c2811f0-0940248e",
+            "name": "AA",
+            "enabled": true,
+            "property": {
+                "address": "127.0.0.1:502",
+                "port": null,
+                "slot": null,
+                "rack": null,
+                "slaveid": "1",
+                "baudrate": 9600,
+                "databits": 8,
+                "stopbits": 1,
+                "parity": "None",
+                "connectionOption": "TcpPort",
+                "delay": 10,
+                "forceFC16": false,
+                "timeout": 2000,
+                "addressCount": 0
+            },
+            "type": "ModbusTCP",
+            "polling": 200,
+            "tags": {
+                "t_ceae9d94-acf7cb19": {
+                    "id": "t_ceae9d94-acf7cb19",
+                    "name": "A",
+                    "type": "Bool",
+                    "memaddress": "000000",
+                    "address": 1,
+                    "divisor": null,
+                    "daq": {
+                        "enabled": false,
+                        "interval": 60,
+                        "changed": false,
+                        "restored": false
+                    },
+                    "description": null,
+                    "timestamp": 1793769762398
+                },
+                "t_eecdec37-3b50ac7b": {
+                    "id": "t_eecdec37-3b50ac7b",
+                    "name": "B",
+                    "type": "Bool",
+                    "memaddress": "000000",
+                    "address": 2,
+                    "divisor": null,
+                    "daq": {
+                        "enabled": false,
+                        "interval": 60,
+                        "changed": false,
+                        "restored": false
+                    },
+                    "description": null,
+                    "timestamp": 1793769762398
+                },
+                "t_04ca231f-96f9c43a": {
+                    "id": "t_04ca231f-96f9c43a",
+                    "name": "C",
+                    "type": "Bool",
+                    "memaddress": "000000",
+                    "address": 3,
+                    "divisor": null,
+                    "daq": {
+                        "enabled": false,
+                        "interval": 60,
+                        "changed": false,
+                        "restored": false
+                    },
+                    "description": null,
+                    "timestamp": 1793769762398
+                }
+            }
+        }
+    },
+    "charts": [],
+    "graphs": [],
+    "alarms": [],
+    "recipes": [],
+    "notifications": [],
+    "scripts": [
+        {
+            "id": "s_b3ecdadf-f33b8b6a",
+            "name": "voice",
+            "sync": false,
+            "parameters": [],
+            "mode": "CLIENT",
+            "code": "const voiceOn = $getTag(\"t_5376140e-37d1b535\" /* FUXA - voiceOn */);\nif (voiceOn) {\n  $setTag(\"t_5376140e-37d1b535\" /* FUXA - voiceOn */, false);\n  const message = $getTag(\"t_ef1bd472-12dca2fb\" /* FUXA - voiceMessage */);\n  const repeatTag = $getTag(\"t_8abc20ae-e2eaa7a8\" /* FUXA - voiceRepeat */);\n  const repeat = Math.min(10, Math.max(1, Math.round(Number(repeatTag) || 1)));\n  const voice = speechSynthesis.getVoices().find(v => v.lang === 'zh-TW' && v.localService);\n  let played = 0;\n  const speakOnce = () => {\n    const u = new SpeechSynthesisUtterance(message);\n    if (voice) u.voice = voice;\n    u.lang = 'zh-TW';\n    u.onend = () => {\n      played += 1;\n      if (played < repeat) speakOnce();\n    };\n    speechSynthesis.speak(u);\n  };\n  speakOnce();\n}",
+            "scheduling": {
+                "mode": "interval",
+                "interval": 1,
+                "schedules": []
+            }
+        }
+    ],
+    "reports": [],
+    "texts": [],
+    "languages": {
+        "options": []
+    },
+    "plugin": [],
+    "mapsLocations": [],
+    "clientAccess": {
+        "scriptSystemFunctions": []
+    },
+    "ar": {
+        "enabled": false,
+        "markers": []
+    },
+    "extra": {
+        "fuxaSetting": {
+            "buildingFloorButtons": {
+                "v_e1747cfd-3c64ddbd": {
+                    "v_e1747cfd-3c64ddbd": "HXB_114ada49-8da5420d",
+                    "v_18f0b8d6-c9165808": "HXB_56e4cabc-a1467f0d"
+                },
+                "v_18f0b8d6-c9165808": {
+                    "v_e1747cfd-3c64ddbd": "HXB_883c7d5f-d13d856b",
+                    "v_18f0b8d6-c9165808": "HXB_7a1e2545-78a2a02b"
+                }
+            },
+            "floorFrameLayoutVersion": 1,
+            "version": 1,
+            "viewGrids": {
+                "v_11060410b1-811212": {
+                    "columns": 4,
+                    "originX": 60,
+                    "originY": 80,
+                    "gapX": 40,
+                    "gapY": 40,
+                    "labelPosition": "above",
+                    "labelOffset": 10,
+                    "labelFontSize": 14,
+                    "iconScale": 100
+                },
+                "v_e1747cfd-3c64ddbd": {
+                    "columns": 4,
+                    "originX": 60,
+                    "originY": 80,
+                    "gapX": 40,
+                    "gapY": 40,
+                    "labelPosition": "above",
+                    "labelOffset": 10,
+                    "labelFontSize": 14,
+                    "iconScale": 100
+                },
+                "v_18f0b8d6-c9165808": {
+                    "columns": 4,
+                    "originX": 60,
+                    "originY": 80,
+                    "gapX": 40,
+                    "gapY": 40,
+                    "labelPosition": "above",
+                    "labelOffset": 10,
+                    "labelFontSize": 14,
+                    "iconScale": 100
+                }
+            },
+            "floorPlanViewIds": [
+                "v_e1747cfd-3c64ddbd"
+            ],
+            "floorGroupArtifacts": {
+                "v_11060410b1-811212": {},
+                "v_e1747cfd-3c64ddbd": {},
+                "v_18f0b8d6-c9165808": {}
+            },
+            "floorPlanTagOffsets": {
+                "v_e1747cfd-3c64ddbd": {
+                    "t_ceae9d94-acf7cb19": {
+                        "dx": -1.5,
+                        "dy": 62
+                    },
+                    "t_eecdec37-3b50ac7b": {
+                        "dx": 46.7,
+                        "dy": 89
+                    },
+                    "t_04ca231f-96f9c43a": {
+                        "dx": 175,
+                        "dy": 40.1
+                    }
+                }
+            }
+        }
+    }
+}

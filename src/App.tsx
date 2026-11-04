@@ -78,6 +78,7 @@ import { GridSettingsCard } from './ui/view/GridSettingsCard'
 import { ManagedComponentCard } from './ui/view/ManagedComponentCard'
 import {
   findLegacySwitchViewIds,
+  findStaleFloorPlanViewIds,
   needsVoiceBridgeUpdate,
   prepareFuxaConfigExport,
 } from './domain/config/prepareFuxaConfigExport'
@@ -340,6 +341,7 @@ function EditorWorkspace() {
       && hasFloorFrames
     const exportDirty = isDirty
       || findLegacySwitchViewIds([...models.values()]).size > 0
+      || findStaleFloorPlanViewIds([...models.values()]).size > 0
       || floorFrameLayoutNeedsUpdate
       || deviceTagsNeedAddressSorting(config.rawConfig)
       || needsVoiceBridgeUpdate(config.rawConfig)

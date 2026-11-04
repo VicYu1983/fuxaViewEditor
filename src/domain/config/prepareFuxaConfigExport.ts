@@ -414,6 +414,22 @@ export function findLegacySwitchViewIds(
   return ids
 }
 
+// 平面圖 View 不保留群組標題與底框；舊輸出殘留時需重新套用該 View 以清除
+export function findStaleFloorPlanViewIds(
+  models: readonly ExportViewModel[],
+): Set<string> {
+  const ids = new Set<string>()
+  for (const model of models) {
+    if (model.floorPlan !== true) continue
+    const hasArtifacts = Object.keys(model.floorTitles).length > 0
+      || Object.keys(model.floorFrames).length > 0
+      || Object.values(model.floorTitleIds).some((values) => values.length > 0)
+      || Object.values(model.floorFrameIds).some((values) => values.length > 0)
+    if (hasArtifacts) ids.add(model.viewId)
+  }
+  return ids
+}
+
 function viewsById(config: FuxaConfig, viewId: string): Record<string, unknown>[] {
   if (!Array.isArray(config.hmi.views)) return []
   return config.hmi.views.filter(
@@ -451,7 +467,8 @@ export function prepareFuxaConfigExport(
       && !needsVoiceBridgeUpdate(input.config)
       && !navigationNeedsSync(input.config)
       && !buildingFloorButtonsNeedSync(input.config)
-      && findLegacySwitchViewIds(input.models ?? []).size === 0) {
+      && findLegacySwitchViewIds(input.models ?? []).size === 0
+      && findStaleFloorPlanViewIds(input.models ?? []).size === 0) {
     return {
       config: input.config,
       text: input.originalText,
@@ -483,6 +500,7 @@ export function prepareFuxaConfigExport(
   const requestedViewIds = new Set([
     ...(input.modifiedViewIds ?? []),
     ...findLegacySwitchViewIds(models),
+    ...findStaleFloorPlanViewIds(models),
   ])
   for (const viewId of requestedViewIds) {
     const model = models.find((candidate) => candidate.viewId === viewId)

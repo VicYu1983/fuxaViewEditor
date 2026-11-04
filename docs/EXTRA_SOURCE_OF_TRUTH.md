@@ -17,6 +17,7 @@ View Editor 產生的 JSON 要交給 FUXA 載入，使用者也會在 FUXA 內�
 | 1 | FUXA 匯入 → View Editor → FUXA，樓層按鈕被破壞 | 按鈕的 `data-name` 與標記在 FUXA 往返後遺失，工具無法辨識自己產生的元件 | 在 `extra` 保存按鈕索引 `buildingFloorButtons` 作為補救 |
 | 2 | 往返後樓層按鈕只剩文字（`測試樓層demo2.json`） | 工具以 XHTML namespace 建立 `<BUTTON>`，序列化後變成 `html:BUTTON`；同時同步判斷不檢查 `<BUTTON>` 是否存在，所以不會重建 | 改用 SVG namespace 建立；同步判斷加入 `<BUTTON>` 數量檢查（**尚未 commit**，已通過測試） |
 | 3 | 平面圖 View 仍殘留群組標題「未設定樓層」 | 舊版輸出留在 SVG 裡，工具把 SVG 內容當成事實保留 | 平面圖分支不再建立群組標題，驗證同步調整 |
+| 4 | 匯出 `demo2` 直接報錯（事件 3 的修正造成，Phase 0 發現） | 殘留標題的平面圖 View 未被重新套用，卻被驗證器檢查 | 殘留標題的平面圖 View 於匯出時重新套用（`findStaleFloorPlanViewIds`） |
 
 三件事的共同點：**工具把 FUXA 回傳的 SVG 當成狀態來源，再去「猜」自己曾經做過什麼。**
 FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以每次猜都可能猜錯。
@@ -283,10 +284,18 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 
 ### Phase 0：安全網（不改正式程式碼）
 
-- 將 `測試樓層demo.json`、`測試樓層demo2.json` 複製到 `tests/fixtures/`，改英文檔名（例如 `floor-demo.json`、`floor-demo2.json`），並在旁邊加簡短說明（來源、重現的問題、日期）。
-- 新增測試輔助函式 `simulateFuxaRoundTrip(config)`：依 3.3 的觀察，模擬 FUXA 往返——移除樓層按鈕 `<g>` 的 `data-name` 與 `data-building-floor-*`、可選擇移除 `<BUTTON>`、為根 `<svg>` 加上 `xmlns:svg`／`xmlns:html`。
-- 寫特徵測試（characterization tests）：記錄現行行為，確認後續重構不改變不該變的部分。
-- 完成條件：新測試通過；既有 337 個測試不受影響。
+**狀態：已完成（2026-11-04）。** 過程中發現並修正一個既有缺陷，見下方「Phase 0 發現」。
+
+- 將 `測試樓層demo.json`、`測試樓層demo2.json` 複製到 `tests/fixtures/`，改英文檔名（`floor-demo.json`、`floor-demo2.json`），並在 [tests/fixtures/README.md](../tests/fixtures/README.md) 說明來源與用途。
+- 新增 [tests/helpers/fuxaRoundTrip.ts](../tests/helpers/fuxaRoundTrip.ts)：`exportText`（載入後不編輯直接匯出）、`simulateFuxaRoundTrip`（依 3.3 的觀察模擬 FUXA 往返）、`summarizeFloorButtons`（摘要按鈕狀態以便比對）。
+- 新增特徵測試 [tests/domain/syncRoundTrip.test.ts](../tests/domain/syncRoundTrip.test.ts)，涵蓋 INV-2～INV-9、INV-12 在目前行為下的表現。
+- 以 `it.fails` 標記尚未達成的不變量：**INV-3（`<BUTTON>` 遺失後重建的按鈕 id 與第一次匯出相同）**，Phase 2 完成後改為一般 `it`。
+- 完成條件：新測試通過；既有測試不受影響。
+
+**Phase 0 發現：** 匯出 `floor-demo2.json` 會直接丟出「平面圖 View 不應保留…群組標題」。原因是樓層按鈕同步把 2F 標為已修改，驗證器隨即檢查該 View，而 2F 殘留舊版輸出的群組標題；此 View 並未重新套用，所以標題沒被清除。已修正：
+- 平面圖 View 若仍有群組標題或底框，匯出時視為「需重新套用」（`findStaleFloorPlanViewIds`），套用後清除（INV-8）。
+- 對應的 App 匯出判斷（`exportDirty`）一併更新。
+- 這個缺陷在 Phase 0 之前沒有被任何測試覆蓋，是先有 fixture 與端對端測試才發現的。
 
 ### Phase 1：集中 `extra` 存取（不改行為）
 
@@ -314,7 +323,7 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 ### Phase 3：群組標題與底框、標題樣式遷移路徑整理
 
 - `readFloorArtifacts` 的推測分支加註「僅舊檔遷移」，並以 `extra.floorGroupArtifacts` 優先。
-- 平面圖 View 的不變量（INV-8）加入匯出前驗證。
+- 平面圖 View 的不變量（INV-8）已在 Phase 0 以「重新套用」修正；此處補上匯出前驗證與更完整的測試。
 - `viewTitleLabel`、`siteNameLabel` 從 SVG 取預設值的分支明確標示為遷移。
 - 風險：低到中。
 
