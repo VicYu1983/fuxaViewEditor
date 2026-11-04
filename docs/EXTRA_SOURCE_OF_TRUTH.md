@@ -71,7 +71,7 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 | 位置 | 做法 | 風險 | 本文件處置 |
 |---|---|---|---|
 | `buildingFloorButtons.ts`：`containsManagedButtons`、`viewHasExpectedButtons` | 以 SVG 內 `data-name`、`data-building-floor-*` 字串與數量判斷是否已同步 | FUXA 往返後這些屬性會遺失，判斷結果不可靠 | **Phase 2 取代** |
-| `buildingFloorButtons.ts`：`adoptExistingFloorButtons` | 比對 `items` 內文字與事件，把既有按鈕「認領」為受管按鈕 | 認領失敗就改走刪除重建並換新 id；認領成功但內部結構已壞（缺 `<BUTTON>`）也會誤判 | **Phase 2 移除** |
+| `buildingFloorButtons.ts`：`adoptExistingFloorButtons` | 比對 `items` 內文字與事件，把既有按鈕「認領」為受管按鈕 | 認領失敗就改走刪除重建並換新 id；認領成功但內部結構已壞（缺 `<BUTTON>`）也會誤判 | **已於 Phase 2 移除** |
 | `buildingFloorButtons.ts`：`buttonPositionsMatch` | 讀 SVG 的 `x`、`y` 與期望值比對 | 同上，且浮點與序列化差異可能造成無限重建 | **Phase 2 取代** |
 | `buildingFloorButtons.ts`：`buildingFloorButtonY` | 讀 `view_title` 文字的 `y` 與字級決定按鈕位置 | 屬於幾何量測，符合 P3；但結果必須是確定的，不能因 FUXA 微調而震盪 | 保留，補測試 |
 | `svg/readFloorArtifacts.ts` | 先用 `extra.floorGroupArtifacts`，再用 `data-floor-group`、文字「未設定樓層」等推測 | 推測規則是為了修補先前的遺失而加，容易誤認 | Phase 3 縮小為「只做舊檔遷移」 |
@@ -257,7 +257,7 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 2. 從 SVG 移除這些節點（整個 `<g>`），並從 `items` 移除。
 3. 依規格產生新節點與 `items`；外層 id 優先沿用索引中的舊值（若該 id 不與其他元件衝突），否則重新配置。
 4. 更新 `extra.buildingFloorButtons[viewId]`。
-5. 不再嘗試「認領」既有節點。
+5. 不再嘗試「認領」既有節點。例外：在 FUXA 內手動建立、指向同系統樓層且文字相同的舊樣板按鈕，會在首次同步時被視為前身並取代（見 Phase 2 的遷移說明）。
 
 這會移除 `adoptExistingFloorButtons` 約 90 行與相關分支。使用者在 FUXA 對按鈕所做的修改（例如改顏色）將被覆寫，這是 P1／P8 的直接結果，需在使用說明中註明。
 
@@ -316,6 +316,29 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 - 完成條件：輸出對所有現有 fixture 逐位元相同（可用匯出文字比對）。
 
 ### Phase 2：樓層按鈕改為規格比對與重建（本次重構的核心）
+
+**狀態：已完成（2026-11-04）。**
+
+實作內容（[buildingFloorButtons.ts](../src/domain/buildingFloors/buildingFloorButtons.ts)）：
+
+- 規格比對（6.3）：`viewNeedsButtonSync` 只用 id 取得實際狀態，逐項比對 `items` 欄位、`<g>`、`rect`／`foreignObject` 的位置與尺寸（容差 0.01）、`BUTTON` 的存在、無命名空間前綴、文字與目前樓層樣式。不再讀取 `data-name`、`data-building-floor-*` 判斷狀態。
+- 重建（6.4）：需要同步的 View 先移除所有受管按鈕再重建；外層 id 優先沿用索引，內部 `rect`、`foreignObject`、`BUTTON` 的 id 由外層 id 決定（`svg_<s>`、`H-HXB_<s>`、`B-HXB_<s>`）。衍生 id 與文件中其他 id 衝突時改用新的外層 id。
+- 已移除：`adoptExistingFloorButtons`、`viewHasExpectedButtons`、`buttonPositionsMatch`。
+- 內部 id 採**嚴格比對**：舊檔中已正常運作、但內部 id 是隨機值的按鈕，第一次匯出會被重建一次（結果只與內部 id 有關），之後穩定。這是為了讓輸出可重複（INV-2、INV-3）。
+
+與原計畫的差異：
+
+- `buildingFloorButtonsNeedSync(config, Parser)` 現在需要 `Parser`（規格比對要解析 SVG）。`prepareFuxaConfigExport` 改由依賴提供 `buildingFloorsNeedSync`，App 以 `DOMParser` 呼叫。
+- **舊樣板按鈕的遷移**：在 FUXA 內手動建立、`property.text` 為樓層名稱且有 `onpage` 事件指向同系統樓層的按鈕（例如 `floor-demo.json`），視為受管按鈕的前身，在多樓層 View 首次同步時被取代，避免出現兩組按鈕。原本「認領並保留既有 id」的行為因此改變：既有按鈕的 id 不再保留。單一樓層或非樓層 View 中使用者自己的按鈕不受影響。
+
+測試：
+
+- [buildingFloorButtons.test.ts](../tests/domain/buildingFloorButtons.test.ts)：`<BUTTON>` 遺失後以相同 id 重建且輸出相同、`html:BUTTON` 前綴被重建、不依賴 `data-*`、座標偏移會重新定位、使用者自己的按鈕不受影響、衍生 id 衝突時改用新 id、舊樣板按鈕被取代。
+- [syncRoundTrip.test.ts](../tests/domain/syncRoundTrip.test.ts)：INV-3 的「`<BUTTON>` 遺失後重建的按鈕 id 與第一次匯出相同」由 `it.fails` 改為一般測試；新增再次匯出 SVG 與 items 完全相同、內部 id 由外層 id 決定的測試。
+
+驗證：完整測試 369 個全數通過，`tsc`、`eslint`、`build` 通過。尚未在真實 FUXA 中驗證（見 9.2）。
+
+原計畫（保留供對照）：
 
 - 實作 `buildFloorButtonSpecs`、規格比對（6.3）、重建（6.4）、內部 id 由外層 id 決定（5.4）。
 - 移除 `adoptExistingFloorButtons`、`viewHasExpectedButtons`、`buttonPositionsMatch` 與相關的字串計數。

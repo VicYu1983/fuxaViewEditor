@@ -5,9 +5,13 @@ import { describe, expect, it } from 'vitest'
 import type { FuxaConfig } from '../../src/domain/config/types'
 import {
   BUILDING_FLOOR_BUTTON_NAME,
-  buildingFloorButtonsNeedSync,
+  buildingFloorButtonsNeedSync as needsSyncWithParser,
   syncBuildingFloorButtons,
 } from '../../src/domain/buildingFloors/buildingFloorButtons'
+
+function buildingFloorButtonsNeedSync(configToCheck: FuxaConfig): boolean {
+  return needsSyncWithParser(configToCheck, DOMParser)
+}
 
 function config(names: Array<[string, string]>): FuxaConfig {
   return {
@@ -111,7 +115,7 @@ describe('building floor buttons', () => {
     expect(buildingFloorButtonsNeedSync(project)).toBe(false)
   })
 
-  it('adopts matching existing FUXA buttons instead of duplicating them', () => {
+  it('replaces legacy FUXA-authored floor buttons instead of duplicating them', () => {
     const project = config([
       ['floor-2', '排風系統/2F'],
       ['floor-3', '排風系統/3F'],
@@ -151,14 +155,19 @@ describe('building floor buttons', () => {
         + '<BUTTON>3F</BUTTON></foreignObject></g></g></svg>'
     }
 
+    expect(buildingFloorButtonsNeedSync(project)).toBe(true)
     sync(project)
 
     for (const view of views) {
-      expect(Object.keys(view.items)).toEqual(['legacy-2f', 'legacy-3f'])
+      expect(Object.keys(view.items)).not.toContain('legacy-2f')
+      expect(Object.keys(view.items)).not.toContain('legacy-3f')
+      expect(Object.values(view.items)).toHaveLength(2)
       expect(Object.values(view.items).every(
         (item) => (item as { name: string }).name === BUILDING_FLOOR_BUTTON_NAME,
       )).toBe(true)
+      expect(view.svgcontent).not.toContain('legacy-')
       expect((view.svgcontent.match(/type="svg-ext-html_button"/g) ?? []).length).toBe(2)
+      expect((view.svgcontent.match(/<BUTTON\b/g) ?? []).length).toBe(2)
     }
     expect(views[0]!.svgcontent).toContain('background-color:#1d4ed8')
     expect(buildingFloorButtonsNeedSync(project)).toBe(false)
@@ -244,7 +253,7 @@ describe('building floor buttons', () => {
     expect(Number(repositionedRect?.getAttribute('y'))).toBeGreaterThan(80)
   })
 
-  it('adopts the sample project buttons and preserves its floor-plan image paths', () => {
+  it('replaces the sample project buttons and preserves its floor-plan image paths', () => {
     const project = JSON.parse(readFileSync(
       resolve(process.cwd(), '..', 'testjson', '測試樓層demo.json'),
       'utf8',
@@ -266,5 +275,113 @@ describe('building floor buttons', () => {
       expect(view.svgcontent).toContain('resources/Drawing2.svg')
     }
     expect(buildingFloorButtonsNeedSync(project)).toBe(false)
+  })
+
+  describe('spec comparison and rebuild', () => {
+    interface TestView {
+      id: string
+      svgcontent: string
+      items: Record<string, { name?: string; property?: { text?: string } }>
+    }
+
+    function twoFloors(): { project: FuxaConfig; views: TestView[] } {
+      const project = config([
+        ['floor-2', '排風系統/2F'],
+        ['floor-3', '排風系統/3F'],
+      ])
+      sync(project)
+      return { project, views: project.hmi.views as TestView[] }
+    }
+
+    it('rebuilds with the same ids when only the BUTTON element was lost', () => {
+      const { project, views } = twoFloors()
+      const before = { ids: Object.keys(views[0]!.items), svg: views[0]!.svgcontent }
+      views[0]!.svgcontent = views[0]!.svgcontent
+        .replace(/<BUTTON\b[^>]*>([\s\S]*?)<\/BUTTON>/g, '$1')
+
+      expect(buildingFloorButtonsNeedSync(project)).toBe(true)
+      sync(project)
+
+      expect(Object.keys(views[0]!.items)).toEqual(before.ids)
+      expect(views[0]!.svgcontent).toBe(before.svg)
+      expect(buildingFloorButtonsNeedSync(project)).toBe(false)
+    })
+
+    it('rebuilds a BUTTON written with an XHTML prefix', () => {
+      const { project, views } = twoFloors()
+      views[1]!.svgcontent = views[1]!.svgcontent
+        .replace('<svg ', '<svg xmlns:html="http://www.w3.org/1999/xhtml" ')
+        .replace(/<BUTTON\b/g, '<html:BUTTON')
+        .replace(/<\/BUTTON>/g, '</html:BUTTON>')
+      expect(views[1]!.svgcontent).toContain('<html:BUTTON')
+
+      expect(buildingFloorButtonsNeedSync(project)).toBe(true)
+      sync(project)
+
+      expect(views[1]!.svgcontent).not.toContain('html:BUTTON')
+      expect((views[1]!.svgcontent.match(/<BUTTON\b/g) ?? []).length).toBe(2)
+      expect(buildingFloorButtonsNeedSync(project)).toBe(false)
+    })
+
+    it('does not depend on data-* markers', () => {
+      const { project, views } = twoFloors()
+      for (const view of views) {
+        view.svgcontent = view.svgcontent
+          .replaceAll(` data-name="${BUILDING_FLOOR_BUTTON_NAME}"`, '')
+          .replaceAll(/ data-building-floor-(target-id|active)="[^"]*"/g, '')
+      }
+
+      expect(buildingFloorButtonsNeedSync(project)).toBe(false)
+    })
+
+    it('repositions buttons whose coordinates drifted', () => {
+      const { project, views } = twoFloors()
+      views[0]!.svgcontent = views[0]!.svgcontent.replaceAll('x="42"', 'x="50"')
+
+      expect(buildingFloorButtonsNeedSync(project)).toBe(true)
+      sync(project)
+
+      expect(views[0]!.svgcontent).toContain('x="42"')
+      expect(buildingFloorButtonsNeedSync(project)).toBe(false)
+    })
+
+    it('keeps user-owned buttons in views without floor navigation', () => {
+      const project = config([['single', '排風系統/1F']])
+      const view = (project.hmi.views as TestView[])[0]!
+      view.items.mine = {
+        name: 'my_button',
+        property: { text: '1F' },
+        type: 'svg-ext-html_button',
+      } as TestView['items'][string]
+      view.svgcontent = view.svgcontent.replace(
+        '</g></svg>',
+        '<g id="mine" type="svg-ext-html_button"><foreignObject><BUTTON id="B-HXB_mine">1F</BUTTON></foreignObject></g></g></svg>',
+      )
+
+      expect(buildingFloorButtonsNeedSync(project)).toBe(false)
+      sync(project)
+
+      expect(Object.keys(view.items)).toEqual(['mine'])
+      expect(view.svgcontent).toContain('id="mine"')
+    })
+
+    it('allocates a new id when the derived inner ids are already taken', () => {
+      const project = config([
+        ['floor-2', '排風系統/2F'],
+        ['floor-3', '排風系統/3F'],
+      ])
+      const views = project.hmi.views as TestView[]
+      views[0]!.svgcontent = views[0]!.svgcontent.replace(
+        '</g></svg>',
+        '<rect id="svg_generated_1"/></g></svg>',
+      )
+
+      sync(project)
+
+      const ids = Object.keys(views[0]!.items)
+      expect(ids).toHaveLength(2)
+      expect(ids).not.toContain('HXB_generated_1')
+      expect(views[0]!.svgcontent.match(/id="svg_generated_1"/g)).toHaveLength(1)
+    })
   })
 })

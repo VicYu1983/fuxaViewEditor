@@ -350,7 +350,7 @@ function EditorWorkspace() {
       || deviceTagsNeedAddressSorting(config.rawConfig)
       || needsVoiceBridgeUpdate(config.rawConfig)
       || navigationNeedsSync(config.rawConfig)
-      || buildingFloorButtonsNeedSync(config.rawConfig)
+      || buildingFloorButtonsNeedSync(config.rawConfig, DOMParser)
     const dependencies = exportDirty
       ? createFuxaConfigExportDependencies(config.rawConfig, createBrowserSvgDeps())
       : undefined

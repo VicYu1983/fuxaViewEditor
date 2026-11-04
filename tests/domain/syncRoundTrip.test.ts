@@ -173,10 +173,43 @@ describe('sync round trip (characterization)', () => {
       expectHealthyFloorButtons(exportText(damaged), DEMO2.floor2, DEMO2.floor3)
     })
 
-    it.fails('INV-3（已知缺口，Phase 2）：<BUTTON> 遺失後重建，按鈕 id 與第一次匯出相同', () => {
+    it('INV-3：<BUTTON> 遺失後重建，按鈕 id 與第一次匯出相同', () => {
       const first = exportText(source)
       const second = exportText(simulateFuxaRoundTrip(first, { dropButtonElements: true }))
       expect(summarizeFloorButtons(second)).toEqual(summarizeFloorButtons(first))
+    })
+
+    it('INV-3：<BUTTON> 遺失後重建，輸出不含命名空間前綴', () => {
+      const damaged = simulateFuxaRoundTrip(exportText(source), { dropButtonElements: true })
+      const text = exportText(damaged)
+      expect(text).not.toMatch(/html:BUTTON/i)
+      expect(text).not.toContain('<html:')
+    })
+
+    it('INV-2：兩份 fixture 再次匯出，樓層 View 的 SVG 與 items 完全相同', () => {
+      for (const name of ['floor-demo.json', 'floor-demo2.json']) {
+        const first = exportText(readFixture(name))
+        const second = exportText(first)
+        const views = (text: string) => parse(text).hmi.views
+          .filter((view) => view.name.includes('/'))
+          .map((view) => ({ id: view.id, svg: view.svgcontent, items: view.items }))
+        expect(views(second), name).toEqual(views(first))
+      }
+    })
+
+    it('內部元素 id 由外層 id 決定', () => {
+      const output = parse(exportText(source))
+      for (const id of [DEMO2.floor2, DEMO2.floor3]) {
+        const view = output.hmi.views.find((candidate) => candidate.id === id)!
+        const outerIds = Object.keys(view.items).filter((key) => key.startsWith('HXB_'))
+        expect(outerIds).toHaveLength(2)
+        for (const outerId of outerIds) {
+          const suffix = outerId.slice('HXB_'.length)
+          expect(view.svgcontent).toContain(`id="svg_${suffix}"`)
+          expect(view.svgcontent).toContain(`id="H-HXB_${suffix}"`)
+          expect(view.svgcontent).toContain(`id="B-HXB_${suffix}"`)
+        }
+      }
     })
   })
 })

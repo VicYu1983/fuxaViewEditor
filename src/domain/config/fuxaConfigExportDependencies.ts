@@ -147,6 +147,9 @@ export function createFuxaConfigExportDependencies(
   }
 
   return {
+    buildingFloorsNeedSync(output) {
+      return buildingFloorButtonsNeedSync(output, runtime.Parser)
+    },
     syncBuildingFloors(output) {
       const changedViewIds = syncBuildingFloorButtons(
         output,
@@ -154,7 +157,7 @@ export function createFuxaConfigExportDependencies(
         runtime.serialize,
         allocateId,
       )
-      if (buildingFloorButtonsNeedSync(output)) {
+      if (buildingFloorButtonsNeedSync(output, runtime.Parser)) {
         throw new Error('樓層按鈕未正確寫入 View。')
       }
       return changedViewIds
