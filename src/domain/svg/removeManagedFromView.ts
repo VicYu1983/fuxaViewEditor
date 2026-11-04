@@ -1,5 +1,6 @@
 // Here, floor means a Tag group within one View, not a cross-View building floor.
 import { isRecord } from '../config/validateFuxaConfig'
+import { FLOOR_PLAN_ATTRIBUTE } from './buildFloorPlanNode'
 import { findSvgElementById } from './parseSvg'
 
 const FLOOR_ARTIFACT_NAMES = new Set([
@@ -89,7 +90,8 @@ export function removeManagedFromView(
   const allNodes = Array.from(doc.getElementsByTagName('*'))
 
   for (const node of allNodes) {
-    if (!FLOOR_ARTIFACT_NAMES.has(node.getAttribute('data-name') ?? '')) continue
+    if (!FLOOR_ARTIFACT_NAMES.has(node.getAttribute('data-name') ?? '')
+        && node.getAttribute(FLOOR_PLAN_ATTRIBUTE) === null) continue
     node.parentNode?.removeChild(node)
   }
 

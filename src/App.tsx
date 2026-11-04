@@ -44,6 +44,15 @@ import { ComponentMoveDialog } from './ui/view/ComponentMoveDialog'
 import { DevicesTab } from './ui/device/DevicesTab'
 import { EditorHeader } from './ui/layout/EditorHeader'
 import { IconLibraryDialog, type IconAddDraft, type MultiStateIconDraft } from './ui/icons/IconLibraryDialog'
+import { FloorPlanLibraryDialog } from './ui/floorPlans/FloorPlanLibraryDialog'
+import {
+  createFloorPlanDataUrl,
+  createFloorPlanImage,
+  floorPlanKeyForView,
+  getFloorPlanLibrary,
+  saveFloorPlanLibrary,
+  type FloorPlanLibrary,
+} from './domain/floorPlans/floorPlanLibrary'
 import { MultiStateIconDialog } from './ui/icons/MultiStateIconDialog'
 import {
   ViewSettingsDialog,
@@ -99,7 +108,7 @@ import {
   TOOL_SETTINGS_OUTDATED_MESSAGE,
   isToolSettingsOutdated,
 } from './domain/config/toolSettings'
-import { parseBuildingFloorName } from './domain/buildingFloors/buildingFloors'
+import { groupBuildingFloors, parseBuildingFloorName } from './domain/buildingFloors/buildingFloors'
 import {
   AUTO_FILLED_TAG_DESCRIPTION,
   buildTagIndex,
@@ -214,6 +223,7 @@ function EditorWorkspace() {
   >('devices')
   const [floorSession, setFloorSession] = useState(0)
   const [iconLibraryOpen, setIconLibraryOpen] = useState(false)
+  const [floorPlanLibraryOpen, setFloorPlanLibraryOpen] = useState(false)
   const [editingMultiStateIconId, setEditingMultiStateIconId] = useState('')
   const [multiStateAddDrafts, setMultiStateAddDrafts] = useState<
     Record<string, MultiStateIconDraft>
@@ -293,6 +303,14 @@ function EditorWorkspace() {
   }, [selectedModel, tags])
   const iconLibrary = useMemo(
     () => config ? getIconLibrary(config.rawConfig) : [],
+    [config],
+  )
+  const floorPlanLibrary = useMemo(
+    () => config ? getFloorPlanLibrary(config.rawConfig) : {},
+    [config],
+  )
+  const buildingFloorGroups = useMemo(
+    () => groupBuildingFloors(config?.views ?? []),
     [config],
   )
   const editingMultiStateIcon = iconLibrary.find((icon): icon is MultiStateIconSet =>
@@ -1352,6 +1370,43 @@ function EditorWorkspace() {
     }
   }
 
+  function commitFloorPlanLibrary(nextLibrary: FloorPlanLibrary, floorKey: string) {
+    if (!config) return
+    const nextConfig = structuredClone(config.rawConfig)
+    saveFloorPlanLibrary(nextConfig, nextLibrary)
+    // Plan changes are not auto-detected by export, so mark every plan view on this floor for re-apply.
+    const affectedIds = new Set(modifiedViewIds)
+    for (const view of config.views) {
+      if (floorPlanKeyForView(view.name) === floorKey && models.get(view.id)?.floorPlan === true) {
+        affectedIds.add(view.id)
+      }
+    }
+    commitDocumentEdit(config, nextConfig, undefined, affectedIds)
+  }
+
+  async function handleSetFloorPlan(floorKey: string, file: File): Promise<boolean> {
+    if (!config) return false
+    try {
+      if (file.type !== 'image/png') throw new Error('平面圖只接受 PNG 圖片。')
+      const image = createFloorPlanImage(
+        createFloorPlanDataUrl(new Uint8Array(await file.arrayBuffer())),
+      )
+      commitFloorPlanLibrary({ ...floorPlanLibrary, [floorKey]: image }, floorKey)
+      messageApi.success('已更新平面圖。')
+      return true
+    } catch (error) {
+      messageApi.error(`設定平面圖失敗：${getErrorMessage(error)}`)
+      return false
+    }
+  }
+
+  function handleRemoveFloorPlan(floorKey: string) {
+    const nextLibrary = { ...floorPlanLibrary }
+    delete nextLibrary[floorKey]
+    commitFloorPlanLibrary(nextLibrary, floorKey)
+    messageApi.success('已移除平面圖。')
+  }
+
   function handleExportIconLibrary() {
     try {
       const contents = `${JSON.stringify(createIconLibraryExport(iconLibrary), null, 2)}\n`
@@ -1699,6 +1754,15 @@ function EditorWorkspace() {
         onRemoveIcon={handleRemoveIcon}
         onEditMultiStateIcon={setEditingMultiStateIconId}
       />
+      <FloorPlanLibraryDialog
+        open={floorPlanLibraryOpen}
+        onClose={() => setFloorPlanLibraryOpen(false)}
+        canEdit={Boolean(config)}
+        floorGroups={buildingFloorGroups}
+        library={floorPlanLibrary}
+        onSetPlan={handleSetFloorPlan}
+        onRemovePlan={handleRemoveFloorPlan}
+      />
       <MultiStateIconDialog
         icon={editingMultiStateIcon}
         addDrafts={multiStateAddDrafts}
@@ -1875,6 +1939,7 @@ function EditorWorkspace() {
           onSyncToFuxa={fuxaSync.sync}
           onOpenProjectManager={openDeviceManager}
           onOpenIconLibrary={() => setIconLibraryOpen(true)}
+          onOpenFloorPlanLibrary={() => setFloorPlanLibraryOpen(true)}
           onOpenViewSettings={openFloorFrameDialog}
         />
 

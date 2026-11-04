@@ -3,8 +3,16 @@ import { isRecord } from '../shared/isRecord'
 import { getErrorMessage } from '../shared/getErrorMessage'
 import { buildTagIndex } from '../tags/index'
 import { generateId, type RandomValuesProvider } from '../ids'
-import { getIconAssets, getIconLibrary, validateIconLibrary } from '../icons/iconLibrary'
+import {
+  getIconAssets,
+  getIconLibrary,
+  validateIconLibrary,
+} from '../icons/iconLibrary'
 import type { IconAsset } from '../icons/iconLibrary'
+import {
+  floorPlanKeyForView,
+  getFloorPlanLibrary,
+} from '../floorPlans/floorPlanLibrary'
 import { applyModelToView } from '../svg/applyModelToView'
 import type { ApplyModelView } from '../svg/applyModelToView'
 import type { SvgIdAllocator, IconAssetResolver } from '../svg/buildComponentNodes'
@@ -138,6 +146,7 @@ export function createFuxaConfigExportDependencies(
 ): PrepareFuxaConfigExportDependencies {
   const tags = buildTagIndex(config)
   const resolveIcon = iconResolver(config, runtime.iconLibrary)
+  const floorPlans = getFloorPlanLibrary(config)
   const floorGroupFrame = runtime.floorGroupFrame ?? getFloorGroupFrameSettings(config)
   const createdIds = new Set<string>()
   let usedIds: Set<string> | undefined
@@ -178,6 +187,7 @@ export function createFuxaConfigExportDependencies(
       }
       usedIds ??= reserveExistingIds(config, runtime.Parser)
       reserveModelIds(usedIds, models)
+      const floorPlanKey = model.floorPlan === true ? floorPlanKeyForView(view.name) : null
       applyModelToView(view, model, {
         Parser: runtime.Parser,
         serialize: runtime.serialize,
@@ -185,6 +195,7 @@ export function createFuxaConfigExportDependencies(
         resolveIcon,
         tags,
         floorGroupFrame,
+        floorPlanImage: floorPlanKey ? floorPlans[floorPlanKey] : undefined,
       })
     },
     validate(output, modifiedIds, models) {

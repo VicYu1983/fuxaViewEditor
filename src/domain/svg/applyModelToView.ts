@@ -13,6 +13,7 @@ import type {
 } from './buildComponentNodes'
 import { buildFloorArtifactNodes } from './buildFloorArtifactNodes'
 import { cleanupInactiveFloorArtifacts } from './cleanupInactiveFloorArtifacts'
+import { buildFloorPlanNode } from './buildFloorPlanNode'
 import { ensureXlinkNamespace } from './ensureXlinkNamespace'
 import { findSvgLayer } from './findSvgLayer'
 import { insertFloorFrame } from './insertFloorFrame'
@@ -20,6 +21,7 @@ import { parseSvg } from './parseSvg'
 import type { SvgParserConstructor } from './parseSvg'
 import { removeManagedFromView } from './removeManagedFromView'
 import type { MultiStateBinding } from './readManagedComponents'
+import type { FloorPlanImage } from '../floorPlans/floorPlanLibrary'
 
 export interface ApplyModelComponent extends FloorLayoutComponent {
   template?: string
@@ -65,6 +67,8 @@ export interface ApplyModelToViewOptions {
   resolveIcon: IconAssetResolver
   tags: Map<string, FloorTag> | Record<string, FloorTag>
   floorGroupFrame: FloorGroupFrameSettings
+  /** 平面圖底圖（來自平面圖庫）；只在 floorPlan View 中套用。 */
+  floorPlanImage?: FloorPlanImage
 }
 
 function isManagedComponent(
@@ -162,7 +166,8 @@ function applyModelToViewInPlace(
   options: ApplyModelToViewOptions,
 ): void {
   const doc = parseSvg(view.svgcontent, options.Parser)
-  if (model.components.some(
+  const floorPlanImage = model.floorPlan === true ? options.floorPlanImage : undefined
+  if (floorPlanImage || model.components.some(
     (component) => component.template === 'icon'
       || component.template === 'icon-pair'
       || component.template === 'icon-multi',
@@ -176,6 +181,10 @@ function applyModelToViewInPlace(
 
   const previousItems = { ...view.items }
   removeManagedFromView(view, model, doc)
+  if (floorPlanImage) {
+    // 底圖放在最底層，確保位於 Tag 與圖示之下
+    layer.insertBefore(buildFloorPlanNode(doc, floorPlanImage), layer.firstChild)
+  }
   if (model.floorPlan === true) {
     // 平面圖 View 不保留群組標題與底框；舊輸出殘留的項目已由上一行移除
     model.floorTitles = {}

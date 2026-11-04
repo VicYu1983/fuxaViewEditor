@@ -18,7 +18,7 @@
 2. 同系統的每個樓層 view，畫面上方都有各樓層按鈕，點擊後切換到對應 view。
 3. `layout.navigation.items` 每個系統只建一筆，指向該系統最低樓層。
 4. 每個系統的每個樓層都是獨立 view，可個別編輯，不混在一起。
-5. 平面圖底圖由使用者在 FUXA 中上傳與擺放，編輯器第一階段不提供上傳；平面圖路徑不可在匯入與匯出後被清除。
+5. 平面圖底圖由 View Editor 管理並為唯一真實來源：以 base64 PNG 保存於 `extra`，匯出時寫入平面圖元素；FUXA 中不修改底圖，平面圖不可在匯入與匯出後被清除。
 
 ## 3. 樓層判斷規則
 
@@ -48,7 +48,10 @@
 - 對應的 SVG 為 `<g type="svg-ext-html_button" id="HXB_...">`，內含 `rect` 與 `foreignObject > BUTTON`。
 - `BUTTON` 必須以無命名空間前綴的形式寫入（與 FUXA 原生一致）。若寫成 `html:BUTTON`，FUXA 匯入後只會剩下文字。同步時若發現按鈕缺少 `<BUTTON>` 元素，會自動重建。
 - 導覽項目位於 `hmi.layout.navigation.items`：`{ text: "<系統>", view: "<最低樓層 view id>", icon, image, permission, children }`。
-- 平面圖為 `svg-ext-own_ctrl-image`，`property.address` 為 `resources/xxx.svg` 路徑。
+- 平面圖為 SVG `<image>`，`xlink:href` 為 base64 PNG data URL，與 Tag icon 採用相同機制（見 [buildComponentNodes.ts](../src/domain/svg/buildComponentNodes.ts)）。
+- 平面圖庫（`extra.fuxaSetting.floorPlans`）以樓層名稱（`系統/1F`）為鍵，同樓層的所有 View 共用同一張底圖；只接受 PNG。平面圖 View 在匯出與預覽時套用底圖（[buildFloorPlanNode.ts](../src/domain/svg/buildFloorPlanNode.ts)，標記 `data-fuxa-floor-plan`）。
+- 圖片大小：不在瀏覽器內壓縮，請先以外部工具減少色彩數；超過 1 MB 時平面圖庫會顯示警告（base64 約增加 33%）。
+- 開發過程留下的舊平面圖（`svg-ext-own_ctrl-image`，`property.address` 為 `resources/xxx.svg`）不在支援範圍，不做遷移。
 
 ## 5. 設計
 
@@ -92,7 +95,7 @@
 
 已完成自動化回歸測試：
 
-- 樣板既有的樓層按鈕會被辨識並接管，不會重複產生；產生或清理按鈕時，`resources/Drawing2.svg` 路徑保持不變。
+- 樣板既有的樓層按鈕會被辨識並接管，不會重複產生；產生或清理按鈕時，平面圖底圖保持不變。
 - 匯出測試確認樓層按鈕與 `layout.navigation.items` 寫入正確，其他 SVG 圖面內容保留。
 - [serialization.ts](../src/domain/config/serialization.ts) 以 `JSON.stringify` 輸出整份設定，不過濾欄位。
 - [removeManagedFromView.ts](../src/domain/svg/removeManagedFromView.ts) 只刪除明確標記的群組底框、樓層按鈕與受管元件，不含 `shape_1`，因此使用者底圖不會被誤刪。
@@ -109,10 +112,10 @@
 
 ## 8. 不在第一階段範圍
 
-- 樓層平面圖上傳，以及平面圖路徑的編輯欄位（由使用者在 FUXA 中處理）。
+- 平面圖庫的 view 重新命名尚未處理：樓層名稱改變後，舊鍵的平面圖會失去對應（延後處理）。
 - 非數字樓層名稱與不符合 `B<number>F` 格式的地下樓層名稱。
 - 程式識別字改名。
-- 在 `extra` 中保存「樓層平面圖底圖」設定（底圖仍由使用者在 FUXA 處理；樓層按鈕索引與平面圖 View 設定已保存於 `extra`，見 5.2、5.5）。
+- 平面圖底圖在 `extra` 中的欄位命名與平面圖庫管理 modal 的細節（樓層按鈕索引與平面圖 View 設定已保存於 `extra`，見 5.2、5.5）。
 
 ## 9. 已確認決策
 

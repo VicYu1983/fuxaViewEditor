@@ -142,7 +142,8 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 | 群組標題、群組底框 | 工具（產物） | 同上；平面圖 View 不產生 |
 | Tag 元件位置（含平面圖偏移） | 工具（產物） | 由 `layoutFloorViewComponents` 計算並寫入 |
 | Tag 元件（`tc_<seq>`）的樣板與屬性 | 工具（定義存於 `extra.fuxaSetting.viewComponents`，SVG 為產物） | 以 `extra` 的定義為主重建；舊檔沒有定義時由 SVG 還原（Phase 4） |
-| 使用者自行加入的元件、底圖、`items` | 使用者／FUXA | 原樣保留，不碰 |
+| 使用者自行加入的元件、`items` | 使用者／FUXA | 原樣保留，不碰 |
+| 平面圖底圖 | View Editor（`extra` 為來源） | 匯出時依 `extra` 寫入；FUXA 中不修改 |
 | `layout.navigation.items` 中使用者自訂項目 | 使用者 | 原樣保留，只管理工具建立的項目 |
 
 ## 5. `extra` 資料契約
@@ -350,7 +351,7 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
   - 兩份 fixture 的往返冪等（INV-2、INV-3）。
   - 以 `simulateFuxaRoundTrip` 破壞後能重建。
   - 輸出不含 `html:`、`svg:` 前綴。
-  - 使用者自訂元件與底圖原樣保留（INV-4）。
+  - 使用者自訂元件原樣保留（INV-4）；平面圖底圖由 `extra` 寫入，不屬於原樣保留範圍。
   - 重建後 id 穩定（連續匯出兩次，受管元件 id 不變）。
 - 風險：中。`items` 結構不變，但 SVG 內部 id 規則改變；舊檔第一次匯出會換掉內部 id。
 - 完成條件：第 8 節所有不變量在兩份 fixture 上通過。
@@ -425,7 +426,7 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 | INV-1 | 樓層、平面圖相關的工具決策只取決於 `extra`、View 清單與 View 名稱；改變 SVG 內的 `data-*` 標記不影響結果。 |
 | INV-2 | **冪等**：`export(export(x))` 與 `export(x)` 在受管元件（節點與 `items`）上完全相同，包含 id。 |
 | INV-3 | **往返穩定**：`export(simulateFuxaRoundTrip(export(x)))` 與 `export(x)` 在受管元件上相同。 |
-| INV-4 | 非受管的節點與 `items`（使用者元件、底圖、`resources/*.svg` 路徑）在匯出前後內容不變。 |
+| INV-4 | 非受管的節點與 `items`（使用者元件）在匯出前後內容不變；平面圖底圖由 `extra` 產生，不在此列。 |
 | INV-5 | `extra` 與 `extra.fuxaSetting` 內未知的鍵原樣保留。 |
 | INV-6 | 匯出文字中，受管元件不含任何 namespace 前綴（`html:`、`svg:`）。 |
 | INV-7 | 同系統樓層數 > 1 的樓層 View：按鈕數等於樓層數，每個按鈕含 `id` 以 `B-HXB_` 開頭的 `<BUTTON>`，且 `items` 內有對應項目。樓層數 ≤ 1 的 View：沒有任何受管按鈕。 |
