@@ -167,7 +167,7 @@ export function createFuxaConfigExportDependencies(
       )
       saveFloorFrameLayoutVersion(output)
     },
-    applyView(view, model, models) {
+    applyView(view, model, models, options) {
       if (!isApplyModelView(view) || view.id !== model.viewId) {
         throw new Error(`View「${model.viewId}」缺少有效的 SVG 或 items，無法套用編輯模型。`)
       }
@@ -180,6 +180,7 @@ export function createFuxaConfigExportDependencies(
         resolveIcon,
         tags,
         floorGroupFrame,
+        preview: options?.preview,
       })
     },
     validate(output, modifiedIds, models) {

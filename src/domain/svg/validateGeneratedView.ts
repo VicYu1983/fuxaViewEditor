@@ -38,6 +38,7 @@ export interface GeneratedViewModel {
   grid: GridSettings
   floorGroupFrame: FloorGroupFrameSettings
   floorPlan?: boolean
+  floorPlanTagOffsets?: Record<string, { dx: number; dy: number }>
   floorTitles: Record<string, string>
   floorTitleIds: Record<string, string[]>
   floorFrames: Record<string, string>

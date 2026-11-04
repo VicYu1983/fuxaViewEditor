@@ -727,6 +727,22 @@ function EditorWorkspace() {
     editView(viewId, { ...model, floorPlan })
   }
 
+  function handleMoveFloorTag(viewId: string, tagId: string, dx: number, dy: number) {
+    const model = models.get(viewId)
+    if (!model) return
+    const current = model.floorPlanTagOffsets?.[tagId] ?? { dx: 0, dy: 0 }
+    editView(viewId, {
+      ...model,
+      floorPlanTagOffsets: {
+        ...model.floorPlanTagOffsets,
+        [tagId]: {
+          dx: Math.round((current.dx + dx) * 10) / 10,
+          dy: Math.round((current.dy + dy) * 10) / 10,
+        },
+      },
+    })
+  }
+
   function openBatchAddTab() {
     setTagAddSession((session) => session + 1)
     setProjectManagerTab('tag-add')
@@ -1555,6 +1571,9 @@ function EditorWorkspace() {
       hasSelection={Boolean(config && selectedView)}
       viewName={selectedView?.name}
       stale={previewStale}
+      onMoveTag={selectedView && models.get(selectedView.id)?.floorPlan
+        ? (tagId, dx, dy) => handleMoveFloorTag(selectedView.id, tagId, dx, dy)
+        : undefined}
     />
   )
 

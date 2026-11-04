@@ -10,6 +10,7 @@ import { sanitizePreview } from '../../domain/svg/sanitizePreview'
 import { findSvgLayer } from '../../domain/svg/findSvgLayer'
 import { buildTagIndex } from '../../domain/tags/index'
 import { isRecord } from '../../domain/config/validateFuxaConfig'
+import { offsetFloorLayoutPlacements } from '../../domain/layout/floorPlanViews'
 import { drawPreviewSwitchArtwork } from './drawPreviewSwitchArtwork'
 import { drawPreviewTagTargets } from './drawPreviewTagTargets'
 
@@ -79,12 +80,15 @@ export function prepareViewPreview(
     const profile = isRecord(view.profile) ? view.profile : {}
     const width = dimension(profile.width, 1024)
     const height = dimension(profile.height, 768)
-    const layout = layoutFloorComponents(
-      model.components,
-      model.grid,
-      tags,
-      frame,
-      getCanvasWidth(profile),
+    const layout = offsetFloorLayoutPlacements(
+      layoutFloorComponents(
+        model.components,
+        model.grid,
+        tags,
+        frame,
+        getCanvasWidth(profile),
+      ),
+      model.floorPlanTagOffsets ?? {},
     )
     previewLayout = layout
     outsideCanvas = layoutExceedsCanvas(
@@ -95,7 +99,9 @@ export function prepareViewPreview(
 
     const dependencies = createFuxaConfigExportDependencies(config, runtime)
     if (!dependencies.applyView) throw new Error('尚未設定 View 套用函式。')
-    dependencies.applyView(view, model, previewModels)
+    dependencies.applyView(view, model, previewModels, {
+      preview: { tagOffsets: model.floorPlanTagOffsets ?? {} },
+    })
   }
 
   if (typeof view.svgcontent !== 'string') {

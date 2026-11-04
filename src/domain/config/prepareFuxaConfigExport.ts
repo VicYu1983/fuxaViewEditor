@@ -7,7 +7,8 @@ import { serializeFuxaConfig } from './serialization'
 import { saveViewGridSettings } from '../layout/gridSettings'
 import { navigationNeedsSync, syncNavigationItems } from '../views/syncNavigation'
 import { saveFloorGroupFrameSettings } from '../layout/floorGroupFrame'
-import { saveFloorPlanViewSettings } from '../layout/floorPlanViews'
+import { saveFloorPlanTagOffsets, saveFloorPlanViewSettings } from '../layout/floorPlanViews'
+import type { FloorPlanTagOffsets } from '../layout/floorPlanViews'
 import { saveFloorGroupArtifacts } from '../layout/floorGroupArtifacts'
 import { groupComponentsByFloor } from '../layout/floorLayout'
 import type { FloorTag } from '../layout/floorLayout'
@@ -89,6 +90,7 @@ export interface PrepareFuxaConfigExportDependencies {
     view: Record<string, unknown>,
     model: ExportViewModel,
     models: readonly ExportViewModel[],
+    options?: { preview?: { tagOffsets: FloorPlanTagOffsets } },
   ) => void
   validate?: (
     config: FuxaConfig,
@@ -527,6 +529,11 @@ export function prepareFuxaConfigExport(
     output,
     allViewIds,
     new Map(models.map((model) => [model.viewId, model.floorPlan === true])),
+  )
+  saveFloorPlanTagOffsets(
+    output,
+    allViewIds,
+    new Map(models.map((model) => [model.viewId, model.floorPlanTagOffsets ?? {}])),
   )
   saveFloorGroupArtifacts(
     output,

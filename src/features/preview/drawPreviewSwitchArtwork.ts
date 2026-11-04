@@ -13,6 +13,7 @@ export function drawPreviewSwitchArtwork(
     const doc = layer.ownerDocument
     const group = doc.createElementNS(SVG_NAMESPACE, 'g')
     group.setAttribute('data-preview-only', 'switch')
+    group.setAttribute('data-preview-tag-id', component.tagId)
     group.setAttribute('aria-hidden', 'true')
     group.setAttribute('pointer-events', 'none')
 

@@ -79,8 +79,10 @@
 
 - 每個 View 可在編輯器的「平面圖 View」卡片手動開啟，設定保存於 `extra.fuxaSetting.floorPlanViewIds`。
 - 平面圖 View 保留樓層標題（位置與樣式同一般樓層 View），不產生群組框。
-- Tag 仍由自動排列（排排站）配置，目的是讓使用者在簡易畫面（SVG 預覽）中點選。預覽中點選 Tag 會顯示其名稱與 ID，不會改動 SVG。
-- 拖拉並保存座標尚未實作。
+- Tag 仍由自動排列（排排站）配置。在簡易畫面（SVG 預覽）中點選 Tag 會以藍色虛線框標示選取，並顯示其名稱與 ID。
+- 在簡易畫面拖拉 Tag 會移動整組元件（icon 或開關、Tag 名稱 label、點擊框）。偏移量（`dx`、`dy`，單位為 SVG 座標）保存於 `extra.fuxaSetting.floorPlanTagOffsets[viewId][tagId]`，以 tagId 為鍵，因此變更 Tag 類型（例如 switch 改為正常/告警）後位置仍會保留。
+- 偏移量只套用於預覽（`applyView` 的 `preview` 選項），匯出時不傳入，因此不寫入 SVG 或 `view.items`。
+- 手動預覽模式下，拖拉後的畫面會保留到按「更新預覽」為止。
 
 ## 6. 匯入與匯出的保護
 
