@@ -1,8 +1,8 @@
 import type { FloorGroupFrameSettings, GridSettings } from '../config/types'
-import type { FloorTag, FloorLayoutComponent, FloorLayoutResult } from '../layout/floorLayout'
-import { getCanvasWidth, layoutFloorComponents } from '../layout/floorLayout'
+import type { FloorTag, FloorLayoutComponent } from '../layout/floorLayout'
+import { getCanvasWidth } from '../layout/floorLayout'
+import { layoutFloorViewComponents } from '../layout/floorPlanViews'
 import type { FloorPlanTagOffsets } from '../layout/floorPlanViews'
-import { offsetFloorLayoutPlacements } from '../layout/floorPlanViews'
 import { applyExistingTagLayout } from './applyExistingTagLayout'
 import { buildComponentEntries } from './buildComponentEntries'
 import { buildComponentNodes } from './buildComponentNodes'
@@ -48,6 +48,7 @@ export interface ApplyModel {
   originalComponents?: ApplyModelComponent[]
   grid: GridSettings
   floorPlan?: boolean
+  floorPlanTagOffsets?: FloorPlanTagOffsets
   floorTitles: Record<string, string>
   floorTitleIds: Record<string, string[]>
   floorFrames: Record<string, string>
@@ -64,21 +65,6 @@ export interface ApplyModelToViewOptions {
   resolveIcon: IconAssetResolver
   tags: Map<string, FloorTag> | Record<string, FloorTag>
   floorGroupFrame: FloorGroupFrameSettings
-  preview?: { tagOffsets: FloorPlanTagOffsets }
-}
-
-function applyPreviewOffsets(
-  layout: FloorLayoutResult,
-  offsets: FloorPlanTagOffsets | undefined,
-): FloorLayoutResult {
-  return offsets ? offsetFloorLayoutPlacements(layout, offsets) : layout
-}
-
-function markPreviewTag(nodes: readonly Element[], component: FloorLayoutComponent) {
-  for (const node of nodes) {
-    node.setAttribute('data-preview-tag-id', component.tagId)
-    node.setAttribute('data-preview-tag-label', component.label ?? component.tagId)
-  }
 }
 
 function isManagedComponent(
@@ -190,13 +176,12 @@ function applyModelToViewInPlace(
 
   const previousItems = { ...view.items }
   removeManagedFromView(view, model, doc)
-  const layout = applyPreviewOffsets(layoutFloorComponents(
-    model.components,
-    model.grid,
+  const layout = layoutFloorViewComponents(
+    model,
     options.tags,
     options.floorGroupFrame,
     getCanvasWidth(view.profile),
-  ), options.preview?.tagOffsets)
+  )
 
   for (const section of layout.sections) {
     const key = floorKey(section.floor)
@@ -271,7 +256,6 @@ function applyModelToViewInPlace(
       )
       for (const shapeNode of nodes.shapeNodes) layer.appendChild(shapeNode)
       layer.appendChild(nodes.labelNode)
-      if (options.preview) markPreviewTag([...nodes.shapeNodes, nodes.labelNode], component)
       writeComponentEntries(
         view,
         previousItems,

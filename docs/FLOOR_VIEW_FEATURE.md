@@ -79,10 +79,12 @@
 
 - 每個 View 可在編輯器的「平面圖 View」卡片手動開啟，設定保存於 `extra.fuxaSetting.floorPlanViewIds`。
 - 平面圖 View 保留樓層標題（位置與樣式同一般樓層 View），不產生群組框。
-- Tag 仍由自動排列（排排站）配置。在簡易畫面（SVG 預覽）中點選 Tag 會以藍色虛線框標示選取，並顯示其名稱與 ID。
-- 在簡易畫面拖拉 Tag 會移動整組元件（icon 或開關、Tag 名稱 label、點擊框）。偏移量（`dx`、`dy`，單位為 SVG 座標）保存於 `extra.fuxaSetting.floorPlanTagOffsets[viewId][tagId]`，以 tagId 為鍵，因此變更 Tag 類型（例如 switch 改為正常/告警）後位置仍會保留。
-- 偏移量只套用於預覽（`applyView` 的 `preview` 選項），匯出時不傳入，因此不寫入 SVG 或 `view.items`。
-- 手動預覽模式下，拖拉後的畫面會保留到按「更新預覽」為止。
+- Tag 仍由自動排列（排排站）配置。在簡易畫面（SVG 預覽）中點選 Tag 會以藍色虛線框標示選取，並顯示其名稱與 ID。SVG 預覽保持靜態，不支援拖拉。
+- 拖拉改由獨立的互動卡片（`FloorPlanLayoutPanel`，位於編輯區下方）完成。卡片以 React 渲染每個受管 Tag 的方塊與 label，拖拉放開後才寫入偏移量。
+- 偏移量（`dx`、`dy`，單位為 SVG 座標）保存於 `extra.fuxaSetting.floorPlanTagOffsets[viewId][tagId]`，以 tagId 為鍵，因此變更 Tag 類型（例如 switch 改為正常/告警）後位置仍會保留。
+- **單一來源**：預覽與匯出都透過 `layoutFloorViewComponents`（`src/domain/layout/floorPlanViews.ts`）計算位置，偏移量在同一處套用。
+- **匯出**：每次匯出時由 view editor 重新計算並寫入 SVG 與 `view.items`，匯出結果只取決於 view editor 的資料，不保留 FUXA 端的修改。
+- **匯入**：不考慮。不從 FUXA 或 SVG 反推位置。
 
 ## 6. 匯入與匯出的保護
 

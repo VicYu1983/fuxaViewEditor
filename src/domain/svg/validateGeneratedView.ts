@@ -6,6 +6,7 @@ import { findSvgElementById, parseSvg } from './parseSvg'
 import type { SvgParserConstructor } from './parseSvg'
 import { existingTagTransform } from './existingTagTransform'
 import type { IconLibraryEntry } from '../icons/iconLibrary'
+import type { FloorPlanTagOffsets } from '../layout/floorPlanViews'
 
 const FLOOR_LAYOUT_MARKER = 'floor-layout-v1'
 const FLOOR_TITLE_NAME = 'fuxa_floor_section_title'
@@ -38,7 +39,7 @@ export interface GeneratedViewModel {
   grid: GridSettings
   floorGroupFrame: FloorGroupFrameSettings
   floorPlan?: boolean
-  floorPlanTagOffsets?: Record<string, { dx: number; dy: number }>
+  floorPlanTagOffsets?: FloorPlanTagOffsets
   floorTitles: Record<string, string>
   floorTitleIds: Record<string, string[]>
   floorFrames: Record<string, string>

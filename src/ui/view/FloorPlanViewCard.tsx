@@ -11,7 +11,7 @@ export function FloorPlanViewCard({ floorPlan, onChange }: FloorPlanViewCardProp
   return (
     <Card title="平面圖 View" className="view-details">
       <label className="floor-plan-view-setting">
-        <Text>此 View 為平面圖（Tag 不排排站，改由簡易畫面點選；不產生群組框）</Text>
+        <Text>此 View 為平面圖（Tag 依自動排排站配置，可在下方拖拉調整位置；不產生群組框）</Text>
         <Switch
           aria-label="平面圖 View"
           checked={floorPlan}

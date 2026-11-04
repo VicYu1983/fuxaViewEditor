@@ -40,7 +40,7 @@ describe('drawPreviewTagTargets', () => {
 
     drawPreviewTagTargets(layer as unknown as Element, layout.placements)
 
-    expect(layer.children).toHaveLength(2)
+    expect(layer.children).toHaveLength(1)
     const target = layer.children[0]!
     const shape = layout.placements[0]!.placement.shape
     expect(target.localName).toBe('rect')
@@ -52,12 +52,6 @@ describe('drawPreviewTagTargets', () => {
       width: String(shape.width),
       height: String(shape.height),
       'fill-opacity': '0',
-      'pointer-events': 'all',
-    })
-    const labelTarget = layer.children[1]!
-    expect(labelTarget.attributes).toMatchObject({
-      'data-preview-tag-id': 'tag-1',
-      'data-preview-tag-label': 'Pump A',
       'pointer-events': 'all',
     })
   })

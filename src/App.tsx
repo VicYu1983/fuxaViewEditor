@@ -69,6 +69,7 @@ import {
   type TagAddTabHandle,
 } from './ui/device/TagAddTab'
 import { PreviewPanel } from './ui/preview/PreviewPanel'
+import { FloorPlanLayoutPanel } from './ui/view/FloorPlanLayoutPanel'
 import { FloorsTab } from './ui/device/FloorsTab'
 import { ViewSidebar } from './ui/view/ViewSidebar'
 import { ViewNameDialog } from './ui/view/ViewNameDialog'
@@ -730,11 +731,12 @@ function EditorWorkspace() {
   function handleMoveFloorTag(viewId: string, tagId: string, dx: number, dy: number) {
     const model = models.get(viewId)
     if (!model) return
-    const current = model.floorPlanTagOffsets?.[tagId] ?? { dx: 0, dy: 0 }
+    const offsets = model.floorPlanTagOffsets ?? {}
+    const current = offsets[tagId] ?? { dx: 0, dy: 0 }
     editView(viewId, {
       ...model,
       floorPlanTagOffsets: {
-        ...model.floorPlanTagOffsets,
+        ...offsets,
         [tagId]: {
           dx: Math.round((current.dx + dx) * 10) / 10,
           dy: Math.round((current.dy + dy) * 10) / 10,
@@ -1571,11 +1573,21 @@ function EditorWorkspace() {
       hasSelection={Boolean(config && selectedView)}
       viewName={selectedView?.name}
       stale={previewStale}
-      onMoveTag={selectedView && models.get(selectedView.id)?.floorPlan
-        ? (tagId, dx, dy) => handleMoveFloorTag(selectedView.id, tagId, dx, dy)
-        : undefined}
     />
   )
+
+  const selectedRawView = config?.rawConfig.hmi.views.find(
+    (view) => isRecord(view) && view.id === selectedView?.id,
+  )
+  const floorPlanLayoutPanel = config && selectedView && selectedModel?.floorPlan === true ? (
+    <FloorPlanLayoutPanel
+      model={selectedModel}
+      profile={isRecord(selectedRawView) ? selectedRawView.profile : undefined}
+      tags={buildTagIndex(config.rawConfig)}
+      floorGroupFrame={getFloorGroupFrameSettings(config.rawConfig)}
+      onMoveTag={(tagId, dx, dy) => handleMoveFloorTag(selectedView.id, tagId, dx, dy)}
+    />
+  ) : null
 
   const batchMoveItems: BatchMoveItem[] = (selectedModel?.components ?? [])
     .filter((component) => component.managed !== false)
@@ -1970,6 +1982,7 @@ function EditorWorkspace() {
                         </div>
                         {previewPanel}
                         </div>
+                        {floorPlanLayoutPanel}
                       </>
                     )}
                   </Space>

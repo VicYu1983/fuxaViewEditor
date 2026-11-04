@@ -1,6 +1,7 @@
 import { isRecord } from '../config/validateFuxaConfig'
-import type { FuxaConfig } from '../config/types'
-import type { FloorLayoutResult } from './floorLayout'
+import type { FuxaConfig, GridSettings, FloorGroupFrameSettings } from '../config/types'
+import type { FloorLayoutComponent, FloorLayoutResult, FloorTag } from './floorLayout'
+import { layoutFloorComponents } from './floorLayout'
 
 const TOOL_SETTINGS_KEY = 'fuxaSetting'
 const FLOOR_PLAN_VIEW_IDS_KEY = 'floorPlanViewIds'
@@ -102,6 +103,23 @@ export function saveFloorPlanTagOffsets(
   } else {
     toolSettings[FLOOR_PLAN_TAG_OFFSETS_KEY] = saved
   }
+}
+
+export function layoutFloorViewComponents(
+  model: {
+    components: FloorLayoutComponent[]
+    grid: GridSettings
+    floorPlan?: boolean
+    floorPlanTagOffsets?: FloorPlanTagOffsets
+  },
+  tags: Map<string, FloorTag> | Record<string, FloorTag>,
+  floorGroupFrame: FloorGroupFrameSettings,
+  canvasWidth: number,
+): FloorLayoutResult {
+  const layout = layoutFloorComponents(model.components, model.grid, tags, floorGroupFrame, canvasWidth)
+  return model.floorPlan === true && model.floorPlanTagOffsets
+    ? offsetFloorLayoutPlacements(layout, model.floorPlanTagOffsets)
+    : layout
 }
 
 export function offsetFloorLayoutPlacements(
