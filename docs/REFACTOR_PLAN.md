@@ -237,4 +237,36 @@ commit({
 2. 新目錄命名：元件放 `src/ui/`，hooks 放 `src/app/hooks/`，是否接受？
 3. CSS：單純依元件拆檔，還是改用 CSS Module？
 4. 做到哪個階段為止（建議先 0＋1，再評估是否繼續）？
-5. 「批次移動 Tag」目標設備已有相同位址時是否阻擋（先前未確認；與重構無關，但會影響 `moveDeviceTags.ts` 的測試）。
+5. 「批次移動 Tag」目標設備已有相同位址時是否阻擋（已決定：以 `memaddress + address` 判斷衝突並阻擋；與重構無關，但會影響 `moveDeviceTags.ts` 的測試）。
+6. CSS 拆分方式（第 10 節第 3 項）：目前採純 CSS 拆分，待使用者確認是否接受。
+
+## 11. 完成狀態與待辦（2026-11-04 盤點）
+
+### 已完成
+- 階段 0–5 的主要 commit 已完成，最後一筆為 `364f563`（Phase 5）。
+- `App.tsx` 為 1984 行（不追求 < 250 行，已由使用者同意）；`useState` 為 13 個，符合 < 20 的目標。
+- `isRecord` 只剩 `domain/shared/isRecord.ts` 一份定義。
+- `dispatchEditor(` 只出現在 hooks／provider 內。
+- `ui/`、`styles/` 拆分與 README 流程索引已完成。
+- `app/lib/parseUpdatedConfig.ts`、`measureSvgBounds.ts` 已建立。
+
+### 待修正（違反計畫的約束）
+- `usePreview.ts`（[features/preview/usePreview.ts](/c:/Users/user/Desktop/baoqi/開發/fuxa/fuxaViewEditor/src/features/preview/usePreview.ts)）與 `useFuxaHost.ts`（[features/fuxa/useFuxaHost.ts](/c:/Users/user/Desktop/baoqi/開發/fuxa/fuxaViewEditor/src/features/fuxa/useFuxaHost.ts)）位於 `features/` 且 import React，違反第 4 節第 3 點。應搬到 `app/hooks/` 並更新 import。
+
+### 尚未完成（計畫中列出的項目）
+- 第 5 節 `app/lib/browserSvgDeps.ts`（`createBrowserSvgDeps`）未建立。App.tsx 仍有直接 `new XMLSerializer()` 的呼叫（約 5 處），`usePreview.ts` 另有一處。
+- 第 5 節 `features/views/createViewModel.ts` 未建立。新增 View 的 model 初值與改名同步標題的邏輯，需確認是否仍內嵌於 App.tsx。
+- 第 5 節 `app/lib/errorMessage.ts` 未建立；`getErrorMessage` 目前位於 `domain/shared/`。功能可接受，但路徑與計畫不同，應於第 5 節註記或統一位置。
+- 第 5 節 `app/hooks/useWorkspaceSelectors.ts` 未建立。決定保留或移除此計畫項目。
+- 第 3.3 節與階段 4 的 try/parse/dispatch 樣板，僅建立了 `commitDocumentEdit` helper，尚未全面改用 `useConfigEdit`。
+- 階段 1 要求的新增測試 ≥ 15 個，以及 `domain/`、`features/` 抽出的純函式（tagViews、readTagAlarms、readModbusDevices、findTagReferences、moveDeviceTags）是否皆有 node 單元測試，尚未逐項核對。
+
+### 風險與未驗證項目
+- 第 7 節的 10 項手動煙霧測試尚未執行。
+- 第 4 節第 2 點：Form 與 `destroyOnHidden` 的組合，開啟前 `setFieldsValue` 可能無效，單元測試無法偵測。
+- 第 7 節第 10 項：重新開啟專案管理時，搜尋與選取狀態是否重置，仍需瀏覽器確認。
+- 第 6 節的驗證指令為 `npx eslint .`，實際執行的是 `npx eslint src tests`，兩者範圍不同，應以計畫為準或更新計畫文字。
+
+### 文件待辦
+- README 的「範圍與注意事項」有一句「階段 5 列出的管理功能已可在新版工作台使用」，為計畫用語，應改寫為使用者可理解的描述。
+- README 與現況的流程描述（開啟 JSON／清空專案 vs. FUXA 宿主同步）尚未逐段核對（第 3.5 節）。
