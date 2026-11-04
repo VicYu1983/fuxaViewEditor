@@ -67,6 +67,27 @@ describe('building floor buttons', () => {
     expect(Object.keys(thirdFloor.items)).toEqual(oldIds)
   })
 
+  it('rebuilds unprefixed BUTTON elements when FUXA export left only button text', () => {
+    const project = config([
+      ['floor-2', '排風系統/2F'],
+      ['floor-3', '排風系統/3F'],
+    ])
+    sync(project)
+
+    const view = (project.hmi.views as Array<{ svgcontent: string }>)[0]!
+    view.svgcontent = view.svgcontent
+      .replace(/<BUTTON\b[^>]*>/g, '')
+      .replace(/<\/BUTTON>/g, '')
+    expect(view.svgcontent).not.toContain('<BUTTON')
+
+    expect(buildingFloorButtonsNeedSync(project)).toBe(true)
+    sync(project)
+
+    expect(view.svgcontent).toContain('<BUTTON')
+    expect(view.svgcontent).not.toContain('html:BUTTON')
+    expect(view.svgcontent).not.toContain('<html:')
+  })
+
   it('creates no buttons for a single floor and removes stale generated buttons', () => {
     const project = config([['floor-1', '排風系統/1F']])
     const view = (project.hmi.views as Array<Record<string, unknown>>)[0]!

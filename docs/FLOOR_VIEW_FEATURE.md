@@ -46,6 +46,7 @@
 ```
 
 - 對應的 SVG 為 `<g type="svg-ext-html_button" id="HXB_...">`，內含 `rect` 與 `foreignObject > BUTTON`。
+- `BUTTON` 必須以無命名空間前綴的形式寫入（與 FUXA 原生一致）。若寫成 `html:BUTTON`，FUXA 匯入後只會剩下文字。同步時若發現按鈕缺少 `<BUTTON>` 元素，會自動重建。
 - 導覽項目位於 `hmi.layout.navigation.items`：`{ text: "<系統>", view: "<最低樓層 view id>", icon, image, permission, children }`。
 - 平面圖為 `svg-ext-own_ctrl-image`，`property.address` 為 `resources/xxx.svg` 路徑。
 
@@ -78,7 +79,7 @@
 ### 5.5 平面圖 View（手動開關）
 
 - 每個 View 可在編輯器的「平面圖 View」卡片手動開啟，設定保存於 `extra.fuxaSetting.floorPlanViewIds`。
-- 平面圖 View 保留樓層標題（位置與樣式同一般樓層 View），不產生群組框。
+- 平面圖 View 保留 view 標題（`view_title`），不產生群組框與群組標題（`fuxa_floor_section_title`，例如「未設定樓層」）。
 - Tag 仍由自動排列（排排站）配置。在簡易畫面（SVG 預覽）中點選 Tag 會以藍色虛線框標示選取，並顯示其名稱與 ID。SVG 預覽保持靜態，不支援拖拉。
 - 拖拉改由獨立的互動卡片（`FloorPlanLayoutPanel`，位於編輯區下方）完成。卡片以 React 渲染每個受管 Tag 的方塊與 label，拖拉放開後才寫入偏移量。
 - 偏移量（`dx`、`dy`，單位為 SVG 座標）保存於 `extra.fuxaSetting.floorPlanTagOffsets[viewId][tagId]`，以 tagId 為鍵，因此變更 Tag 類型（例如 switch 改為正常/告警）後位置仍會保留。

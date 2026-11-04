@@ -211,7 +211,7 @@ function appendFloorButtons(
       y: buttonY,
       x,
     })
-    const htmlButton = doc.createElementNS('http://www.w3.org/1999/xhtml', 'BUTTON')
+    const htmlButton = doc.createElementNS(SVG_NAMESPACE, 'BUTTON')
     htmlButton.setAttribute(
       'style',
       `width:calc(100% - 6px);height:calc(100% - 6px);text-align:center;`
@@ -398,6 +398,7 @@ function viewHasExpectedButtons(
   if ((view.svgcontent.match(
     new RegExp(`data-name="${BUILDING_FLOOR_BUTTON_NAME}"`, 'g'),
   ) ?? []).length !== expectedFloors.length) return false
+  if ((view.svgcontent.match(/<button\b/gi) ?? []).length !== expectedFloors.length) return false
   if (!expectedFloors.every((expected) => {
     const indexedId = indexedButtonIds[expected.id]
     const entry = entries.find(([id, item]) => (

@@ -356,6 +356,15 @@ function validateFloorArtifacts(
 ): void {
   for (const section of sections) {
     const key = `floor:${section.floor}`
+    if (model.floorPlan) {
+      if (model.floorTitles[key]
+          || (model.floorTitleIds[key] ?? []).length
+          || model.floorFrames[key]
+          || (model.floorFrameIds[key] ?? []).length) {
+        throw new Error(`平面圖 View「${viewLabel(view)}」不應保留「${section.title}」群組標題或底框。`)
+      }
+      continue
+    }
     const titleId = model.floorTitles[key]
     const titleNode = titleId ? findSvgElementById(doc, titleId) : null
     if (!titleNode
@@ -366,12 +375,6 @@ function validateFloorArtifacts(
     }
     if ((model.floorTitleIds[key] ?? []).length !== 1) {
       throw new Error(`View「${viewLabel(view)}」的「${section.title}」樓層元件仍有重複項目。`)
-    }
-    if (model.floorPlan) {
-      if (model.floorFrames[key] || (model.floorFrameIds[key] ?? []).length) {
-        throw new Error(`平面圖 View「${viewLabel(view)}」不應保留「${section.title}」樓層底框。`)
-      }
-      continue
     }
     const frameId = model.floorFrames[key]
     const frameNode = frameId ? findSvgElementById(doc, frameId) : null
@@ -385,7 +388,7 @@ function validateFloorArtifacts(
     }
   }
 
-  const expectedCount = sections.length
+  const expectedCount = model.floorPlan ? 0 : sections.length
   const titleCount = Object.values(items)
     .filter((item) => isRecord(item) && item.name === FLOOR_TITLE_NAME).length
   const frameCount = Object.values(items)

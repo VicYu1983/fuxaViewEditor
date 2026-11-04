@@ -185,29 +185,19 @@ function applyModelToViewInPlace(
 
   for (const section of layout.sections) {
     const key = floorKey(section.floor)
-    const floorPlan = model.floorPlan === true
-    const frameId = floorPlan ? '' : model.floorFrames[key] || options.allocateId('svg')
-    const frameShapeId = floorPlan
-      ? ''
-      : model.floorFrameShapeIds[key] || (model.floorFrameShapeIds[key] = options.allocateId('SHE'))
-    const titleId = model.floorTitles[key] || options.allocateId('svg')
-    model.floorTitles[key] = titleId
-    model.floorTitleIds[key] = [titleId]
-    if (floorPlan) {
+    if (model.floorPlan === true) {
+      delete model.floorTitles[key]
+      model.floorTitleIds[key] = []
       delete model.floorFrames[key]
       delete model.floorFrameIds[key]
       delete model.floorFrameShapeIds[key]
-      const titleNodes = buildFloorArtifactNodes(
-        doc,
-        section,
-        { titleId, frameId },
-        model.grid,
-        options.floorGroupFrame,
-        { title: previousItems[titleId] },
-      )
-      layer.appendChild(titleNodes.titleNode)
-      view.items[titleId] = titleNodes.titleEntry
     } else {
+      const frameId = model.floorFrames[key] || options.allocateId('svg')
+      const frameShapeId = model.floorFrameShapeIds[key]
+        || (model.floorFrameShapeIds[key] = options.allocateId('SHE'))
+      const titleId = model.floorTitles[key] || options.allocateId('svg')
+      model.floorTitles[key] = titleId
+      model.floorTitleIds[key] = [titleId]
       model.floorFrames[key] = frameId
       model.floorFrameIds[key] = [frameId]
       const floorNodes = buildFloorArtifactNodes(
