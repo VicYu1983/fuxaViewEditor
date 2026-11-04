@@ -40,6 +40,7 @@ import {
 import { findTagReferences } from './features/devices/findTagReferences'
 import { buildViewTargetOptions } from './domain/views/viewTargetOptions'
 import { BatchMoveDialog, type BatchMoveItem } from './ui/view/BatchMoveDialog'
+import { AutoViewDialog, type AutoViewApplyOptions } from './ui/view/AutoViewDialog'
 import { ComponentMoveDialog } from './ui/view/ComponentMoveDialog'
 import { DevicesTab } from './ui/device/DevicesTab'
 import { EditorHeader } from './ui/layout/EditorHeader'
@@ -147,6 +148,9 @@ import { createViewComponents } from './features/tags/createViewComponents'
 import { createTagsForDevice } from './features/tags/createTagsForDevice'
 import { getNextAvailableAddress } from './domain/tags/batch'
 import { createBlankView } from './features/views/createBlankView'
+import { createAutoViews } from './features/views/createAutoViews'
+import type { AutoViewGroup } from './domain/views/autoViewMapping'
+import { readAutoViewMapping } from './domain/views/autoViewMapping'
 import { createEmptyViewModel } from './features/views/createViewModel'
 import { syncViewTitleText } from './features/views/syncViewTitleText'
 import { moveManagedComponent } from './features/views/moveManagedComponent'
@@ -224,6 +228,7 @@ function EditorWorkspace() {
   const [floorSession, setFloorSession] = useState(0)
   const [iconLibraryOpen, setIconLibraryOpen] = useState(false)
   const [floorPlanLibraryOpen, setFloorPlanLibraryOpen] = useState(false)
+  const [autoViewDialogOpen, setAutoViewDialogOpen] = useState(false)
   const [editingMultiStateIconId, setEditingMultiStateIconId] = useState('')
   const [multiStateAddDrafts, setMultiStateAddDrafts] = useState<
     Record<string, MultiStateIconDraft>
@@ -307,6 +312,10 @@ function EditorWorkspace() {
   )
   const floorPlanLibrary = useMemo(
     () => config ? getFloorPlanLibrary(config.rawConfig) : {},
+    [config],
+  )
+  const autoViewMapping = useMemo(
+    () => config ? readAutoViewMapping(config.rawConfig) : [],
     [config],
   )
   const buildingFloorGroups = useMemo(
@@ -554,6 +563,36 @@ function EditorWorkspace() {
         }
       },
     })
+  }
+
+  function handleApplyAutoViews(groups: AutoViewGroup[], options: AutoViewApplyOptions) {
+    if (!config) return
+
+    try {
+      const result = createAutoViews(config.rawConfig, {
+        groups,
+        tags,
+        includeAutoFilled: options.includeAutoFilled,
+        coilSwitchEnabled: options.coilSwitchEnabled,
+      }, createBrowserSvgDeps())
+      const nextModifiedViewIds = new Set(result.viewIds)
+      commitDocumentEdit(config, result.config, result.models, nextModifiedViewIds)
+      setSelectedViewId(result.viewIds[0] ?? '')
+      setAutoViewDialogOpen(false)
+
+      if (result.addedTagCount === 0) {
+        messageApi.success(`沒有可加入的 Tag，已建立 ${result.viewIds.length} 個空白 View。`)
+        return
+      }
+      const skippedMessage = result.skippedTagCount > 0
+        ? `，並排除 ${result.skippedTagCount} 筆自動補位 Tag`
+        : ''
+      messageApi.success(
+        `已清除舊 View，建立 ${result.viewIds.length} 個 View，加入 ${result.addedTagCount} 個 Tag 元件${skippedMessage}。`,
+      )
+    } catch (error) {
+      messageApi.error(`一鍵配置失敗：${getErrorMessage(error)}`)
+    }
   }
 
   function handleRemoveComponent(viewId: string, key: string) {
@@ -1775,6 +1814,13 @@ function EditorWorkspace() {
         onCancel={() => setViewDialogMode(null)}
         onOk={() => viewNameForm.submit()}
       />
+      <AutoViewDialog
+        open={autoViewDialogOpen}
+        mapping={autoViewMapping}
+        tags={tags}
+        onApply={handleApplyAutoViews}
+        onCancel={() => setAutoViewDialogOpen(false)}
+      />
       <ViewSettingsDialog
         open={viewSettingsOpen}
         tab={viewSettingsTab}
@@ -1982,6 +2028,7 @@ function EditorWorkspace() {
           onExportConfig={handleExportConfig}
           onSyncToFuxa={fuxaSync.sync}
           onOpenProjectManager={openDeviceManager}
+          onOpenAutoView={() => setAutoViewDialogOpen(true)}
           onOpenIconLibrary={() => setIconLibraryOpen(true)}
           onOpenFloorPlanLibrary={() => setFloorPlanLibraryOpen(true)}
           onOpenViewSettings={openFloorFrameDialog}

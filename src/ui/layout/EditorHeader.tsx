@@ -17,6 +17,7 @@ export interface EditorHeaderProps {
   onExportConfig: () => void
   onSyncToFuxa: () => void
   onOpenProjectManager: () => void
+  onOpenAutoView: () => void
   onOpenIconLibrary: () => void
   onOpenFloorPlanLibrary: () => void
   onOpenViewSettings: () => void
@@ -35,6 +36,7 @@ export function EditorHeader({
   onExportConfig,
   onSyncToFuxa,
   onOpenProjectManager,
+  onOpenAutoView,
   onOpenIconLibrary,
   onOpenFloorPlanLibrary,
   onOpenViewSettings,
@@ -89,6 +91,9 @@ export function EditorHeader({
         )}
         <Button disabled={!hasConfig} onClick={onOpenProjectManager}>
           專案管理
+        </Button>
+        <Button disabled={!hasConfig} onClick={onOpenAutoView}>
+          一鍵配置
         </Button>
         <Button disabled={!hasConfig} onClick={onOpenIconLibrary}>
           圖示庫

@@ -22,8 +22,8 @@ FUXA 配置編輯工具，使用 React、TypeScript、Ant Design 與 Vite。View
 - 新增空白 View、重新命名及刪除 View；刪除時會清理起始頁與導覽引用，並保留至少一個 View。
 - View 名稱符合「系統/樓層」（例如 `排風系統/B1F`、`排風系統/2F`）時會啟用跨 View 樓層導覽：同系統有多個樓層時，在 View 上方產生切換按鈕並標示目前樓層；按鈕列會避開 View 標題標籤。導覽列每個系統只保留一筆並指向最低樓層；單一樓層不產生切換按鈕。編輯器會顯示「樓層功能已開啟」提示，並將按鈕索引保存在 `extra.fuxaSetting.buildingFloorButtons`，供 FUXA 往返匯入後修復按鈕；匯出時保留平面圖及其他既有 SVG 元件。
 - 在選取的 View 批次加入既有 Tag，支援搜尋、全選搜尋結果，並沿用 Tag 已設定的群組；Boolean Coil 可建立綁定 click 事件的 Switch，並以 Tag 名稱作為文字標籤，也可關閉此行為改用一般元件。
-- 新增、修改、刪除 ModbusTCP 設備；管理 addressCount 補位及整台設備 Tag 位址 ±1，越界時整批取消；設備管理可一次移除該設備所有自動補位 Tag。
-- 「設備與 Tag 管理」會依數值 address 由小到大列出所選 ModbusTCP 設備的 Tag；匯出 JSON 時也會依相同規則排列設備 Tag，無效或空白位址排在最後。同位址 Tag 保留原順序。管理畫面會檢查全專案已建立 Tag 的重複名稱，標示重名 Tag 並列出所在設備；可修改名稱、位址、型別、記憶體區段、備註與群組，儲存時不可使用其他 Tag 已使用的名稱，或刪除 Tag。刪除時會同步移除引用該 Tag 的受管理元件，唯讀元件仍有引用時會阻止刪除。
+- 提供「一鍵配置」：以專案內的分類表（保存在 `extra.fuxaSetting.viewAutoMapping`）依 Tag 名稱包含的關鍵字分組，預覽每組 Tag 數量後，清除所有 View 並自動建立對應 View、加入 Tag 元件；未命中的 Tag 集中到「未分類」，Boolean Coil 可選擇建立 Switch，並可使用 Undo 復原。專案尚未保存分類表時，會帶入消防、給排水、風機、發電機、電梯、門禁求救、通訊狀態、照明等基礎分類，可直接預覽並套用。
+- 新增、修改、刪除 ModbusTCP 設備；管理 addressCount 補位及整台設備 Tag 位址 ±1，越界時整批取消；設備管理可一次移除該設備所有自動補位 Tag。- 「設備與 Tag 管理」會依數值 address 由小到大列出所選 ModbusTCP 設備的 Tag；匯出 JSON 時也會依相同規則排列設備 Tag，無效或空白位址排在最後。同位址 Tag 保留原順序。管理畫面會檢查全專案已建立 Tag 的重複名稱，標示重名 Tag 並列出所在設備；可修改名稱、位址、型別、記憶體區段、備註與群組，儲存時不可使用其他 Tag 已使用的名稱，或刪除 Tag。刪除時會同步移除引用該 Tag 的受管理元件，唯讀元件仍有引用時會阻止刪除。
 - 可在「設備與 Tag 管理」中批次建立 Tag；支援逐行名稱或 CSV／Tab 欄位、起始位址／步長、型別、記憶體區段、群組預設及建立預覽，也可選擇同步加入目前 View。預覽會檢查全專案 Tag 名稱是否重複，可直接修改名稱，名稱重複或空白時不可建立；位址重複會提示但不阻擋。ModbusTCP 設備會依 addressCount 自動補齊缺漏位址，自動補位名稱也會避開全專案既有名稱。
 - 可由「設備與 Tag 管理」開啟獨立的「批次設定 Tag 告警」視窗，多選 Tag 後一次設定共用告警文字與等級，並為每個 Tag 指定觸發時要跳轉的 View。Tag 只出現在一個 View 時會自動帶入；出現在多個 View 時需明確選擇。已存在的 Tag 告警會更新而不重複新增。
 - 管理 Tag 群組（沿用 FUXA 配置中的 `extra.floor` 資料欄位），支援搜尋、多選、全選可見項目、批次套用及依群組／平面清單切換。
@@ -100,6 +100,7 @@ Vite 使用相對資產路徑，適用於 FUXA 的子路徑部署；目前尚未
 | Grid 排版設定 | `ui/view/GridSettingsCard.tsx` | `domain/layout/gridSettings.ts`、`gridLayout.ts` |
 | 已管理元件清單、排序、移動 | `ui/view/ManagedComponentCard.tsx`、`ComponentMoveDialog.tsx`、`BatchMoveDialog.tsx` | `features/views/moveManagedComponent.ts`、`moveComponentsBetweenViews.ts`、`domain/svg/readManagedComponents.ts` |
 | 批次加入 Tag 至 View | `ui/device/TagAddTab.tsx` | `features/tags/createViewComponents.ts`、`domain/tags/batch.ts` |
+| 一鍵配置（依 Tag 名稱重建 View） | `ui/view/AutoViewDialog.tsx` | `domain/views/autoViewMapping.ts`、`features/views/createAutoViews.ts` |
 | ModbusTCP 設備管理 | `ui/device/DevicesTab.tsx` | `features/devices/manageModbusDevice.ts`、`domain/devices/modbusTcp.ts`、`readModbusDevices.ts` |
 | 設備 Tag 管理、重名檢查、刪除 | `ui/device/DeviceTagManager.tsx`、`DeviceTagEditDialog.tsx` | `features/devices/manageDeviceTags.ts`、`findTagReferences.ts`、`domain/devices/deviceTagAddressSort.ts` |
 | 設備 Tag 批次移動（位址 ±1） | `ui/device/DeviceTagMoveDialog.tsx` | `features/devices/moveDeviceTags.ts` |

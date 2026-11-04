@@ -55,6 +55,7 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 | `floorFrameLayoutVersion` | `1` | `layout/floorGroupFrame.ts` | 群組框排版演算法版本（不是資料版本） |
 | `floorGroupArtifacts` | `{ [viewId]: { [floorKey]: { titleId, frameId, frameShapeId } } }` | `layout/floorGroupArtifacts.ts` | 群組標題與底框的 SVG id 索引 |
 | `viewComponents` | `{ [viewId]: StoredViewComponent[] }` | `views/viewComponents.ts` | 每個 View 的受管 Tag 元件定義（Phase 4；不含位置） |
+| `viewAutoMapping` | `Array<{ name: string; keywords: string[] }>` | `views/autoViewMapping.ts` | 「一鍵配置」的分類表；依關鍵字比對 Tag 名稱並重建 View。未保存時使用內建基礎分類，保存空陣列則代表不套用任何分類 |
 | `buildingFloorButtons` | `{ [viewId]: { [targetViewId]: buttonItemId } }` | `buildingFloors/buildingFloorButtons.ts` | 樓層按鈕的 `items` id 索引 |
 | `floorPlanViewIds` | `string[]` | `layout/floorPlanViews.ts` | 開啟「平面圖 View」的 View |
 | `floorPlanTagOffsets` | `{ [viewId]: { [tagId]: { dx, dy } } }` | `layout/floorPlanViews.ts` | 平面圖 Tag 的手動偏移 |
