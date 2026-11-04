@@ -25,7 +25,7 @@ export const DEFAULT_AUTO_STATE_MAPPING: readonly AutoViewStateGroup[] = Object.
   },
   {
     state: '異常',
-    keywords: ['過載', '故障', '異常', '告警', '警報', '火警', '洩漏', '入侵', '離線'],
+    keywords: ['過載', '故障', '異常', '告警', '警報', '火警', '洩漏', '入侵', '離線', '低油位', '壓扣'],
   },
   {
     state: '停止',
