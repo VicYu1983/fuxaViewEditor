@@ -1,6 +1,5 @@
 import {
   useMemo,
-  useReducer,
   useRef,
   useState,
   type ChangeEvent,
@@ -150,10 +149,8 @@ import type { FuxaViewSummary, ParsedFuxaConfig } from './domain/config/types'
 import type { ExportViewModel } from './domain/config/prepareFuxaConfigExport'
 import type { GeneratedComponent } from './domain/svg/validateGeneratedView'
 import type { GridSettings } from './domain/config/types'
-import {
-  createEditorHistoryState,
-  editorHistoryReducer,
-} from './app/store/editorHistory'
+import { EditorProvider } from './app/store/EditorProvider'
+import { useConfigEdit } from './app/hooks/useConfigEdit'
 import './App.css'
 
 const { Content } = Layout
@@ -168,7 +165,16 @@ function getSelectedView(
   return views.find((view) => (view.id || view.key) === selectedViewId) ?? views[0]
 }
 
-function App() {
+function EditorWorkspace() {
+  const {
+    editor,
+    commitDocumentEdit,
+    replaceDocument,
+    editView,
+    resetEditor,
+    undo,
+    redo,
+  } = useConfigEdit()
   const [viewNameForm] = Form.useForm<{ name: string }>()
   const [deviceManagerForm] = Form.useForm<ModbusDeviceFormValues>()
   const [deviceTagForm] = Form.useForm<ModbusTagFormValues>()
@@ -223,10 +229,6 @@ function App() {
       return prepared ? JSON.parse(prepared.text) as unknown : null
     },
   })
-  const [editor, dispatchEditor] = useReducer(
-    editorHistoryReducer<ExportViewModel, ParsedFuxaConfig>,
-    createEditorHistoryState<ExportViewModel, ParsedFuxaConfig>(),
-  )
   const [modelErrors, setModelErrors] = useState<Map<string, string>>(new Map())
   const [unsupported, setUnsupported] = useState<Map<string, string[]>>(new Map())
   const { models, modifiedViewIds } = editor
@@ -239,30 +241,12 @@ function App() {
   function replaceWorkspace(parsed: ParsedFuxaConfig) {
     getIconLibrary(parsed.rawConfig)
     const editorModels = buildViewEditorModels(parsed.rawConfig, DOMParser, measureSvgBounds)
-    dispatchEditor({
-      type: 'reset',
-      models: editorModels.models,
-      document: parsed,
-    })
+    resetEditor(editorModels.models, parsed)
     setModelErrors(editorModels.errors)
     setUnsupported(editorModels.unsupported)
     setTagAddSession((session) => session + 1)
     const firstView = parsed.views[0]
     setSelectedViewId(firstView ? firstView.id || firstView.key : '')
-  }
-
-  function commitDocumentEdit(
-    base: ParsedFuxaConfig,
-    nextRaw: ParsedFuxaConfig['rawConfig'],
-    nextModels: Map<string, ExportViewModel> = models,
-    nextModifiedViewIds?: Set<string>,
-  ) {
-    dispatchEditor({
-      type: 'document-edit',
-      document: parseUpdatedConfig(nextRaw, base),
-      models: nextModels,
-      modifiedViewIds: nextModifiedViewIds,
-    })
   }
 
   const selectedView = useMemo(
@@ -463,12 +447,7 @@ function App() {
         }
       }
 
-      const document = parseUpdatedConfig(nextRaw, config)
-      dispatchEditor({
-        type: 'document-edit',
-        document,
-        models: nextModels,
-      })
+      commitDocumentEdit(config, nextRaw, nextModels)
       setSelectedViewId(selectedId)
       setViewDialogMode(null)
       messageApi.success(viewDialogMode === 'create'
@@ -524,13 +503,7 @@ function App() {
           nextModels.delete(selectedView.id)
           const nextModifiedIds = new Set(modifiedViewIds)
           nextModifiedIds.delete(selectedView.id)
-          const document = parseUpdatedConfig(nextRaw, config)
-          dispatchEditor({
-            type: 'document-edit',
-            document,
-            models: nextModels,
-            modifiedViewIds: nextModifiedIds,
-          })
+          commitDocumentEdit(config, nextRaw, nextModels, nextModifiedIds)
           setSelectedViewId(fallbackId)
           messageApi.success('已刪除 View，並處理其起始頁／導覽引用。')
         } catch (error) {
@@ -546,13 +519,9 @@ function App() {
     if (!model) return
     const component = model.components.find((item) => item.key === key)
     if (!component || component.managed === false) return
-    dispatchEditor({
-      type: 'edit',
-      viewId,
-      model: {
-        ...model,
-        components: model.components.filter((item) => item.key !== key),
-      },
+    editView(viewId, {
+      ...model,
+      components: model.components.filter((item) => item.key !== key),
     })
   }
 
@@ -566,11 +535,7 @@ function App() {
       new Map(tags.map((tag) => [tag.id, tag] as const)),
     )
     if (nextComponents.every((component, index) => component === model.components[index])) return
-    dispatchEditor({
-      type: 'edit',
-      viewId,
-      model: { ...model, components: nextComponents },
-    })
+    editView(viewId, { ...model, components: nextComponents })
   }
 
   function openComponentMoveDialog(viewId: string, componentKey: string) {
@@ -616,12 +581,7 @@ function App() {
       messageApi.error(plan.error)
       return false
     }
-    dispatchEditor({
-      type: 'document-edit',
-      document: config,
-      models: plan.models,
-      modifiedViewIds: plan.modifiedViewIds,
-    })
+    replaceDocument(config, plan.models, plan.modifiedViewIds)
     setSelectedViewId(targetViewId)
     const targetName = config.views.find((view) =>
       (view.id || view.key) === targetViewId)?.name || targetViewId
@@ -667,15 +627,11 @@ function App() {
       }
     }
 
-    dispatchEditor({
-      type: 'edit',
-      viewId,
-      model: {
-        ...model,
-        components: model.components.map((item) => (
-          item.key === key ? { ...item, ...update } : item
-        )),
-      },
+    editView(viewId, {
+      ...model,
+      components: model.components.map((item) => (
+        item.key === key ? { ...item, ...update } : item
+      )),
     })
   }
 
@@ -733,15 +689,11 @@ function App() {
             && updated.multiIconSetId === component.multiIconSetId
             && JSON.stringify(updated.multiStateBindings) ===
               JSON.stringify(component.multiStateBindings))) return
-      dispatchEditor({
-        type: 'edit',
-        viewId,
-        model: {
-          ...model,
-          components: model.components.map((item) => (
-            item.key === component.key ? updated : item
-          )),
-        },
+      editView(viewId, {
+        ...model,
+        components: model.components.map((item) => (
+          item.key === component.key ? updated : item
+        )),
       })
     } catch (error) {
       messageApi.error(`更新元件圖形失敗：${getErrorMessage(error)}`)
@@ -785,13 +737,9 @@ function App() {
   ) {
     const model = models.get(viewId)
     if (!model) return
-    dispatchEditor({
-      type: 'edit',
-      viewId,
-      model: {
-        ...model,
-        grid: { ...model.grid, ...update },
-      },
+    editView(viewId, {
+      ...model,
+      grid: { ...model.grid, ...update },
     })
   }
 
@@ -850,7 +798,7 @@ function App() {
         ))
         addedToViewCount = createdTags.length
       }
-      dispatchEditor({ type: 'document-edit', document, models: nextModels })
+      replaceDocument(document, nextModels)
       const autoFillMessage = result.autoFilled.length
         ? `，並自動補齊 ${result.autoFilled.length} 個地址`
         : ''
@@ -904,11 +852,7 @@ function App() {
         iconLibrary,
         switchTagIds,
       )
-      dispatchEditor({
-        type: 'edit',
-        viewId: selectedView.id,
-        model: nextModels,
-      })
+      editView(selectedView.id, nextModels)
       setDeviceManagerOpen(false)
       messageApi.success(`已加入 ${selectedTags.length} 筆 Tag 元件。`)
     } catch (error) {
@@ -1142,11 +1086,7 @@ function App() {
         window.crypto,
       )
       const document = parseUpdatedConfig(result.config, config)
-      dispatchEditor({
-        type: 'document-edit',
-        document,
-        models,
-      })
+      replaceDocument(document, models)
       setManagedDeviceId(result.deviceId)
       setDeviceManagerMode('edit')
       deviceManagerForm.setFieldsValue(values)
@@ -1238,7 +1178,7 @@ function App() {
     try {
       const nextConfig = deleteManagedDevice(config.rawConfig, managedDeviceId)
       const document = parseUpdatedConfig(nextConfig, config)
-      dispatchEditor({ type: 'document-edit', document, models })
+      replaceDocument(document, models)
       const fallback = modbusDevices.find((candidate) => candidate.id !== managedDeviceId)
       if (fallback) selectManagedDevice(fallback.id)
       else {
@@ -1861,7 +1801,7 @@ function App() {
                 config={config}
                 tags={tags}
                 models={models}
-                onDocumentEdit={(document) => dispatchEditor({ type: 'document-edit', document, models })}
+                onDocumentEdit={(document) => replaceDocument(document, models)}
                 onNotify={(type, content) => messageApi[type](content)}
                 onStatusChange={setTagAlarmStatus}
               />,
@@ -1911,8 +1851,8 @@ function App() {
           onProjectNameChange={setProjectName}
           canUndo={editor.past.length > 0}
           canRedo={editor.future.length > 0}
-          onUndo={() => dispatchEditor({ type: 'undo' })}
-          onRedo={() => dispatchEditor({ type: 'redo' })}
+          onUndo={() => undo()}
+          onRedo={() => redo()}
           fuxaSyncStatus={fuxaSync.status}
           hasConfig={Boolean(config)}
           onSyncToFuxa={fuxaSync.sync}
@@ -2035,4 +1975,10 @@ function App() {
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <EditorProvider>
+      <EditorWorkspace />
+    </EditorProvider>
+  )
+}
