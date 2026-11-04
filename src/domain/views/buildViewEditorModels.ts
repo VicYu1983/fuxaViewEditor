@@ -1,4 +1,5 @@
 import type { FuxaConfig } from '../config/types'
+import { getErrorMessage } from '../shared/getErrorMessage'
 import { getFloorGroupFrameSettings } from '../layout/floorGroupFrame'
 import type { FloorLayoutComponent, Bounds } from '../layout/floorLayout'
 import { getViewGridSettings } from '../layout/gridSettings'
@@ -63,7 +64,7 @@ function existingTagComponents(
         companions: [],
       })
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
+      const reason = getErrorMessage(error)
       unsupported.push(`${candidate.name}：${reason}`)
     }
   }
@@ -83,7 +84,7 @@ function existingTagComponents(
     try {
       labels.push({ id, bounds: measureBounds(parsed.doc, id) })
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
+      const reason = getErrorMessage(error)
       const name = typeof item.name === 'string' ? item.name : id
       unsupported.push(`${name}：無法量測既有文字位置（${reason}）`)
     }

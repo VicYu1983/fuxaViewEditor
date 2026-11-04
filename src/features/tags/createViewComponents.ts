@@ -1,5 +1,6 @@
 import type { FuxaConfig } from '../../domain/config/types'
 import type { ExportViewModel } from '../../domain/config/prepareFuxaConfigExport'
+import { getErrorMessage } from '../../domain/shared/getErrorMessage'
 import type { IconLibraryEntry } from '../../domain/icons/iconLibrary'
 import { isRecord } from '../../domain/config/validateFuxaConfig'
 import { generateId, type RandomValuesProvider } from '../../domain/ids'
@@ -30,7 +31,7 @@ function collectUsedIds(
         if (id) usedIds.add(id)
       }
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       const name = typeof view.name === 'string' && view.name ? view.name : view.id
       throw new Error(`無法安全加入 Tag 元件：View「${name}」的 SVG ID 無法檢查（${detail}）`, {
         cause: error,

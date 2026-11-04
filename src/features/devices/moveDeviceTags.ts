@@ -36,6 +36,18 @@ function findTagEntry(
   return entry && isRecord(entry[1]) ? [entry[0], entry[1]] : undefined
 }
 
+function getAddressKey(record: Record<string, unknown>): string {
+  return `${String(record.memaddress ?? '')}:${String(record.address ?? '')}`
+}
+
+function collectAddressKeys(tags: Record<string, unknown>): Set<string> {
+  const keys = new Set<string>()
+  for (const tag of Object.values(tags)) {
+    if (isRecord(tag)) keys.add(getAddressKey(tag))
+  }
+  return keys
+}
+
 function collectTagNames(config: FuxaConfig): Set<string> {
   const names = new Set<string>()
   for (const device of Object.values(config.devices)) {
@@ -70,6 +82,15 @@ export function moveModbusDeviceTags(
     if (!entry) throw new Error('找不到要移動的 Tag。')
     delete sourceTags[entry[0]]
     moving.push({ tagId, record: entry[1] })
+  }
+
+  const usedAddresses = collectAddressKeys(targetTags)
+  for (const { record } of moving) {
+    const key = getAddressKey(record)
+    if (usedAddresses.has(key)) {
+      throw new Error(`目標設備已有相同位址的 Tag（記憶體位址 ${String(record.memaddress ?? '')}，位址 ${String(record.address ?? '')}），無法移動。`)
+    }
+    usedAddresses.add(key)
   }
 
   const usedNames = collectTagNames(config)

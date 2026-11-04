@@ -1,5 +1,6 @@
 import type { FuxaConfig } from '../config/types'
 import { isRecord } from '../config/validateFuxaConfig'
+import { getErrorMessage } from '../shared/getErrorMessage'
 import { parseSvg } from '../svg/parseSvg'
 import type { SvgParserConstructor } from '../svg/parseSvg'
 
@@ -60,7 +61,7 @@ export function getViewTitleLabelSettings(
   try {
     doc = parseSvg(view.svgcontent, Parser)
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error)
+    const detail = getErrorMessage(error)
     const name = typeof view.name === 'string' && view.name ? view.name : viewId
     throw new Error(`無法讀取 View「${name}」的名稱標籤樣式：${detail}`, { cause: error })
   }
@@ -116,7 +117,7 @@ export function updateAllViewTitleLabels(
     try {
       doc = parseSvg(view.svgcontent, Parser)
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
+      const detail = getErrorMessage(error)
       const name = typeof view.name === 'string' && view.name ? view.name : String(view.id || '未知 View')
       throw new Error(`無法更新 View「${name}」的名稱標籤：${detail}`, { cause: error })
     }

@@ -1,0 +1,126 @@
+/* ---------- 批次建立 Tag ---------- */
+
+.tag-create-manager {
+  width: 100%;
+}
+
+.tag-create-settings {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tag-create-settings label {
+  display: grid;
+  gap: 6px;
+}
+
+.tag-create-preview-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.tag-create-preview {
+  max-height: 260px;
+  overflow: auto;
+  width: 100%;
+}
+
+.tag-create-preview table {
+  border-collapse: collapse;
+  min-width: 720px;
+  width: 100%;
+}
+
+.tag-create-preview th,
+.tag-create-preview td {
+  border-bottom: 1px solid var(--hairline);
+  padding: 7px;
+  text-align: left;
+}
+
+.tag-create-preview th {
+  background: var(--hover);
+  color: var(--text-secondary);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+/* ---------- 設備與 Tag 管理 ---------- */
+
+.device-manager-summary {
+  align-items: flex-start;
+  border-block: 1px solid var(--border);
+  margin-bottom: 16px;
+  padding: 12px 0;
+}
+
+.device-tag-manager {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  margin-bottom: 16px;
+  padding: 10px;
+}
+
+.device-tag-manager-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.device-tag-search {
+  margin-bottom: 8px;
+}
+
+.device-tag-bulk-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.device-tag-move-body,
+.device-tag-move-target {
+  width: 100%;
+}
+
+.device-tag-list {
+  max-height: min(30vh, 260px);
+  overflow: auto;
+}
+
+.device-tag-row {
+  align-items: center;
+  border-bottom: 1px solid var(--hairline);
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 54px;
+  padding: 6px 4px;
+}
+
+.device-tag-row:last-child {
+  border-bottom: 0;
+}
+
+.device-tag-info {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.device-manager-form {
+  display: grid;
+  gap: 0 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.device-manager-form .ant-form-item:last-child {
+  align-self: center;
+  margin-top: 28px;
+}

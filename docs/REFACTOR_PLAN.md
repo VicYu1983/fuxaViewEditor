@@ -104,14 +104,14 @@ src/
     store/editorHistory.ts     # 既有，不動
     EditorProvider.tsx         # context：config, models, modifiedViewIds, dispatch, messageApi
     hooks/
-      useFuxaHost.ts           # postMessage 協定、同步狀態、handleSyncToFuxa
-      useConfigEdit.ts         # 統一「try → parse → dispatch → 訊息」樣板
-      usePreview.ts            # 預覽 debounce、snapshot、stale 判斷
-      useWorkspaceSelectors.ts # 呼叫 domain 的衍生資料（tags、devices…）
+      useFuxaHost.ts           # postMessage 協定、同步狀態、handleSyncToFuxa（已建立）
+      useConfigEdit.ts         # 統一「try → parse → dispatch → 訊息」樣板（僅 commitDocumentEdit，見第 11 節）
+      usePreview.ts            # 預覽 debounce、snapshot、stale 判斷（已建立）
     lib/
-      browserSvgDeps.ts        # 一處組裝 { Parser, serialize, crypto }
-      errorMessage.ts          # getErrorMessage(error)
+      browserSvgDeps.ts        # createBrowserSvgDeps()：組裝瀏覽器的 { Parser, serialize, crypto }（已建立）
       measureSvgBounds.ts      # 目前在 App.tsx 的 DOM 量測
+  （註：getErrorMessage 位於 domain/shared/getErrorMessage.ts，因 domain 需要依賴它；不另建 app/lib/errorMessage.ts）
+  （註：useWorkspaceSelectors 已取消，衍生資料直接由 domain 函式計算。）
   ui/                          # 只放 React 元件（含各自的 state 與表單）
     layout/        AppHeader.tsx, ViewSidebar.tsx
     views/         ViewNameDialog.tsx, ViewSettingsModal.tsx
@@ -128,10 +128,12 @@ src/
     alarms/readTagAlarms.ts    # alarmSettingsByTag、alarmInversionByTag
     devices/readModbusDevices.ts   # modbusDevices、managedDeviceTags、設備表單初值
   features/                    # 維持 React-free
-    views/createViewModel.ts   # 新增空白 View 的 model 初值、改名同步標題
+    views/createViewModel.ts   # 新增空白 View 的 model 初值（已建立）
+    views/syncViewTitleText.ts # 改名時同步 view_title 的 SVG 文字（已建立）
+    preview/createPreviewState.ts # 預覽狀態組裝，SVG runtime 由參數注入（已建立）
     views/moveComponentsBetweenViews.ts
     devices/findTagReferences.ts   # 刪除 Tag 前的引用掃描
-  styles/                      # App.css 依元件拆分
+  styles/                      # 依主題拆分（index.css 匯入順序即層疊順序）
 ```
 
 預期結果：`App.tsx` 由 4848 → 約 200 行；最大的新元件（`DevicesTab`）預估 400–500 行，仍需視情況再拆。
@@ -156,7 +158,7 @@ commit({
 
 ## 6. 執行階段
 
-每階段獨立 commit，結束時必須通過 `npx tsc -b --pretty false`、`npx vitest run`、`npx eslint .`；階段 2 起加上第 7 節手動煙霧測試。任一階段出現行為差異就回退該 commit，不往下做。
+每階段獨立 commit，結束時必須通過 `npx tsc -b --pretty false`、`npx vitest run`、`npx eslint src tests`（實際執行範圍；專案 eslint 設定涵蓋的目錄即此範圍）；階段 2 起加上第 7 節手動煙霧測試。任一階段出現行為差異就回退該 commit，不往下做。
 
 ### 階段 0：安全網（半天）
 - 確認 commit 基準與驗證數字（已完成：232 測試）。
@@ -193,7 +195,7 @@ commit({
 - 風險：中。留意 `handleFuxaMessage` 的 effect 依賴 `[messageApi]`，抽出後需維持相同依賴語意（目前內部只呼叫穩定的 setter 與 `replaceWorkspace`）。
 
 ### 階段 5：收尾
-- `App.css` 依元件拆分到 `src/styles/`（或改 CSS Module，需使用者決定）。
+- `App.css` 依主題拆分到 `src/styles/`（已完成；採純 CSS 拆分，未改 CSS Module，類別名稱不變；建置 CSS 與拆分前逐位元組相同）。
 - README 補「流程索引」（功能 → 檔案），並確認／修正與現況不符的段落。
 - 驗收：全部驗證通過；`npx vite build --outDir <暫存目錄>` 成功；README 索引可用。
 
@@ -237,4 +239,63 @@ commit({
 2. 新目錄命名：元件放 `src/ui/`，hooks 放 `src/app/hooks/`，是否接受？
 3. CSS：單純依元件拆檔，還是改用 CSS Module？
 4. 做到哪個階段為止（建議先 0＋1，再評估是否繼續）？
-5. 「批次移動 Tag」目標設備已有相同位址時是否阻擋（先前未確認；與重構無關，但會影響 `moveDeviceTags.ts` 的測試）。
+5. 「批次移動 Tag」目標設備已有相同位址時是否阻擋（已決定：以 `memaddress + address` 判斷衝突並阻擋；與重構無關，但會影響 `moveDeviceTags.ts` 的測試）。
+6. CSS 拆分方式（第 10 節第 3 項）：目前採純 CSS 拆分，待使用者確認是否接受。
+
+## 11. 完成狀態與待辦（2026-11-04 盤點）
+
+### 已完成
+- 階段 0–5 的主要 commit 已完成，最後一筆為 `364f563`（Phase 5）。
+- `App.tsx` 為 1984 行（不追求 < 250 行，已由使用者同意）；`useState` 數量待重新盤點：2026-11-04 grep 顯示 `App.tsx` 仍有約 26 處 `useState`（含多行宣告），與先前記錄的 13 個不符，階段 3 的「< 20」目標尚未達成。
+- `isRecord` 只剩 `domain/shared/isRecord.ts` 一份定義。
+- `dispatchEditor(` 只出現在 hooks／provider 內。
+- `ui/`、`styles/` 拆分與 README 流程索引已完成。
+- `app/lib/parseUpdatedConfig.ts`、`measureSvgBounds.ts` 已建立。
+
+### 已修正（原違反計畫的約束）
+- `usePreview.ts` 與 `useFuxaHost.ts` 已搬到 `app/hooks/`（commit `2c8d37b`）。`features/preview/createPreviewState.ts` 改以參數注入 SVG runtime，`features/` 不再依賴 `app/`。
+
+### 第 5 節項目的處理結果
+- `app/lib/browserSvgDeps.ts`（`createBrowserSvgDeps`）已建立（commit `2c8d37b`）。App.tsx 中完整的 `{ Parser, serialize, crypto }` 組裝已全部改用此函式（commit `6e5379d`）。唯一保留的直接用法為 App.tsx 中位置參數的 `(doc) => new XMLSerializer()…`，行為相同，不另改。
+- `features/views/createViewModel.ts` 已建立（commit `6e5379d`），並新增 `features/views/syncViewTitleText.ts` 處理改名時的標題 SVG 同步。
+- `getErrorMessage` 維持在 `domain/shared/`（domain 需要它），不另建 `app/lib/errorMessage.ts`。
+- `useWorkspaceSelectors.ts` 取消：衍生資料直接由 domain 函式計算，沒有需要集中的 hook。
+
+### 尚未完成
+- 第 3.3 節與階段 4 的 try/parse/dispatch 樣板，目前僅有 `commitDocumentEdit`。全面改用 `useConfigEdit` 涉及 30+ 處，行為差異風險高（例如 `edit` 對相同模型 no-op、`document-edit` 寫入歷史與 dirty 旗標的差異）。**本輪暫緩**，待使用者決定是否要分批進行，並在瀏覽器煙霧測試通過後再做。
+- 階段 1 要求的新增測試 ≥ 15 個，以及 `domain/`、`features/` 抽出的純函式是否皆有 node 單元測試，尚未逐項核對。
+- 本輪新增測試：`tests/features/views/createViewModel.test.ts`、`tests/features/views/syncViewTitleText.test.ts`（全套 303 測試通過）。
+
+
+### 風險與未驗證項目
+- 第 7 節的 10 項手動煙霧測試尚未執行。
+- 第 4 節第 2 點：Form 與 `destroyOnHidden` 的組合，開啟前 `setFieldsValue` 可能無效，單元測試無法偵測。
+- 第 7 節第 10 項：重新開啟專案管理時，搜尋與選取狀態是否重置，仍需瀏覽器確認。
+- 第 6 節的驗證指令已更新為 `npx eslint src tests`。
+
+### 文件待辦
+- README 的「範圍與注意事項」已改寫，不再使用計畫用語。
+- README 與現況的流程描述（開啟 JSON／清空專案 vs. FUXA 宿主同步）尚未逐段核對（第 3.5 節）。
+
+## 12. 剩餘優化的評估與暫緩記錄（2026-11-04）
+
+評估標準：對「之後新增功能」的開發成本與風險是否有明顯幫助。結論：目前沒有任何一項是「必須現在做」；下列項目一律暫緩，待實際需要時再評估。
+
+| 項目 | 對新功能的幫助 | 成本／風險 | 判定 |
+|---|---|---|---|
+| A. `useConfigEdit` 全面取代 30+ 處樣板（§3.3、階段 4） | 中。新 handler 已可直接使用現有 `useConfigEdit`，不必等全面替換 | 中高。`edit` 與 `document-edit` 的歷史與 dirty 語意不同，缺瀏覽器煙霧測試 | 暫緩。新 handler 直接用 hook，舊樣板隨修改順手替換 |
+| B. 階段 3 state 下放（`tagCreate*`、`tagAlarm*`、`batch*`、設備選取等） | 中。能降低 App 的耦合，但目前功能穩定 | 高。Form 與 `destroyOnHidden` 的行為偏移（§4.2），且需先完成 §7 煙霧測試 | 暫緩。新增涉及某個分頁的功能時，再就該分頁評估 |
+| C. 階段 2 靜態 UI 拆分（Modal JSX 外移） | 低到中。grep 未發現 `<Modal` 仍留在 `App.tsx`，此部分實際上已大致完成 | 低（已完成部分） | 不另做。以 grep 再確認即可 |
+| D. 階段 1 衍生資料與純邏輯搬到 `domain/` 並補測試（`modbusDevices`、`managedDeviceTags` 仍在 `App.tsx` 約 L290–304；`buildTagViewOptions` 已在 `domain/tags/tagViews.ts`，UI 只保留 `useMemo` 包裝） | **高**。純函式可單元測試，之後改這些邏輯不必碰 UI | 低。純函式，輸入輸出可逐一對照 | **只做與平面圖相關的部分**：`tagViewOptions` 已完成搬移；`modbusDevices`／`managedDeviceTags` 等平面圖需要從設備選 Tag 時再搬 |
+| E. jsdom ＋ `@testing-library/react`（§10 第 1 項、階段 0） | **高**。目前 UI 零自動化覆蓋，之後每個 UI 功能都要靠手動測試 | 中。新增依賴，需使用者同意；`package.json` 與 `yarn.lock` 會變動 | 待使用者決定。建議在下一個 UI 功能開始時再提出 |
+| F. §7 瀏覽器煙霧測試（10 項） | 高，但屬驗證而非優化 | 低 | 任何高風險批次（B、A）之前必做。目前尚未執行 |
+| G. CSS Module 取代純 CSS 拆分（§10 第 3 項） | 低。現行拆分已運作，且建置 CSS 逐位元組相同 | 中。需改類別名稱 | 不做。建議在 §10 關閉此項 |
+| H. `Form` 與 `destroyOnHidden` 的 `setFieldsValue` 時序（§4.2、§11） | 只影響 B 之類的搬遷 | 無獨立成本 | 隨 B 一併評估 |
+| I. README 流程描述與現況的核對（§3.5） | 中。文件漂移會誤導之後的開發 | 低 | 下一次修改對應流程時一併核對 |
+| J. 階段 1 的「新增測試 ≥ 15」與各純模組測試覆蓋核對 | 中。已核對樓層相關純函式皆有測試；唯一缺口 `domain/tags/floor.ts` 已於本輪補上 `tests/domain/tagFloor.test.ts` | 低 | 已完成（樓層範圍）。其餘模組覆蓋隨需要再核對 |
+
+### 近期建議順序（只在需要時執行）
+1. 有新的 View／Tag 相關功能時，先做 D 與 J。
+2. 需要對 UI 做自動化測試時，提出 E。
+3. 執行 F，確認現況正常後，才考慮 A 或 B。
+4. I 與 G 不急，隨時可以關閉或延後。
