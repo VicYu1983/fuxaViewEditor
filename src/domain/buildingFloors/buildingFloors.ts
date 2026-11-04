@@ -17,13 +17,14 @@ export function parseBuildingFloorName(
 
   const system = viewName.slice(0, separator)
   const floorLabel = viewName.slice(separator + 1)
+  const basementMatch = /^B(\d+)F$/i.exec(floorLabel)
   const match = /^(\d+)(F|樓)$/i.exec(floorLabel)
-  if (!system.trim() || !match) return null
+  if (!system.trim() || (!match && !basementMatch)) return null
 
   return {
     system,
     floorLabel,
-    floorNumber: Number(match[1]),
+    floorNumber: basementMatch ? -Number(basementMatch[1]) : Number(match?.[1]),
   }
 }
 

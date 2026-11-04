@@ -143,6 +143,86 @@ describe('building floor buttons', () => {
     expect(buildingFloorButtonsNeedSync(project)).toBe(false)
   })
 
+  it('uses the extra index to repair buttons after FUXA strips SVG and item markers', () => {
+    const project = config([
+      ['floor-2', '排風系統/2F'],
+      ['floor-3', '排風系統/3F'],
+    ])
+    sync(project)
+    const views = project.hmi.views as Array<{
+      id: string
+      svgcontent: string
+      items: Record<string, {
+        name: string
+        property?: { events?: Array<{ actparam: string }> }
+      }>
+    }>
+    const originalIds = Object.keys(views[0]!.items)
+    const settings = project.extra as {
+      fuxaSetting: { buildingFloorButtons: Record<string, Record<string, string>> }
+    }
+
+    expect(settings.fuxaSetting.buildingFloorButtons['floor-2']).toEqual({
+      'floor-2': originalIds[0],
+      'floor-3': originalIds[1],
+    })
+    for (const view of views) {
+      view.svgcontent = view.svgcontent
+        .replaceAll(` data-name="${BUILDING_FLOOR_BUTTON_NAME}"`, '')
+        .replaceAll(/ data-building-floor-target-id="[^"]*"/g, '')
+        .replaceAll(/ data-building-floor-active="[^"]*"/g, '')
+      for (const item of Object.values(view.items)) item.name = 'button_1'
+    }
+
+    expect(buildingFloorButtonsNeedSync(project)).toBe(true)
+    sync(project)
+
+    expect(Object.keys(views[0]!.items)).toEqual(originalIds)
+    expect(Object.values(views[0]!.items).map((item) => item.name))
+      .toEqual([BUILDING_FLOOR_BUTTON_NAME, BUILDING_FLOOR_BUTTON_NAME])
+    expect((views[0]!.svgcontent.match(/type="svg-ext-html_button"/g) ?? []).length).toBe(2)
+    expect(Object.values(views[0]!.items).map((item) => item.property?.events?.[0]?.actparam))
+      .toEqual(['floor-2', 'floor-3'])
+    expect(buildingFloorButtonsNeedSync(project)).toBe(false)
+  })
+
+  it('places floor buttons below the View title label', () => {
+    const project = config([
+      ['floor-1', '排風系統/1F'],
+      ['floor-2', '排風系統/2F'],
+    ])
+    const views = project.hmi.views as Array<{
+      id: string
+      items: Record<string, unknown>
+      svgcontent: string
+    }>
+    for (const view of views) {
+      view.items.title = { id: 'title', name: 'view_title' }
+      view.svgcontent = view.svgcontent.replace(
+        '</g></svg>',
+        '<text id="title" y="40" font-size="14">排風系統/1F</text></g></svg>',
+      )
+    }
+
+    sync(project)
+
+    const doc = new DOMParser().parseFromString(views[0]!.svgcontent, 'image/svg+xml')
+    const buttonRect = doc.querySelector(`[data-name="${BUILDING_FLOOR_BUTTON_NAME}"] rect`)
+    const buttonForeignObject = doc.querySelector(
+      `[data-name="${BUILDING_FLOOR_BUTTON_NAME}"] foreignObject`,
+    )
+    expect(Number(buttonRect?.getAttribute('y'))).toBeGreaterThan(40)
+    expect(buttonRect?.getAttribute('y')).toBe(buttonForeignObject?.getAttribute('y'))
+
+    views[0]!.svgcontent = views[0]!.svgcontent.replace('y="40"', 'y="80"')
+    sync(project)
+    const updatedDoc = new DOMParser().parseFromString(views[0]!.svgcontent, 'image/svg+xml')
+    const repositionedRect = updatedDoc.querySelector(
+      `[data-name="${BUILDING_FLOOR_BUTTON_NAME}"] rect`,
+    )
+    expect(Number(repositionedRect?.getAttribute('y'))).toBeGreaterThan(80)
+  })
+
   it('adopts the sample project buttons and preserves its floor-plan image paths', () => {
     const project = JSON.parse(readFileSync(
       resolve(process.cwd(), '..', 'testjson', '測試樓層demo.json'),

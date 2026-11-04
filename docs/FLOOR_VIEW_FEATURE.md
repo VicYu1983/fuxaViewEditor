@@ -23,11 +23,11 @@
 ## 3. 樓層判斷規則
 
 - view 名稱格式：`<系統>/<樓層>`，以第一個 `/` 切分。
-- 樓層部分須符合：`^\d+F$`（不分大小寫）或 `^\d+樓$`。
-- 例：`排風系統/2F`、`排風系統/3樓` 符合；`排風系統/FAN`、`MainView` 不符合。
+- 樓層部分須符合：`^\d+F$`（不分大小寫）、`^\d+樓$` 或 `^B\d+F$`（不分大小寫）。
+- 例：`排風系統/2F`、`排風系統/3樓`、`排風系統/B1F` 符合；`排風系統/FAN`、`MainView` 不符合。
 - 系統名稱為 `/` 之前的字串，同系統名稱的樓層 view 屬於同一組。
 - 同系統只有一個樓層時，不產生樓層按鈕。
-- 排序：依樓層數字由小到大（`1F`、`2F`、`3F`）。`B1` 之類的地下樓層不在第一階段範圍。
+- 排序：地下樓層先依樓層數字由大到小（`B2F`、`B1F`），再接地面樓層由小到大（`1F`、`2F`、`3F`）。
 
 ## 4. FUXA 資料格式（依範例 JSON）
 
@@ -54,13 +54,14 @@
 ### 5.1 純函式（`src/domain/buildingFloors/`）
 
 - `parseBuildingFloorName(viewName)`：回傳 `{ system, floorLabel, floorNumber }` 或 `null`。
-- `groupBuildingFloors(views)`：回傳 `Map<system, 樓層清單（已排序，含 View id）>`。
-- `syncBuildingFloorButtons(...)`：依樓層清單產生按鈕的 `items` 項目與 SVG 節點。沿用範例的 80×32 尺寸、上方位置與間距；目前樓層按鈕以藍底白字標示。
+- `groupBuildingFloors(views)`：回傳 `Map<system, 樓層清單（已排序，含 View id）>`；地下樓層排在地面樓層之前。
+- `syncBuildingFloorButtons(...)`：依樓層清單產生按鈕的 `items` 項目與 SVG 節點。沿用範例的 80×32 尺寸與間距；若有 View 標題標籤，按鈕列移至標籤下方；目前樓層按鈕以藍底白字標示。
 - `syncNavigationItems(config)`：每個系統一筆，更新或新增，不動使用者自訂的其他項目。
 
 ### 5.2 重建策略
 
 - 樓層按鈕以專用 `data-name`（`fuxa_building_floor_button`）標記，仿照現有 `FLOOR_ARTIFACT_NAMES` 的做法。
+- 同時將每個 View 的樓層按鈕 id 索引保存於 `extra.fuxaSetting.buildingFloorButtons`，供 FUXA 往返匯入後 SVG 自訂標記或項目名稱遭移除時，仍可安全辨識並修復按鈕。
 - 每次匯出時檢查樓層按鈕是否與 View 清單一致；需要更新時先移除受管按鈕再重建，避免殘留與重複。
 - 不可使用 `shape_1` 之類通用名稱，避免誤刪使用者自己的元件。
 
@@ -96,7 +97,7 @@
 ## 8. 不在第一階段範圍
 
 - 樓層平面圖上傳，以及平面圖路徑的編輯欄位（由使用者在 FUXA 中處理）。
-- 地下樓層（`B1`）與非數字樓層名稱。
+- 非數字樓層名稱與不符合 `B<number>F` 格式的地下樓層名稱。
 - 程式識別字改名。
 - 在 `extra` 中保存樓層設定（因為不做平面圖欄位，目前不需要）。
 
