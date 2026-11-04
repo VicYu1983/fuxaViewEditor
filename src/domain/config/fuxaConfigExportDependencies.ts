@@ -79,6 +79,8 @@ function reserveExistingIds(
     if (isRecord(view.items)) {
       for (const id of Object.keys(view.items)) ids.add(id)
     }
+    // FUXA 的空白 View 的 svgcontent 可以是空字串，沒有任何 SVG ID 需要保留
+    if (!view.svgcontent.trim()) continue
     let doc: XMLDocument
     try {
       doc = parseSvg(view.svgcontent, Parser)

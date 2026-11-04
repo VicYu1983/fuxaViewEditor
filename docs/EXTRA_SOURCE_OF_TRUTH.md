@@ -54,6 +54,7 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 | `floorGroupFrames` | `FloorGroupFrameSettings` | `layout/floorGroupFrame.ts` | 群組框樣式 |
 | `floorFrameLayoutVersion` | `1` | `layout/floorGroupFrame.ts` | 群組框排版演算法版本（不是資料版本） |
 | `floorGroupArtifacts` | `{ [viewId]: { [floorKey]: { titleId, frameId, frameShapeId } } }` | `layout/floorGroupArtifacts.ts` | 群組標題與底框的 SVG id 索引 |
+| `viewComponents` | `{ [viewId]: StoredViewComponent[] }` | `views/viewComponents.ts` | 每個 View 的受管 Tag 元件定義（Phase 4；不含位置） |
 | `buildingFloorButtons` | `{ [viewId]: { [targetViewId]: buttonItemId } }` | `buildingFloors/buildingFloorButtons.ts` | 樓層按鈕的 `items` id 索引 |
 | `floorPlanViewIds` | `string[]` | `layout/floorPlanViews.ts` | 開啟「平面圖 View」的 View |
 | `floorPlanTagOffsets` | `{ [viewId]: { [tagId]: { dx, dy } } }` | `layout/floorPlanViews.ts` | 平面圖 Tag 的手動偏移 |
@@ -140,7 +141,7 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 | 樓層按鈕（SVG 節點與 `items` 項目） | 工具（產物） | 先移除再依規格重建，id 優先沿用索引 |
 | 群組標題、群組底框 | 工具（產物） | 同上；平面圖 View 不產生 |
 | Tag 元件位置（含平面圖偏移） | 工具（產物） | 由 `layoutFloorViewComponents` 計算並寫入 |
-| Tag 元件本身（`tc_<seq>`）的樣板與屬性 | **目前仍由 SVG／`items` 還原**（Phase 4 才處理） | 維持現行做法 |
+| Tag 元件（`tc_<seq>`）的樣板與屬性 | 工具（定義存於 `extra.fuxaSetting.viewComponents`，SVG 為產物） | 以 `extra` 的定義為主重建；舊檔沒有定義時由 SVG 還原（Phase 4） |
 | 使用者自行加入的元件、底圖、`items` | 使用者／FUXA | 原樣保留，不碰 |
 | `layout.navigation.items` 中使用者自訂項目 | 使用者 | 原樣保留，只管理工具建立的項目 |
 
@@ -160,7 +161,7 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 ### 5.2 版本
 
 - 目前 `fuxaSetting.version` 已存在於既有檔案（值為 `1`），但語意不明。
-- 規格：**把 `fuxaSetting.version` 定義為資料結構版本**，`1` 代表「目前這份結構」，因此既有檔案不需遷移。
+- 規格：**把 `fuxaSetting.version` 定義為資料結構版本**。`1` 為 Phase 0–3 之前的結構；Phase 4 新增 `viewComponents`，升為 **`2`**（目前版本）。版本 1 的檔案不需遷移，缺少 `viewComponents` 時沿用 SVG 還原。
 - 之後任何不相容的結構改動，必須：`version` +1、新增遷移函式、新增含舊版 fixture 的測試。
 - `floorFrameLayoutVersion` 維持現狀，它是排版演算法版本，與資料版本無關。
 - 缺少 `version` 的檔案視為版本 1（舊檔），匯出時補上。
@@ -201,7 +202,7 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 
 - 樓層按鈕：`extra.buildingFloorButtons[viewId]` 的值，加上 `items` 內 `name === 'fuxa_building_floor_button'` 的 key。
 - 群組標題與底框：`extra.floorGroupArtifacts[viewId]` 與 `items` 內 `name` 為 `fuxa_floor_section_title`／`fuxa_floor_section_frame` 的 key。
-- Tag 元件：維持現行（Phase 4 前不變）。
+- Tag 元件：以 `extra.fuxaSetting.viewComponents` 保存的 `shapeId`、`labelId`、`alarmShapeId`、多狀態圖示 id 與內部元素 id 識別（Phase 4）。
 
 `data-name`、`data-building-floor-*`、`data-floor-group` 仍會**寫入**（方便人工閱讀與除錯），但**不得**作為判斷依據讀回（P3）。
 唯一例外是舊檔遷移（見 10 節），且必須標註。
@@ -374,7 +375,41 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 - `viewTitleLabel`、`siteNameLabel` 從 SVG 取預設值的分支明確標示為遷移。
 - 風險：低到中。
 
-### Phase 4：Tag 元件的資料來源（尚未決定，見 12 節 D3）
+### Phase 4：Tag 元件的資料來源
+
+**狀態：已完成（2026-11-04）。** 範圍與行為於開發前經使用者確認（D3、D7）。
+
+#### 設計
+
+- **保存**：每次匯出時，把每個 View 的受管 Tag 元件定義存入 `extra.fuxaSetting.viewComponents[viewId]`（陣列，按顯示順序）。由 [viewComponents.ts](../src/domain/views/viewComponents.ts) 的 `saveViewComponents` 負責，格式為 `ManagedComponentRecord` 去掉 `key`、`managed`：`seq`、`tagId`、`label`、`template`、`palette`、`shapeId`、`labelId`、`shapeInnerIds`，以及依樣板而定的 `iconId`、`normalIconId`、`alarmIconId`、`alarmShapeId`、`invertIconState`、`multiIconSetId`、`multiStateBindings`。**位置不保存**，仍由格線與平面圖偏移每次計算。只保存受管元件；既有的 FUXA 原生 Tag 元件（只能移動）不屬於此範圍。沒有元件的 View 不寫入鍵。
+- **載入**（`buildViewEditorModels` → `reconcileManagedComponents`）：
+  1. 有保存的定義：以定義為主，與從 SVG 還原的結果合併。
+  2. 定義在 SVG 找不到（例如在 FUXA 被刪除或弄丟）：**仍然保留**，匯出時重建（D7 決議：刪除要在工具內進行）。
+  3. 對應的 Tag 已不存在：自動移除該元件並在畫面顯示警告；匯出時一併從 View 清除。多狀態元件任一綁定的 Tag 不存在即整個移除。
+  4. SVG 還原到、但沒有定義的元件（舊檔或工具外新增）：照舊保留。
+  5. 沒有保存的定義（舊檔）：完全沿用 SVG 還原結果，第一次匯出時寫入定義（遷移）。
+- **重建條件**：SVG 與保存的定義不一致（缺少元件、樣板／圖示／綁定／標籤不同）時，`componentsNeedRebuild` 為 true，匯出時即使使用者沒有修改該 View 也會重新套用（`findViewIdsNeedingReapply`，與舊版 Switch、平面圖殘留標題併為同一判斷）。`undefined`、空字串與 `false` 視為相同，避免誤判。
+- **受損元件不會變成「既有 Tag」**：已保存元件的 id（含 label、alarm、多狀態圖示、內部元素）會預先保留，`readMovableTags` 不會把 FUXA 弄壞的殘骸當成可移動的既有 Tag，否則重建後會重複。
+- **版本**：`fuxaSetting.version` 由 1 升為 **2**。舊版工具開啟新檔時會顯示「版本可能過舊」（D4），避免舊版工具改了 SVG 卻沒更新 `viewComponents`，導致新版工具載入時以過期定義覆蓋。版本 1 的舊檔不需遷移。
+- **附帶修正**：FUXA 空白 View 的 `svgcontent` 可以是空字串，原本會讓「檢查既有 SVG ID」拋出「無法解析」，使整個專案無法匯出任何修改；現在空字串視為沒有任何 SVG ID。
+
+#### 與原計畫的差異
+
+- 原計畫以 `tagId` 為鍵；實際以 View 為單位的陣列，因為同一個 Tag 可以在同一 View 出現多次，且元件以 `shapeId` 為唯一識別。
+- 原計畫的「Tag 元件」不含樣板之外的使用者客製欄位；`applyModelToView` 本來就會保留原有 `items` 的未知欄位，行為不變。
+
+#### 測試
+
+- [viewComponents.test.ts](../tests/domain/viewComponents.test.ts)：保存與清除、多狀態與圖示配對往返、格式錯誤與重複項目、定義不完整時拒絕保存、`reconcileManagedComponents` 的各種情況（舊檔、一致、定義優先、SVG 缺少、SVG 獨有、Tag 不存在、多狀態任一 Tag 不存在）。
+- [componentRoundTrip.test.ts](../tests/domain/componentRoundTrip.test.ts)：保存定義與版本、新匯出不需重建、重新套用所有 View 後不需重建、FUXA 弄丟元件後由 extra 重建且 id 相同（INV-1）、重建後再次匯出不再變動（INV-2）、受損元件不會變成既有 Tag、Tag 不存在時移除並警告、舊檔沿用 SVG、真實專案（34 個元件）遷移穩定。
+- 一次性驗證（未納入測試套件，因為檔案過大）：5 個真實專案（66～158 個受管元件，含多狀態圖示與圖示配對，最大 30 MB）載入後重新套用所有含元件的 View，元件數量不變、沒有誤判重建、沒有警告；其中 3 個再模擬 FUXA 弄丟第一個元件，匯出後完整還原。
+
+#### 已知限制
+
+- 在 FUXA 內對受管元件的修改（例如改標籤文字、換圖示）在下次匯出時會被 `extra` 的定義覆蓋。這是 P1／P8 的直接結果，需在使用說明註明；FUXA 內為這些元件新增的自訂屬性（`items` 的未知欄位）會保留。
+- 在工具外（FUXA 內）複製出來的受管元件不會被保存定義，需在下次匯出時才寫入。
+
+原評估（保留供對照）：
 
 目前 `readManagedComponents` 從 `items` 與 `data-fuxa-*` 還原樣板、圖示、多狀態。這與本文件的原則相反，但範圍大、牽涉編輯器所有功能。
 建議在 Phase 0–3 完成並穩定後，再單獨立案評估：是否把元件定義也存到 `extra`（以 `tagId` 為鍵），讓 SVG 完全成為產物。
@@ -437,17 +472,18 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 | 內部 id 規則改變導致舊檔第一次匯出有大量差異 | 版本控制 diff 變大 | 只發生一次；文件與 PR 說明註明 |
 | jsdom 與真實瀏覽器序列化不同 | 測試通過但實際輸出有前綴 | 9.1 已知限制；人工檢查；評估瀏覽器冒煙測試 |
 | Phase 1 搬移 9 個模組時誤改行為 | 匯出內容改變 | Phase 1 要求輸出逐位元相同；逐模組提交 |
-| Tag 元件仍由 SVG 還原（Phase 4 前） | 同類問題可能出現在 Tag 元件 | 已知風險；Phase 4 另行評估；先以往返模擬測試覆蓋現有路徑 |
+| Tag 元件在 FUXA 內被改動後，下次匯出會被 `extra` 的定義覆蓋 | 使用者困惑 | 已知限制（見 Phase 4）；在使用說明註明「Tag 元件請在 View Editor 內修改」 |
 | 規格比對的容差設定錯誤 | 無限重建或漏重建 | 規格比對有獨立單元測試；連續匯出的冪等測試（INV-2） |
 
 ## 12. 決議事項（2026-11-04 已確認）
 
 | 編號 | 問題 | 決議 |
 |---|---|---|
-| D1 | 資料版本欄位 | 沿用 `fuxaSetting.version`，`1` 代表目前結構，既有檔案不需遷移 |
+| D1 | 資料版本欄位 | 沿用 `fuxaSetting.version`；Phase 4 起為 `2`，版本 1 的檔案不需遷移 |
 | D2 | 按鈕內部 id 是否由外層 id 決定（5.4） | 是，以取得可重複的輸出 |
-| D3 | Tag 元件是否也改為以 `extra` 為來源（Phase 4） | 先完成 Phase 0–3，穩定後再單獨評估 |
+| D3 | Tag 元件是否也改為以 `extra` 為來源（Phase 4） | 是，Phase 0–3 完成後執行（2026-11-04） |
 | D4 | `version` 高於工具支援版本時 | **不阻擋編輯與匯出，但提示「工具版本可能過舊」**；行為細節見 5.2 |
+| D7 | `extra` 有、SVG 沒有的 Tag 元件（Phase 4） | **以 `extra` 為主**：元件仍存在，匯出時重建；刪除要在工具內進行；對應 Tag 已不存在的元件自動移除並提示 |
 | D5 | 是否引入真實瀏覽器的冒煙測試 | Phase 2 完成後評估成本 |
 | D6 | 使用者在 FUXA 內修改樓層按鈕外觀是否保留 | 不保留（P1／P8），在使用說明註明 |
 

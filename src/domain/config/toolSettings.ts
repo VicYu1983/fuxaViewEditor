@@ -2,7 +2,7 @@ import { isRecord } from '../shared/isRecord'
 
 // extra.fuxaSetting 的唯一存取入口。設計見 docs/EXTRA_SOURCE_OF_TRUTH.md 第 5 節。
 export const TOOL_SETTINGS_KEY = 'fuxaSetting'
-export const TOOL_SETTINGS_VERSION = 1
+export const TOOL_SETTINGS_VERSION = 2
 export const TOOL_SETTINGS_OUTDATED_MESSAGE
   = '此檔案由較新版本的工具產生，目前工具版本可能過舊，部分設定可能無法正確處理。'
 

@@ -77,8 +77,7 @@ import { FloorPlanViewCard } from './ui/view/FloorPlanViewCard'
 import { GridSettingsCard } from './ui/view/GridSettingsCard'
 import { ManagedComponentCard } from './ui/view/ManagedComponentCard'
 import {
-  findLegacySwitchViewIds,
-  findStaleFloorPlanViewIds,
+  findViewIdsNeedingReapply,
   needsVoiceBridgeUpdate,
   prepareFuxaConfigExport,
 } from './domain/config/prepareFuxaConfigExport'
@@ -242,6 +241,7 @@ function EditorWorkspace() {
   })
   const [modelErrors, setModelErrors] = useState<Map<string, string>>(new Map())
   const [unsupported, setUnsupported] = useState<Map<string, string[]>>(new Map())
+  const [modelWarnings, setModelWarnings] = useState<Map<string, string[]>>(new Map())
   const { models, modifiedViewIds } = editor
   const config = editor.document
   const normalizedProjectName = normalizeProjectName(projectName)
@@ -255,6 +255,7 @@ function EditorWorkspace() {
     resetEditor(editorModels.models, parsed)
     setModelErrors(editorModels.errors)
     setUnsupported(editorModels.unsupported)
+    setModelWarnings(editorModels.warnings)
     setTagAddSession((session) => session + 1)
     const firstView = parsed.views[0]
     setSelectedViewId(firstView ? firstView.id || firstView.key : '')
@@ -344,8 +345,7 @@ function EditorWorkspace() {
     const floorFrameLayoutNeedsUpdate = !hasCurrentFloorFrameLayout(config.rawConfig)
       && hasFloorFrames
     const exportDirty = isDirty
-      || findLegacySwitchViewIds([...models.values()]).size > 0
-      || findStaleFloorPlanViewIds([...models.values()]).size > 0
+      || findViewIdsNeedingReapply([...models.values()]).size > 0
       || floorFrameLayoutNeedsUpdate
       || deviceTagsNeedAddressSorting(config.rawConfig)
       || needsVoiceBridgeUpdate(config.rawConfig)
@@ -1986,6 +1986,14 @@ function EditorWorkspace() {
                         onOpenComponentMove={openComponentMoveDialog}
                         onRemoveComponent={handleRemoveComponent}
                       />
+                    {(modelWarnings.get(selectedView.id)?.length ?? 0) > 0 && (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        title="部分 Tag 元件已被移除"
+                        description={modelWarnings.get(selectedView.id)?.join('；')}
+                      />
+                    )}
                     {(unsupported.get(selectedView.id)?.length ?? 0) > 0 && (
                       <Alert
                         type="info"

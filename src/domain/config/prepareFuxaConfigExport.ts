@@ -10,6 +10,7 @@ import { saveFloorGroupFrameSettings } from '../layout/floorGroupFrame'
 import { saveFloorPlanTagOffsets, saveFloorPlanViewSettings } from '../layout/floorPlanViews'
 import type { FloorPlanTagOffsets } from '../layout/floorPlanViews'
 import { saveFloorGroupArtifacts } from '../layout/floorGroupArtifacts'
+import { saveViewComponents } from '../views/viewComponents'
 import { groupComponentsByFloor } from '../layout/floorLayout'
 import type { FloorTag } from '../layout/floorLayout'
 import { saveIconLibrary } from '../icons/iconLibrary'
@@ -67,6 +68,8 @@ export interface ExportViewModel extends GeneratedViewModel {
   floorFrameShapeIds: Record<string, string>
   originalFloorTitleIds?: Record<string, string[]>
   originalFloorFrameIds?: Record<string, string[]>
+  /** extra 保存的元件定義與 SVG 不一致，匯出時需重新套用此 View。 */
+  componentsNeedRebuild?: boolean
 }
 
 export interface PrepareFuxaConfigExportInput {
@@ -430,6 +433,17 @@ export function findStaleFloorPlanViewIds(
   return ids
 }
 
+// 需要在匯出時重新套用的 View：舊版 Switch、平面圖殘留群組標題、extra 的元件定義與 SVG 不一致
+export function findViewIdsNeedingReapply(
+  models: readonly ExportViewModel[],
+): Set<string> {
+  return new Set([
+    ...findLegacySwitchViewIds(models),
+    ...findStaleFloorPlanViewIds(models),
+    ...models.filter((model) => model.componentsNeedRebuild === true).map((model) => model.viewId),
+  ])
+}
+
 function viewsById(config: FuxaConfig, viewId: string): Record<string, unknown>[] {
   if (!Array.isArray(config.hmi.views)) return []
   return config.hmi.views.filter(
@@ -467,8 +481,7 @@ export function prepareFuxaConfigExport(
       && !needsVoiceBridgeUpdate(input.config)
       && !navigationNeedsSync(input.config)
       && !(dependencies.buildingFloorsNeedSync?.(input.config) ?? false)
-      && findLegacySwitchViewIds(input.models ?? []).size === 0
-      && findStaleFloorPlanViewIds(input.models ?? []).size === 0) {
+      && findViewIdsNeedingReapply(input.models ?? []).size === 0) {
     return {
       config: input.config,
       text: input.originalText,
@@ -499,8 +512,7 @@ export function prepareFuxaConfigExport(
 
   const requestedViewIds = new Set([
     ...(input.modifiedViewIds ?? []),
-    ...findLegacySwitchViewIds(models),
-    ...findStaleFloorPlanViewIds(models),
+    ...findViewIdsNeedingReapply(models),
   ])
   for (const viewId of requestedViewIds) {
     const model = models.find((candidate) => candidate.viewId === viewId)
@@ -557,6 +569,11 @@ export function prepareFuxaConfigExport(
     output,
     allViewIds,
     new Map(models.map((model) => [model.viewId, floorArtifactsForModel(model, tags)])),
+  )
+  saveViewComponents(
+    output,
+    allViewIds,
+    new Map(models.map((model) => [model.viewId, model.components])),
   )
 
   if (!dependencies.validate) {

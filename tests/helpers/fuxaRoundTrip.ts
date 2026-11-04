@@ -13,11 +13,18 @@ export function readFixture(name: string): string {
   return readFileSync(resolve(process.cwd(), 'tests', 'fixtures', name), 'utf8')
 }
 
+export interface ExportTextOptions {
+  /** 視為所有 View 都被使用者修改過（強制重新套用每個 View）。 */
+  modifyAll?: boolean
+  /** 視為只有這些 View 被使用者修改過。 */
+  modifyViewIds?: readonly string[]
+}
+
 /**
  * 模擬使用者載入後不做任何編輯就匯出（dirty 但沒有已修改的 View），
  * 與 App 在「樓層按鈕需要同步」時的路徑相同。
  */
-export function exportText(text: string): string {
+export function exportText(text: string, options: ExportTextOptions = {}): string {
   const parsed = parseFuxaConfig(text)
   const { models } = buildViewEditorModels(parsed.rawConfig, DOMParser, () => {
     throw new Error('jsdom 無法量測 SVG 邊界')
@@ -33,9 +40,42 @@ export function exportText(text: string): string {
     sourceFormat: parsed.sourceFormat,
     dirty: true,
     models: [...models.values()],
-    modifiedViewIds: new Set(),
+    modifiedViewIds: options.modifyAll
+      ? new Set(models.keys())
+      : new Set(options.modifyViewIds ?? []),
     tags: buildTagIndex(parsed.rawConfig),
   }, dependencies).text
+}
+
+/** 以與匯出相同的方式載入編輯模型（jsdom 無法量測既有元件，會被略過）。 */
+export function loadModels(text: string) {
+  return buildViewEditorModels(parseFuxaConfig(text).rawConfig, DOMParser, () => {
+    throw new Error('jsdom 無法量測 SVG 邊界')
+  })
+}
+
+/**
+ * 模擬 FUXA 弄丟某個受管 Tag 元件：從 SVG 與 items 移除該元件（名稱為 tc_N）及其 label、alarm 等附屬項目。
+ */
+export function removeManagedComponent(text: string, viewId: string, name: string): string {
+  const config = JSON.parse(text) as { hmi: { views: Array<Record<string, unknown>> } }
+  const view = config.hmi.views.find((candidate) => candidate.id === viewId)
+  if (!view) throw new Error(`找不到 View ${viewId}`)
+  const items = view.items as Record<string, { name?: string }>
+  const ids = Object.entries(items)
+    .filter(([, item]) => item.name === name || item.name?.startsWith(`${name}_`))
+    .map(([id]) => id)
+  if (ids.length === 0) throw new Error(`View ${viewId} 沒有元件 ${name}`)
+
+  const doc = new DOMParser().parseFromString(String(view.svgcontent), 'image/svg+xml')
+  for (const id of ids) {
+    const node = Array.from(doc.getElementsByTagName('*'))
+      .find((element) => element.getAttribute('id') === id)
+    node?.parentNode?.removeChild(node)
+    delete items[id]
+  }
+  view.svgcontent = new XMLSerializer().serializeToString(doc)
+  return JSON.stringify(config, null, 4)
 }
 
 export interface FuxaRoundTripOptions {

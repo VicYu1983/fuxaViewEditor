@@ -11,6 +11,12 @@ import { readManaged } from '../svg/readManaged'
 import type { SvgParserConstructor } from '../svg/parseSvg'
 import type { ExportViewModel } from '../config/prepareFuxaConfigExport'
 import { isRecord } from '../config/validateFuxaConfig'
+import { buildTagIndex } from '../tags/index'
+import {
+  getStoredViewComponents,
+  reconcileManagedComponents,
+} from './viewComponents'
+import type { StoredViewComponents } from './viewComponents'
 
 export interface ExistingTagComponent extends FloorLayoutComponent {
   shapeId: string
@@ -21,9 +27,39 @@ export interface ViewEditorModelsResult {
   models: Map<string, ExportViewModel>
   errors: Map<string, string>
   unsupported: Map<string, string[]>
+  warnings: Map<string, string[]>
 }
 
 export type MeasureSvgBounds = (doc: XMLDocument, id: string) => Bounds
+
+function reservedComponentIds(stored: StoredViewComponents | undefined): Set<string> {
+  const ids = new Set<string>()
+  for (const component of stored?.components ?? []) {
+    for (const id of [
+      component.shapeId,
+      component.labelId,
+      component.alarmShapeId,
+      ...(component.multiStateBindings ?? []).map((binding) => binding.shapeId),
+      ...component.shapeInnerIds,
+    ]) {
+      if (id) ids.add(id)
+    }
+  }
+  return ids
+}
+
+function componentWarnings(pruned: readonly string[], invalidCount: number): string[] {
+  const warnings: string[] = []
+  if (pruned.length) {
+    warnings.push(
+      `下列元件對應的 Tag 已不存在，已自動移除，匯出時會一併從 View 清除：${pruned.join('、')}`,
+    )
+  }
+  if (invalidCount > 0) {
+    warnings.push(`有 ${invalidCount} 筆保存的元件定義格式無法辨識，已忽略。`)
+  }
+  return warnings
+}
 
 function hasSvgTransform(node: Element): boolean {
   let current: Element | null = node
@@ -124,7 +160,10 @@ export function buildViewEditorModels(
   const models = new Map<string, ExportViewModel>()
   const errors = new Map<string, string>()
   const unsupported = new Map<string, string[]>()
+  const warnings = new Map<string, string[]>()
   const duplicates = new Set<string>()
+  const tagIds = new Set(buildTagIndex(config).keys())
+  const tagExists = (tagId: string) => tagIds.has(tagId)
   const iconLibrary = getIconLibrary(config)
   const multiStateIcons = iconLibrary.filter(
     (icon): icon is MultiStateIconSet => icon.type === 'multi-state',
@@ -155,22 +194,29 @@ export function buildViewEditorModels(
       continue
     }
 
+    const stored = getStoredViewComponents(config, view.id)
     const parsed = readManaged(
       view,
       Parser,
       getFloorGroupArtifacts(config, view.id),
       iconAssetIds,
       multiStateIcons,
+      reservedComponentIds(stored),
     )
     if (parsed.error) {
       errors.set(view.id, parsed.error)
       continue
     }
 
+    const reconciled = reconcileManagedComponents(stored, parsed.records, tagExists)
+    const viewWarnings = componentWarnings(reconciled.pruned, stored?.invalidCount ?? 0)
+    if (viewWarnings.length) warnings.set(view.id, viewWarnings)
+
     const unsupportedItems = parsed.unmanaged.map((item) => `${item.name}：${item.reason}`)
+    const existingComponents = existingTagComponents(view, parsed, measureBounds, unsupportedItems)
     const components: ExportViewModel['components'] = [
-      ...parsed.records,
-      ...existingTagComponents(view, parsed, measureBounds, unsupportedItems),
+      ...reconciled.components,
+      ...existingComponents,
     ]
     const titles = { ...(parsed.floorTitles ?? {}) }
     const titleIds = structuredClone(parsed.floorTitleIds ?? {})
@@ -179,7 +225,8 @@ export function buildViewEditorModels(
     const model: ExportViewModel = {
       viewId: view.id,
       components,
-      originalComponents: structuredClone(components),
+      originalComponents: structuredClone([...reconciled.original, ...existingComponents]),
+      componentsNeedRebuild: reconciled.needsRebuild,
       grid: getViewGridSettings(config, view.id),
       floorGroupFrame: getFloorGroupFrameSettings(config),
       floorPlan: getViewFloorPlanSetting(config, view.id),
@@ -196,5 +243,5 @@ export function buildViewEditorModels(
     if (unsupportedItems.length) unsupported.set(view.id, unsupportedItems)
   }
 
-  return { models, errors, unsupported }
+  return { models, errors, unsupported, warnings }
 }
