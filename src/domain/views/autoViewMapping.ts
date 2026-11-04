@@ -25,11 +25,22 @@ export interface AutoViewGroup {
 export const DEFAULT_AUTO_VIEW_MAPPING: readonly AutoViewGroup[] = Object.freeze([
   {
     name: '消防系統',
-    keywords: ['消防', 'co2', '一氧化碳', '撒水', '泡沫', '火警', '滅火', '偵煙'],
+    keywords: [
+      '消防',
+      'co2',
+      'CO2',
+      '一氧化碳',
+      '排煙',
+      '馬達',
+      '泡沫',
+      '火警',
+      '滅火',
+      '偵煙',
+    ],
   },
   {
     name: '給排水系統',
-    keywords: ['泵', '污水', '汙水', '廢水', '水池', '水箱', '水位', '漏水'],
+    keywords: ['加壓','撒水','灑水','採水', '泵', '污水', '汙水', '廢水', '水池', '水箱', '水位', '漏水'],
   },
   {
     name: '風機系統',
@@ -45,11 +56,11 @@ export const DEFAULT_AUTO_VIEW_MAPPING: readonly AutoViewGroup[] = Object.freeze
   },
   {
     name: '門禁求救',
-    keywords: ['安全門', '磁簧', '門禁', '紅外線', '红外线', '入侵', '求救'],
+    keywords: ['壓扣', '安全門', '磁簧', '門禁', '紅外線', '红外线', '入侵', '求救'],
   },
   {
     name: '通訊狀態',
-    keywords: ['connection status', '通訊', '通讯', '離線', '离线'],
+    keywords: ['通訊', '通讯', '離線', '离线'],
   },
   {
     name: '照明系統',

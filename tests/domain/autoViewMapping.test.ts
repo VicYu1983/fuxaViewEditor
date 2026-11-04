@@ -185,7 +185,6 @@ describe('classifyTagsForViews', () => {
       makeTag('t1', 'B1F消防泵運轉'),
       makeTag('t2', 'B4F排風機啟動'),
       makeTag('t3', 'R3F安全門(NC)'),
-      makeTag('t4', '1 Connection Status'),
       makeTag('t5', 'R2F電梯機房溫度'),
       makeTag('t6', 'B4F廢水泵1運轉'),
       makeTag('t7', 'R3F水箱蓋(NC)'),
@@ -202,7 +201,6 @@ describe('classifyTagsForViews', () => {
       風機系統: ['t2'],
       電梯系統: ['t5'],
       門禁求救: ['t3'],
-      通訊狀態: ['t4'],
     })
     expect(result.unclassified).toEqual([])
   })
