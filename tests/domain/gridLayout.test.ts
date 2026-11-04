@@ -21,6 +21,7 @@ describe('Grid component layout', () => {
       labelPosition: 'above',
       labelOffset: 4,
       labelFontSize: 10,
+      iconScale: 100,
     })
 
     expect(placements).toHaveLength(5)
@@ -55,6 +56,7 @@ describe('Grid component layout', () => {
       gapY: 5,
       labelFontSize: 10,
       labelOffset: 0,
+      iconScale: 100,
     })
 
     expect(placements[0]?.shape.width).toBe(100)
@@ -65,7 +67,7 @@ describe('Grid component layout', () => {
   it('reserves the standard Switch dimensions for Coil controls', () => {
     const [placement] = layoutComponents([{ key: 'switch', template: 'switch' }], DEFAULT_GRID)
 
-    expect(placement?.shape).toMatchObject({ width: 50, height: 28 })
+    expect(placement?.shape).toMatchObject({ width: 75, height: 42 })
   })
 
   it('scales standard shapes by iconScale but keeps measured existing sizes', () => {
@@ -82,12 +84,12 @@ describe('Grid component layout', () => {
     expect(placements[3]?.shape).toMatchObject({ width: 100, height: 50 })
   })
 
-  it('falls back to 100% when iconScale is missing or invalid', () => {
+  it('falls back to the default iconScale when iconScale is missing or invalid', () => {
     const [placement] = layoutComponents([{ key: 'rect', template: 'rect' }], {
       iconScale: Number.NaN,
     })
 
-    expect(placement?.shape).toMatchObject({ width: 40, height: 40 })
+    expect(placement?.shape).toMatchObject({ width: 60, height: 60 })
   })
 })
 

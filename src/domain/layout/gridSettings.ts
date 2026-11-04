@@ -8,15 +8,15 @@ import {
 } from '../config/toolSettings'
 
 export const DEFAULT_GRID: Readonly<GridSettings> = Object.freeze({
-  columns: 4,
+  columns: 6,
   originX: 60,
   originY: 80,
-  gapX: 40,
+  gapX: 100,
   gapY: 40,
   labelPosition: 'above',
   labelOffset: 10,
   labelFontSize: 14,
-  iconScale: 100,
+  iconScale: 150,
 })
 
 export const ICON_SCALE_MIN = 25

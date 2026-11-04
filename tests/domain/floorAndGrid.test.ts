@@ -77,7 +77,7 @@ describe('View Grid settings', () => {
     expect(normalizeGridSettings({ iconScale: 150 }).iconScale).toBe(150)
     expect(normalizeGridSettings({ iconScale: 24 }).iconScale).toBe(DEFAULT_GRID.iconScale)
     expect(normalizeGridSettings({ iconScale: 301 }).iconScale).toBe(DEFAULT_GRID.iconScale)
-    expect(normalizeGridSettings({}).iconScale).toBe(100)
+    expect(normalizeGridSettings({}).iconScale).toBe(DEFAULT_GRID.iconScale)
   })
 
   it('loads and saves settings by View ID while preserving sibling settings', () => {
