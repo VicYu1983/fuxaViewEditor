@@ -417,18 +417,14 @@ export function findLegacySwitchViewIds(
   return ids
 }
 
-// 平面圖 View 不保留群組標題與底框；舊輸出殘留時需重新套用該 View 以清除
+// 平面圖 View 每次匯出都重新套用：底圖必須固定為 x:0, y:0 且滿版，
+// FUXA 端可能已改過底圖位置/尺寸，也可能殘留舊的群組標題與底框
 export function findStaleFloorPlanViewIds(
   models: readonly ExportViewModel[],
 ): Set<string> {
   const ids = new Set<string>()
   for (const model of models) {
-    if (model.floorPlan !== true) continue
-    const hasArtifacts = Object.keys(model.floorTitles).length > 0
-      || Object.keys(model.floorFrames).length > 0
-      || Object.values(model.floorTitleIds).some((values) => values.length > 0)
-      || Object.values(model.floorFrameIds).some((values) => values.length > 0)
-    if (hasArtifacts) ids.add(model.viewId)
+    if (model.floorPlan === true) ids.add(model.viewId)
   }
   return ids
 }

@@ -49,7 +49,8 @@
 - `BUTTON` 必須以無命名空間前綴的形式寫入（與 FUXA 原生一致）。若寫成 `html:BUTTON`，FUXA 匯入後只會剩下文字。同步時若發現按鈕缺少 `<BUTTON>` 元素，會自動重建。
 - 導覽項目位於 `hmi.layout.navigation.items`：`{ text: "<系統>", view: "<最低樓層 view id>", icon, image, permission, children }`。
 - 平面圖為 SVG `<image>`，`xlink:href` 為 base64 PNG data URL，與 Tag icon 採用相同機制（見 [buildComponentNodes.ts](../src/domain/svg/buildComponentNodes.ts)）。
-- 滿版：`<image>` 的寬高取自 View 的 `profile`（與 [getCanvasWidth / getCanvasHeight](../src/domain/layout/floorLayout.ts) 相同的預設值），並設 `preserveAspectRatio="none"`。PNG 與 View 長寬比不同時會被拉伸。
+- 滿版：`<image>` 固定為 `x="0" y="0"`，寬高取自 View 的 `profile`（與 [getCanvasWidth / getCanvasHeight](../src/domain/layout/floorLayout.ts) 相同的預設值），並設 `preserveAspectRatio="none"`。PNG 與 View 長寬比不同時會被拉伸。
+- 每次匯出都會重新套用平面圖 View（[findStaleFloorPlanViewIds](../src/domain/config/prepareFuxaConfigExport.ts)），即使 FUXA 端已改過底圖位置或尺寸，匯出後仍會回到 0,0 滿版。
 - 拖拉畫布（[FloorPlanLayoutPanel.tsx](../src/ui/view/FloorPlanLayoutPanel.tsx)）會以相同尺寸顯示所選樓層的底圖，位於 Tag 之下；沒有可拖拉 Tag 時仍顯示底圖。
 - 平面圖庫（`extra.fuxaSetting.floorPlans`）以樓層名稱（`系統/1F`）為鍵，同樓層的所有 View 共用同一張底圖；只接受 PNG。平面圖 View 在匯出與預覽時套用底圖（[buildFloorPlanNode.ts](../src/domain/svg/buildFloorPlanNode.ts)，標記 `data-fuxa-floor-plan`）。
 - 圖片大小：不在瀏覽器內壓縮，請先以外部工具減少色彩數；超過 1 MB 時平面圖庫會顯示警告（base64 約增加 33%）。

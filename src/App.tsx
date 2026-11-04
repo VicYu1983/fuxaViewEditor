@@ -414,7 +414,7 @@ function EditorWorkspace() {
         modelsToReset = savedModels
       }
       const savedConfig = prepared.dirty
-        ? parseUpdatedConfig(prepared.text, config)
+        ? parseUpdatedConfig(prepared.config, config)
         : config
       resetEditor(modelsToReset, savedConfig)
       messageApi.success(prepared.dirty ? '已匯出修改後的配置 JSON。' : '已另存配置 JSON。')

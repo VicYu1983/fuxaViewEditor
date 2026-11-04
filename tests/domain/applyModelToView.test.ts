@@ -286,6 +286,35 @@ describe('applyModelToView', () => {
     expect(layer.children.some((node) => node.getAttribute('id') === 'shape-1')).toBe(true)
   })
 
+  it('re-applies a floor-plan background at x:0, y:0 with the full View size, replacing a misplaced FUXA-side node', () => {
+    const root = new TestElement('svg')
+    const layer = root.appendChild(new TestElement('g', { id: 'layer-1' }))
+    layer.appendChild(new TestElement('image', {
+      id: 'old-plan', 'data-fuxa-floor-plan': 'true', x: '50', y: '30', width: '100', height: '100',
+    }))
+    const currentView = view()
+    currentView.profile = { width: 800, height: 600 }
+    const currentModel: ApplyModel = { ...model(), floorPlan: true }
+
+    applyModelToView(currentView, currentModel, {
+      ...options(new TestDocument(root)),
+      floorPlanImage: {
+        mimeType: 'image/png',
+        dataUrl: 'data:image/png;base64,AAAA',
+        width: 1,
+        height: 1,
+      },
+    })
+
+    const plans = layer.children.filter((node) => node.getAttribute('data-fuxa-floor-plan') === 'true')
+    expect(plans).toHaveLength(1)
+    expect(plans[0]!.getAttribute('x')).toBe('0')
+    expect(plans[0]!.getAttribute('y')).toBe('0')
+    expect(plans[0]!.getAttribute('width')).toBe('800')
+    expect(plans[0]!.getAttribute('height')).toBe('600')
+    expect(layer.children[0]).toBe(plans[0])
+  })
+
   it('declares XLink namespace for icon-based components', () => {
     const root = new TestElement('svg')
     root.appendChild(new TestElement('g'))
