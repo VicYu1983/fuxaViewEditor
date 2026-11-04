@@ -251,6 +251,19 @@ function App() {
     setSelectedViewId(firstView ? firstView.id || firstView.key : '')
   }
 
+  function commitDocumentEdit(
+    base: ParsedFuxaConfig,
+    nextRaw: ParsedFuxaConfig['rawConfig'],
+    nextModels: Map<string, ExportViewModel> = models,
+    nextModifiedViewIds?: Set<string>,
+  ) {
+    dispatchEditor({
+      type: 'document-edit',
+      document: parseUpdatedConfig(nextRaw, base),
+      models: nextModels,
+      modifiedViewIds: nextModifiedViewIds,
+    })
+  }
 
   const selectedView = useMemo(
     () => config ? getSelectedView(config.views, selectedViewId) : undefined,
@@ -966,11 +979,7 @@ function App() {
         tagId,
         values,
       )
-      dispatchEditor({
-        type: 'document-edit',
-        document: parseUpdatedConfig(nextConfig, config),
-        models,
-      })
+      commitDocumentEdit(config, nextConfig)
       messageApi.success(`已更新 Tag「${values.name.trim()}」。`)
       return true
     } catch (error) {
@@ -993,11 +1002,7 @@ function App() {
         targetId,
         tagIds,
       )
-      dispatchEditor({
-        type: 'document-edit',
-        document: parseUpdatedConfig(nextConfig, config),
-        models,
-      })
+      commitDocumentEdit(config, nextConfig)
       const renameNote = renamed.length ? `，其中 ${renamed.length} 個因名稱重複已自動改名` : ''
       messageApi.success(`已移動 ${moved} 個 Tag${renameNote}。`)
       return true
@@ -1048,11 +1053,7 @@ function App() {
               components: model.components.filter((component) => !removeKeys.has(component.key)),
             })
           }
-          dispatchEditor({
-            type: 'document-edit',
-            document: parseUpdatedConfig(nextConfig, config),
-            models: nextModels,
-          })
+          commitDocumentEdit(config, nextConfig, nextModels)
           messageApi.success(
             `已刪除 Tag「${tag?.name || tagId}」。`
             + (managedReferenceCount ? `並移除 ${managedReferenceCount} 個相關元件。` : ''),
@@ -1105,11 +1106,7 @@ function App() {
               components: model.components.filter((component) => !removeKeys.has(component.key)),
             })
           }
-          dispatchEditor({
-            type: 'document-edit',
-            document: parseUpdatedConfig(result.config, config),
-            models: nextModels,
-          })
+          commitDocumentEdit(config, result.config, nextModels)
           messageApi.success(
             `已移除 ${result.deletedTagIds.length} 個補位 Tag。`
             + (managedReferenceCount ? `並移除 ${managedReferenceCount} 個相關元件。` : ''),
@@ -1186,11 +1183,7 @@ function App() {
       if (!window.confirm(
         `確定將設備「${managedDevice.record.name || managedDeviceId}」的 ${shifted.count} 個 Tag address 全部 ${deltaLabel}？\n此操作跨所有 memaddress 區段；沒有 address 的 Tag 不變。`,
       )) return
-      dispatchEditor({
-        type: 'document-edit',
-        document: parseUpdatedConfig(shifted.config, config),
-        models,
-      })
+      commitDocumentEdit(config, shifted.config)
       messageApi.success(
         `已調整 ${shifted.count} 個 Tag address。`
         + (shifted.skippedInvalid ? ` ${shifted.skippedInvalid} 個無效 address 未變更。` : ''),
@@ -1217,11 +1210,7 @@ function App() {
         `將在 ${plan.memaddress} 位址區段建立 ${plan.missing.length} 個補位 Tag（${plan.startAddress}–${plan.endAddress}），確定繼續？`,
       )) return
       const result = fillModbusDeviceAddressGaps(config.rawConfig, managedDeviceId, window.crypto)
-      dispatchEditor({
-        type: 'document-edit',
-        document: parseUpdatedConfig(result.config, config),
-        models,
-      })
+      commitDocumentEdit(config, result.config)
       messageApi.success(`已建立 ${result.fill.created.length} 個補位 Tag。`)
     } catch (error) {
       const detail = getErrorMessage(error)
@@ -1279,11 +1268,7 @@ function App() {
         messageApi.info('選取的 Tag 樓層沒有變更。')
         return
       }
-      dispatchEditor({
-        type: 'document-edit',
-        document: parseUpdatedConfig(result.config, config),
-        models,
-      })
+      commitDocumentEdit(config, result.config)
       messageApi.success(`已更新 ${result.changedCount} 個 Tag 的樓層。`)
     } catch (error) {
       const detail = getErrorMessage(error)
@@ -1344,11 +1329,7 @@ function App() {
           { ...model, floorGroupFrame: updatedFrame },
         ]),
       )
-      dispatchEditor({
-        type: 'document-edit',
-        document: parseUpdatedConfig(result.config, config),
-        models: nextModels,
-      })
+      commitDocumentEdit(config, result.config, nextModels)
       setViewSettingsOpen(false)
       messageApi.success('已更新所有 View 的樓層底框設定。')
     } catch (error) {
@@ -1387,11 +1368,7 @@ function App() {
         messageApi.info('View 屬性沒有變更。')
         return
       }
-      dispatchEditor({
-        type: 'document-edit',
-        document: parseUpdatedConfig(siteResult.config, config),
-        models,
-      })
+      commitDocumentEdit(config, siteResult.config)
       setViewSettingsOpen(false)
       messageApi.success('已更新所有 View 的背景色與名稱標籤樣式。')
     } catch (error) {
@@ -1422,11 +1399,7 @@ function App() {
         window.crypto,
         stateNames,
       )
-      dispatchEditor({
-        type: 'document-edit',
-        document: parseUpdatedConfig(nextConfig, config),
-        models,
-      })
+      commitDocumentEdit(config, nextConfig)
       messageApi.success('已新增圖示。')
       return true
     } catch (error) {
@@ -1462,11 +1435,7 @@ function App() {
       const input: unknown = JSON.parse(await file.text())
       const nextConfig = importIconLibrary(config.rawConfig, input)
       const importedCount = getIconLibrary(nextConfig).length - iconLibrary.length
-      dispatchEditor({
-        type: 'document-edit',
-        document: parseUpdatedConfig(nextConfig, config),
-        models,
-      })
+      commitDocumentEdit(config, nextConfig)
       messageApi.success(`已匯入 ${importedCount} 個圖示。`)
     } catch (error) {
       messageApi.error(`圖示庫匯入失敗：${getErrorMessage(error)}`)
@@ -1488,11 +1457,7 @@ function App() {
       }
       if (!window.confirm('確定刪除此圖示？此操作可使用「復原」還原。')) return
       const nextConfig = removeIconLibraryEntry(config.rawConfig, iconId, usages)
-      dispatchEditor({
-        type: 'document-edit',
-        document: parseUpdatedConfig(nextConfig, config),
-        models,
-      })
+      commitDocumentEdit(config, nextConfig)
       messageApi.success('已刪除圖示。')
     } catch (error) {
       messageApi.error(`刪除圖示失敗：${getErrorMessage(error)}`)
@@ -1537,12 +1502,7 @@ function App() {
           }),
         })
       }
-      dispatchEditor({
-        type: 'document-edit',
-        document: parseUpdatedConfig(nextConfig, config),
-        models: nextModels,
-        modifiedViewIds: modifiedIds,
-      })
+      commitDocumentEdit(config, nextConfig, nextModels, modifiedIds)
     } catch (error) {
       messageApi.error(`調整狀態優先順序失敗：${getErrorMessage(error)}`)
     }
@@ -1621,12 +1581,7 @@ function App() {
           )),
         })
       }
-      dispatchEditor({
-        type: 'document-edit',
-        document: parseUpdatedConfig(nextConfig, config),
-        models: nextModels,
-        modifiedViewIds: modifiedIds,
-      })
+      commitDocumentEdit(config, nextConfig, nextModels, modifiedIds)
       setMultiStateAddDrafts((current) => ({ ...current, [iconSetId]: { name: '', file: null } }))
       messageApi.success('已新增狀態；請在使用此圖示組的元件中綁定 Boolean Tag。')
     } catch (error) {
@@ -1664,11 +1619,7 @@ function App() {
         stateKey,
         usages,
       )
-      dispatchEditor({
-        type: 'document-edit',
-        document: parseUpdatedConfig(nextConfig, config),
-        models,
-      })
+      commitDocumentEdit(config, nextConfig)
       messageApi.success('已刪除多狀態圖示定義。')
     } catch (error) {
       messageApi.error(`刪除狀態失敗：${getErrorMessage(error)}`)
