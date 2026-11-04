@@ -104,14 +104,14 @@ src/
     store/editorHistory.ts     # 既有，不動
     EditorProvider.tsx         # context：config, models, modifiedViewIds, dispatch, messageApi
     hooks/
-      useFuxaHost.ts           # postMessage 協定、同步狀態、handleSyncToFuxa
-      useConfigEdit.ts         # 統一「try → parse → dispatch → 訊息」樣板
-      usePreview.ts            # 預覽 debounce、snapshot、stale 判斷
-      useWorkspaceSelectors.ts # 呼叫 domain 的衍生資料（tags、devices…）
+      useFuxaHost.ts           # postMessage 協定、同步狀態、handleSyncToFuxa（已建立）
+      useConfigEdit.ts         # 統一「try → parse → dispatch → 訊息」樣板（僅 commitDocumentEdit，見第 11 節）
+      usePreview.ts            # 預覽 debounce、snapshot、stale 判斷（已建立）
     lib/
-      browserSvgDeps.ts        # 一處組裝 { Parser, serialize, crypto }
-      errorMessage.ts          # getErrorMessage(error)
+      browserSvgDeps.ts        # createBrowserSvgDeps()：組裝瀏覽器的 { Parser, serialize, crypto }（已建立）
       measureSvgBounds.ts      # 目前在 App.tsx 的 DOM 量測
+  （註：getErrorMessage 位於 domain/shared/getErrorMessage.ts，因 domain 需要依賴它；不另建 app/lib/errorMessage.ts）
+  （註：useWorkspaceSelectors 已取消，衍生資料直接由 domain 函式計算。）
   ui/                          # 只放 React 元件（含各自的 state 與表單）
     layout/        AppHeader.tsx, ViewSidebar.tsx
     views/         ViewNameDialog.tsx, ViewSettingsModal.tsx
@@ -128,7 +128,9 @@ src/
     alarms/readTagAlarms.ts    # alarmSettingsByTag、alarmInversionByTag
     devices/readModbusDevices.ts   # modbusDevices、managedDeviceTags、設備表單初值
   features/                    # 維持 React-free
-    views/createViewModel.ts   # 新增空白 View 的 model 初值、改名同步標題
+    views/createViewModel.ts   # 新增空白 View 的 model 初值（已建立）
+    views/syncViewTitleText.ts # 改名時同步 view_title 的 SVG 文字（已建立）
+    preview/createPreviewState.ts # 預覽狀態組裝，SVG runtime 由參數注入（已建立）
     views/moveComponentsBetweenViews.ts
     devices/findTagReferences.ts   # 刪除 Tag 前的引用掃描
   styles/                      # 依主題拆分（index.css 匯入順序即層疊順序）
@@ -156,7 +158,7 @@ commit({
 
 ## 6. 執行階段
 
-每階段獨立 commit，結束時必須通過 `npx tsc -b --pretty false`、`npx vitest run`、`npx eslint .`；階段 2 起加上第 7 節手動煙霧測試。任一階段出現行為差異就回退該 commit，不往下做。
+每階段獨立 commit，結束時必須通過 `npx tsc -b --pretty false`、`npx vitest run`、`npx eslint src tests`（實際執行範圍；專案 eslint 設定涵蓋的目錄即此範圍）；階段 2 起加上第 7 節手動煙霧測試。任一階段出現行為差異就回退該 commit，不往下做。
 
 ### 階段 0：安全網（半天）
 - 確認 commit 基準與驗證數字（已完成：232 測試）。
@@ -250,23 +252,27 @@ commit({
 - `ui/`、`styles/` 拆分與 README 流程索引已完成。
 - `app/lib/parseUpdatedConfig.ts`、`measureSvgBounds.ts` 已建立。
 
-### 待修正（違反計畫的約束）
-- `usePreview.ts`（[features/preview/usePreview.ts](/c:/Users/user/Desktop/baoqi/開發/fuxa/fuxaViewEditor/src/features/preview/usePreview.ts)）與 `useFuxaHost.ts`（[features/fuxa/useFuxaHost.ts](/c:/Users/user/Desktop/baoqi/開發/fuxa/fuxaViewEditor/src/features/fuxa/useFuxaHost.ts)）位於 `features/` 且 import React，違反第 4 節第 3 點。應搬到 `app/hooks/` 並更新 import。
+### 已修正（原違反計畫的約束）
+- `usePreview.ts` 與 `useFuxaHost.ts` 已搬到 `app/hooks/`（commit `2c8d37b`）。`features/preview/createPreviewState.ts` 改以參數注入 SVG runtime，`features/` 不再依賴 `app/`。
 
-### 尚未完成（計畫中列出的項目）
-- 第 5 節 `app/lib/browserSvgDeps.ts`（`createBrowserSvgDeps`）未建立。App.tsx 仍有直接 `new XMLSerializer()` 的呼叫（約 5 處），`usePreview.ts` 另有一處。
-- 第 5 節 `features/views/createViewModel.ts` 未建立。新增 View 的 model 初值與改名同步標題的邏輯，需確認是否仍內嵌於 App.tsx。
-- 第 5 節 `app/lib/errorMessage.ts` 未建立；`getErrorMessage` 目前位於 `domain/shared/`。功能可接受，但路徑與計畫不同，應於第 5 節註記或統一位置。
-- 第 5 節 `app/hooks/useWorkspaceSelectors.ts` 未建立。決定保留或移除此計畫項目。
-- 第 3.3 節與階段 4 的 try/parse/dispatch 樣板，僅建立了 `commitDocumentEdit` helper，尚未全面改用 `useConfigEdit`。
-- 階段 1 要求的新增測試 ≥ 15 個，以及 `domain/`、`features/` 抽出的純函式（tagViews、readTagAlarms、readModbusDevices、findTagReferences、moveDeviceTags）是否皆有 node 單元測試，尚未逐項核對。
+### 第 5 節項目的處理結果
+- `app/lib/browserSvgDeps.ts`（`createBrowserSvgDeps`）已建立（commit `2c8d37b`）。App.tsx 中完整的 `{ Parser, serialize, crypto }` 組裝已全部改用此函式（commit `6e5379d`）。唯一保留的直接用法為 App.tsx 中位置參數的 `(doc) => new XMLSerializer()…`，行為相同，不另改。
+- `features/views/createViewModel.ts` 已建立（commit `6e5379d`），並新增 `features/views/syncViewTitleText.ts` 處理改名時的標題 SVG 同步。
+- `getErrorMessage` 維持在 `domain/shared/`（domain 需要它），不另建 `app/lib/errorMessage.ts`。
+- `useWorkspaceSelectors.ts` 取消：衍生資料直接由 domain 函式計算，沒有需要集中的 hook。
+
+### 尚未完成
+- 第 3.3 節與階段 4 的 try/parse/dispatch 樣板，目前僅有 `commitDocumentEdit`。全面改用 `useConfigEdit` 涉及 30+ 處，行為差異風險高（例如 `edit` 對相同模型 no-op、`document-edit` 寫入歷史與 dirty 旗標的差異）。**本輪暫緩**，待使用者決定是否要分批進行，並在瀏覽器煙霧測試通過後再做。
+- 階段 1 要求的新增測試 ≥ 15 個，以及 `domain/`、`features/` 抽出的純函式是否皆有 node 單元測試，尚未逐項核對。
+- 本輪新增測試：`tests/features/views/createViewModel.test.ts`、`tests/features/views/syncViewTitleText.test.ts`（全套 303 測試通過）。
+
 
 ### 風險與未驗證項目
 - 第 7 節的 10 項手動煙霧測試尚未執行。
 - 第 4 節第 2 點：Form 與 `destroyOnHidden` 的組合，開啟前 `setFieldsValue` 可能無效，單元測試無法偵測。
 - 第 7 節第 10 項：重新開啟專案管理時，搜尋與選取狀態是否重置，仍需瀏覽器確認。
-- 第 6 節的驗證指令為 `npx eslint .`，實際執行的是 `npx eslint src tests`，兩者範圍不同，應以計畫為準或更新計畫文字。
+- 第 6 節的驗證指令已更新為 `npx eslint src tests`。
 
 ### 文件待辦
-- README 的「範圍與注意事項」有一句「階段 5 列出的管理功能已可在新版工作台使用」，為計畫用語，應改寫為使用者可理解的描述。
+- README 的「範圍與注意事項」已改寫，不再使用計畫用語。
 - README 與現況的流程描述（開啟 JSON／清空專案 vs. FUXA 宿主同步）尚未逐段核對（第 3.5 節）。
