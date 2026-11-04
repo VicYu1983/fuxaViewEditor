@@ -1,6 +1,11 @@
 // Here, floor means a Tag group within one View, not a cross-View building floor.
 import type { FuxaConfig } from '../config/types'
 import { isRecord } from '../config/validateFuxaConfig'
+import {
+  TOOL_SETTINGS_KEY,
+  getToolSettings,
+  readToolSettingsForWrite,
+} from '../config/toolSettings'
 
 export interface FloorGroupArtifact {
   titleId: string
@@ -11,7 +16,6 @@ export interface FloorGroupArtifact {
 export type FloorGroupArtifacts = Record<string, FloorGroupArtifact>
 export type FloorGroupArtifactsByView = ReadonlyMap<string, unknown>
 
-const TOOL_SETTINGS_KEY = 'fuxaSetting'
 const FLOOR_GROUP_ARTIFACTS_KEY = 'floorGroupArtifacts'
 const ARTIFACT_ID_KEYS = ['titleId', 'frameId', 'frameShapeId'] as const
 
@@ -19,10 +23,7 @@ export function getFloorGroupArtifacts(
   config: FuxaConfig,
   viewId: string,
 ): Record<string, unknown> {
-  const extra = isRecord(config.extra) ? config.extra : undefined
-  const toolSettings = extra && isRecord(extra[TOOL_SETTINGS_KEY])
-    ? extra[TOOL_SETTINGS_KEY]
-    : undefined
+  const toolSettings = getToolSettings(config)
   const allArtifacts = toolSettings && isRecord(toolSettings[FLOOR_GROUP_ARTIFACTS_KEY])
     ? toolSettings[FLOOR_GROUP_ARTIFACTS_KEY]
     : undefined
@@ -36,19 +37,9 @@ export function saveFloorGroupArtifacts(
   artifactsByView: FloorGroupArtifactsByView,
 ): Record<string, unknown> {
   if (!isRecord(config)) throw new Error('無效的配置資料。')
-  if (config.extra !== undefined && !isRecord(config.extra)) {
-    throw new Error('配置的 extra 欄位不是物件，無法安全保存樓層群組元件索引。')
-  }
-  const extra = isRecord(config.extra) ? config.extra : {}
+  const { extra, toolSettings } = readToolSettingsForWrite(config, '安全保存樓層群組元件索引')
   config.extra = extra
 
-  const currentSettings = extra[TOOL_SETTINGS_KEY]
-  if (currentSettings !== undefined && !isRecord(currentSettings)) {
-    throw new Error(
-      `配置的 extra.${TOOL_SETTINGS_KEY} 欄位不是物件，無法安全保存樓層群組元件索引。`,
-    )
-  }
-  const toolSettings = isRecord(currentSettings) ? currentSettings : {}
   const currentArtifacts = toolSettings[FLOOR_GROUP_ARTIFACTS_KEY]
   if (currentArtifacts !== undefined && !isRecord(currentArtifacts)) {
     throw new Error(

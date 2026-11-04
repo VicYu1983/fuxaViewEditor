@@ -6,6 +6,11 @@ import type { RandomValuesProvider } from '../ids'
 import { parseSvg } from '../svg/parseSvg'
 import type { SvgParserConstructor } from '../svg/parseSvg'
 import { getViewTitleLabelSettings } from './viewTitleLabel'
+import {
+  TOOL_SETTINGS_KEY,
+  getToolSettings,
+  readToolSettingsForWrite,
+} from '../config/toolSettings'
 
 export interface SiteNameLabelRuntime {
   Parser: SvgParserConstructor
@@ -18,7 +23,6 @@ export interface UpdateSiteNameLabelResult {
   changed: boolean
 }
 
-const TOOL_SETTINGS_KEY = 'fuxaSetting'
 const SITE_NAME_LABEL_KEY = 'siteNameLabel'
 const SITE_NAME_LABEL_NAME = 'site_name'
 const SVG_NS = 'http://www.w3.org/2000/svg'
@@ -36,9 +40,7 @@ export interface SiteNameLabelSettings {
 export type SiteNameLabelStyle = Omit<SiteNameLabelSettings, 'name'>
 
 export function getSiteNameSettings(config: FuxaConfig): SiteNameLabelSettings {
-  const toolSettings = isRecord(config.extra) && isRecord(config.extra[TOOL_SETTINGS_KEY])
-    ? config.extra[TOOL_SETTINGS_KEY]
-    : undefined
+  const toolSettings = getToolSettings(config)
   const stored = toolSettings?.[SITE_NAME_LABEL_KEY]
   const record = isRecord(stored) ? stored : {}
   const title = getViewTitleLabelSettings(config)
@@ -186,15 +188,7 @@ export function updateAllSiteNameLabels(
   input: Partial<SiteNameLabelSettings>,
   runtime: SiteNameLabelRuntime,
 ): UpdateSiteNameLabelResult {
-  if (source.extra !== undefined && !isRecord(source.extra)) {
-    throw new Error('配置的 extra 欄位不是物件，無法安全保存案場名稱設定。')
-  }
-  const extra = isRecord(source.extra) ? source.extra : {}
-  const currentToolSettings = extra[TOOL_SETTINGS_KEY]
-  if (currentToolSettings !== undefined && !isRecord(currentToolSettings)) {
-    throw new Error(`配置的 extra.${TOOL_SETTINGS_KEY} 欄位不是物件，無法安全保存案場名稱設定。`)
-  }
-  const toolSettings = isRecord(currentToolSettings) ? currentToolSettings : {}
+  const { extra, toolSettings } = readToolSettingsForWrite(source, '安全保存案場名稱設定')
   const current = getSiteNameSettings(source)
   const merged = { ...current, ...input }
   const settings: SiteNameLabelSettings = {

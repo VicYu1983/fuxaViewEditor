@@ -12,6 +12,7 @@ import {
   normalizeGridSettings,
   saveViewGridSettings,
 } from '../../src/domain/layout/gridSettings'
+import { TOOL_SETTINGS_VERSION } from '../../src/domain/config/toolSettings'
 
 describe('floor metadata', () => {
   it('normalizes floor labels and preserves other Tag extra fields', () => {
@@ -119,7 +120,7 @@ describe('View Grid settings', () => {
       keep: { value: true },
       fuxaSetting: {
         note: 'keep',
-        version: 1,
+        version: TOOL_SETTINGS_VERSION,
         viewGrids: {
           'view-a': gridA,
           'view-b': { ...DEFAULT_GRID, columns: 3 },

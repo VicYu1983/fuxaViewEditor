@@ -10,10 +10,10 @@ import { saveFloorGroupFrameSettings } from '../layout/floorGroupFrame'
 import { saveFloorPlanTagOffsets, saveFloorPlanViewSettings } from '../layout/floorPlanViews'
 import type { FloorPlanTagOffsets } from '../layout/floorPlanViews'
 import { saveFloorGroupArtifacts } from '../layout/floorGroupArtifacts'
+import { saveViewComponents } from '../views/viewComponents'
 import { groupComponentsByFloor } from '../layout/floorLayout'
 import type { FloorTag } from '../layout/floorLayout'
 import { saveIconLibrary } from '../icons/iconLibrary'
-import { buildingFloorButtonsNeedSync } from '../buildingFloors/buildingFloorButtons'
 import {
   deviceTagsNeedAddressSorting,
   sortDeviceTagsByAddress,
@@ -68,6 +68,8 @@ export interface ExportViewModel extends GeneratedViewModel {
   floorFrameShapeIds: Record<string, string>
   originalFloorTitleIds?: Record<string, string[]>
   originalFloorFrameIds?: Record<string, string[]>
+  /** extra 保存的元件定義與 SVG 不一致，匯出時需重新套用此 View。 */
+  componentsNeedRebuild?: boolean
 }
 
 export interface PrepareFuxaConfigExportInput {
@@ -86,6 +88,7 @@ export interface PrepareFuxaConfigExportInput {
 
 export interface PrepareFuxaConfigExportDependencies {
   syncBuildingFloors?: (config: FuxaConfig) => ReadonlySet<string> | void
+  buildingFloorsNeedSync?: (config: FuxaConfig) => boolean
   applyView?: (
     view: Record<string, unknown>,
     model: ExportViewModel,
@@ -414,6 +417,33 @@ export function findLegacySwitchViewIds(
   return ids
 }
 
+// 平面圖 View 不保留群組標題與底框；舊輸出殘留時需重新套用該 View 以清除
+export function findStaleFloorPlanViewIds(
+  models: readonly ExportViewModel[],
+): Set<string> {
+  const ids = new Set<string>()
+  for (const model of models) {
+    if (model.floorPlan !== true) continue
+    const hasArtifacts = Object.keys(model.floorTitles).length > 0
+      || Object.keys(model.floorFrames).length > 0
+      || Object.values(model.floorTitleIds).some((values) => values.length > 0)
+      || Object.values(model.floorFrameIds).some((values) => values.length > 0)
+    if (hasArtifacts) ids.add(model.viewId)
+  }
+  return ids
+}
+
+// 需要在匯出時重新套用的 View：舊版 Switch、平面圖殘留群組標題、extra 的元件定義與 SVG 不一致
+export function findViewIdsNeedingReapply(
+  models: readonly ExportViewModel[],
+): Set<string> {
+  return new Set([
+    ...findLegacySwitchViewIds(models),
+    ...findStaleFloorPlanViewIds(models),
+    ...models.filter((model) => model.componentsNeedRebuild === true).map((model) => model.viewId),
+  ])
+}
+
 function viewsById(config: FuxaConfig, viewId: string): Record<string, unknown>[] {
   if (!Array.isArray(config.hmi.views)) return []
   return config.hmi.views.filter(
@@ -450,8 +480,8 @@ export function prepareFuxaConfigExport(
       && !deviceTagsNeedSorting
       && !needsVoiceBridgeUpdate(input.config)
       && !navigationNeedsSync(input.config)
-      && !buildingFloorButtonsNeedSync(input.config)
-      && findLegacySwitchViewIds(input.models ?? []).size === 0) {
+      && !(dependencies.buildingFloorsNeedSync?.(input.config) ?? false)
+      && findViewIdsNeedingReapply(input.models ?? []).size === 0) {
     return {
       config: input.config,
       text: input.originalText,
@@ -482,7 +512,7 @@ export function prepareFuxaConfigExport(
 
   const requestedViewIds = new Set([
     ...(input.modifiedViewIds ?? []),
-    ...findLegacySwitchViewIds(models),
+    ...findViewIdsNeedingReapply(models),
   ])
   for (const viewId of requestedViewIds) {
     const model = models.find((candidate) => candidate.viewId === viewId)
@@ -506,7 +536,7 @@ export function prepareFuxaConfigExport(
   }
 
   const floorButtonViewIds = dependencies.syncBuildingFloors?.(output)
-  if (buildingFloorButtonsNeedSync(output)) {
+  if (!dependencies.syncBuildingFloors && dependencies.buildingFloorsNeedSync?.(output)) {
     throw new Error('尚未設定樓層按鈕同步函式，無法匯出樓層 View。')
   }
   for (const viewId of floorButtonViewIds ?? []) modifiedViewIds.add(viewId)
@@ -539,6 +569,11 @@ export function prepareFuxaConfigExport(
     output,
     allViewIds,
     new Map(models.map((model) => [model.viewId, floorArtifactsForModel(model, tags)])),
+  )
+  saveViewComponents(
+    output,
+    allViewIds,
+    new Map(models.map((model) => [model.viewId, model.components])),
   )
 
   if (!dependencies.validate) {

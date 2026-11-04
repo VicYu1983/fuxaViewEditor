@@ -77,7 +77,7 @@ import { FloorPlanViewCard } from './ui/view/FloorPlanViewCard'
 import { GridSettingsCard } from './ui/view/GridSettingsCard'
 import { ManagedComponentCard } from './ui/view/ManagedComponentCard'
 import {
-  findLegacySwitchViewIds,
+  findViewIdsNeedingReapply,
   needsVoiceBridgeUpdate,
   prepareFuxaConfigExport,
 } from './domain/config/prepareFuxaConfigExport'
@@ -95,6 +95,10 @@ import {
 import { getSiteNameSettings, updateAllSiteNameLabels } from './domain/views/siteNameLabel'
 import { navigationNeedsSync } from './domain/views/syncNavigation'
 import { buildingFloorButtonsNeedSync } from './domain/buildingFloors/buildingFloorButtons'
+import {
+  TOOL_SETTINGS_OUTDATED_MESSAGE,
+  isToolSettingsOutdated,
+} from './domain/config/toolSettings'
 import { parseBuildingFloorName } from './domain/buildingFloors/buildingFloors'
 import {
   AUTO_FILLED_TAG_DESCRIPTION,
@@ -237,6 +241,7 @@ function EditorWorkspace() {
   })
   const [modelErrors, setModelErrors] = useState<Map<string, string>>(new Map())
   const [unsupported, setUnsupported] = useState<Map<string, string[]>>(new Map())
+  const [modelWarnings, setModelWarnings] = useState<Map<string, string[]>>(new Map())
   const { models, modifiedViewIds } = editor
   const config = editor.document
   const normalizedProjectName = normalizeProjectName(projectName)
@@ -250,6 +255,7 @@ function EditorWorkspace() {
     resetEditor(editorModels.models, parsed)
     setModelErrors(editorModels.errors)
     setUnsupported(editorModels.unsupported)
+    setModelWarnings(editorModels.warnings)
     setTagAddSession((session) => session + 1)
     const firstView = parsed.views[0]
     setSelectedViewId(firstView ? firstView.id || firstView.key : '')
@@ -339,12 +345,12 @@ function EditorWorkspace() {
     const floorFrameLayoutNeedsUpdate = !hasCurrentFloorFrameLayout(config.rawConfig)
       && hasFloorFrames
     const exportDirty = isDirty
-      || findLegacySwitchViewIds([...models.values()]).size > 0
+      || findViewIdsNeedingReapply([...models.values()]).size > 0
       || floorFrameLayoutNeedsUpdate
       || deviceTagsNeedAddressSorting(config.rawConfig)
       || needsVoiceBridgeUpdate(config.rawConfig)
       || navigationNeedsSync(config.rawConfig)
-      || buildingFloorButtonsNeedSync(config.rawConfig)
+      || buildingFloorButtonsNeedSync(config.rawConfig, DOMParser)
     const dependencies = exportDirty
       ? createFuxaConfigExportDependencies(config.rawConfig, createBrowserSvgDeps())
       : undefined
@@ -1914,6 +1920,15 @@ function EditorWorkspace() {
                   </Space>
                 </div>
 
+                {isToolSettingsOutdated(config.rawConfig) && (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    title="工具版本可能過舊"
+                    description={TOOL_SETTINGS_OUTDATED_MESSAGE}
+                  />
+                )}
+
                 {selectedView ? (
                   <Space className="view-panels" orientation="vertical" size="middle">
                     {modelErrors.has(selectedView.id) ? (
@@ -1971,6 +1986,14 @@ function EditorWorkspace() {
                         onOpenComponentMove={openComponentMoveDialog}
                         onRemoveComponent={handleRemoveComponent}
                       />
+                    {(modelWarnings.get(selectedView.id)?.length ?? 0) > 0 && (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        title="部分 Tag 元件已被移除"
+                        description={modelWarnings.get(selectedView.id)?.join('；')}
+                      />
+                    )}
                     {(unsupported.get(selectedView.id)?.length ?? 0) > 0 && (
                       <Alert
                         type="info"

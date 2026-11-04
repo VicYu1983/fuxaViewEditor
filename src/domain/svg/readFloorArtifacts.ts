@@ -66,9 +66,13 @@ export function readFloorArtifacts(
 
   for (const [floorKey, artifact] of Object.entries(artifacts)) {
     if (!isRecord(artifact)) continue
-    if (typeof artifact.titleId === 'string' && findSvgElementById(doc, artifact.titleId)) {
+    const configuredTitle = typeof artifact.titleId === 'string'
+      ? findSvgElementById(doc, artifact.titleId)
+      : null
+    if (typeof artifact.titleId === 'string' && configuredTitle) {
       floorTitles[floorKey] = artifact.titleId
       addFloorId(floorTitleIds, floorKey, artifact.titleId)
+      floorTitleNodes[floorKey] = configuredTitle
       consumed.add(artifact.titleId)
     }
     const frameId = typeof artifact.frameId === 'string' ? artifact.frameId : undefined
@@ -86,7 +90,10 @@ export function readFloorArtifacts(
     }
   }
 
+  // 以下依 data-floor-group、文字推測群組，僅用於 extra 索引不存在的舊檔；
+  // 已由索引認定的元件（consumed）不再推測，避免同一元件被登記到多個群組。
   for (const [shapeId, shapeItem] of Object.entries(items)) {
+    if (consumed.has(shapeId)) continue
     if (itemName(shapeItem) === 'fuxa_floor_section_frame') {
       const frameNode = findSvgElementById(doc, shapeId)
       const floor = frameNode?.getAttribute('data-floor-group')

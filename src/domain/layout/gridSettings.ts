@@ -1,5 +1,11 @@
 import { isRecord } from '../config/validateFuxaConfig'
 import type { FuxaConfig, GridSettings, LabelPosition } from '../config/types'
+import {
+  TOOL_SETTINGS_KEY,
+  getToolSettings,
+  nextToolSettingsVersion,
+  readToolSettingsForWrite,
+} from '../config/toolSettings'
 
 export const DEFAULT_GRID: Readonly<GridSettings> = Object.freeze({
   columns: 4,
@@ -16,7 +22,6 @@ export const DEFAULT_GRID: Readonly<GridSettings> = Object.freeze({
 export const ICON_SCALE_MIN = 25
 export const ICON_SCALE_MAX = 300
 
-const GRID_SETTINGS_KEY = 'fuxaSetting'
 const LABEL_POSITIONS = new Set<LabelPosition>(['above', 'below', 'left', 'right'])
 
 function isLabelPosition(value: string): value is LabelPosition {
@@ -49,11 +54,6 @@ export function normalizeGridSettings(settings: unknown): GridSettings {
   return grid
 }
 
-function getToolSettings(config: FuxaConfig): Record<string, unknown> | undefined {
-  if (!isRecord(config.extra) || !isRecord(config.extra[GRID_SETTINGS_KEY])) return undefined
-  return config.extra[GRID_SETTINGS_KEY]
-}
-
 export function getViewGridSettings(config: FuxaConfig, viewId: string): GridSettings {
   const toolSettings = getToolSettings(config)
   const viewGrids = toolSettings && isRecord(toolSettings.viewGrids)
@@ -67,21 +67,12 @@ export function saveViewGridSettings(
   viewIds: readonly string[],
   grids: ReadonlyMap<string, unknown>,
 ): Record<string, unknown> {
-  if (config.extra !== undefined && !isRecord(config.extra)) {
-    throw new Error('配置的 extra 欄位不是物件，無法安全保存 Grid 設定。')
-  }
-  const extra = isRecord(config.extra) ? config.extra : {}
+  const { extra, toolSettings } = readToolSettingsForWrite(config, '安全保存 Grid 設定')
   config.extra = extra
-
-  const currentToolSettings = extra[GRID_SETTINGS_KEY]
-  if (currentToolSettings !== undefined && !isRecord(currentToolSettings)) {
-    throw new Error(`配置的 extra.${GRID_SETTINGS_KEY} 欄位不是物件，無法安全保存 Grid 設定。`)
-  }
-  const toolSettings = isRecord(currentToolSettings) ? currentToolSettings : {}
 
   const currentViewGrids = toolSettings.viewGrids
   if (currentViewGrids !== undefined && !isRecord(currentViewGrids)) {
-    throw new Error(`配置的 extra.${GRID_SETTINGS_KEY}.viewGrids 欄位不是物件，無法安全保存 Grid 設定。`)
+    throw new Error(`配置的 extra.${TOOL_SETTINGS_KEY}.viewGrids 欄位不是物件，無法安全保存 Grid 設定。`)
   }
   const viewGrids = isRecord(currentViewGrids) ? { ...currentViewGrids } : {}
   const activeViewIds = new Set(viewIds)
@@ -93,7 +84,11 @@ export function saveViewGridSettings(
     if (activeViewIds.has(viewId)) viewGrids[viewId] = normalizeGridSettings(settings)
   }
 
-  const updatedToolSettings = { ...toolSettings, version: 1, viewGrids }
-  extra[GRID_SETTINGS_KEY] = updatedToolSettings
+  const updatedToolSettings = {
+    ...toolSettings,
+    version: nextToolSettingsVersion(toolSettings),
+    viewGrids,
+  }
+  extra[TOOL_SETTINGS_KEY] = updatedToolSettings
   return updatedToolSettings
 }

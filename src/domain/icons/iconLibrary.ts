@@ -1,5 +1,10 @@
 import type { FuxaConfig } from '../config/types'
 import { isRecord } from '../config/validateFuxaConfig'
+import {
+  TOOL_SETTINGS_KEY,
+  getToolSettings,
+  readToolSettingsForWrite,
+} from '../config/toolSettings'
 
 export type IconMimeType = 'image/png' | 'image/jpeg' | 'image/gif'
 
@@ -42,7 +47,6 @@ export interface MultiStateIconSet {
 export type IconLibraryEntry = SingleIcon | IconPair | MultiStateIconSet
 export const MAX_MULTI_STATE_COUNT = 8
 
-const TOOL_SETTINGS_KEY = 'fuxaSetting'
 const ICON_LIBRARY_KEY = 'icons'
 const ALLOWED_MIME_TYPES: readonly IconMimeType[] = ['image/png', 'image/jpeg', 'image/gif']
 
@@ -159,11 +163,7 @@ export function buildVisibilityActions(tagId: string, visibleValue: number): Vis
 }
 
 export function getIconLibrary(config: unknown): IconLibraryEntry[] {
-  const extra = isRecord(config) && isRecord(config.extra) ? config.extra : undefined
-  const toolSettings = extra && isRecord(extra[TOOL_SETTINGS_KEY])
-    ? extra[TOOL_SETTINGS_KEY]
-    : undefined
-  const icons = toolSettings?.[ICON_LIBRARY_KEY]
+  const icons = getToolSettings(config)?.[ICON_LIBRARY_KEY]
   return icons === undefined ? [] : validateIconLibrary(icons)
 }
 
@@ -172,20 +172,12 @@ export function saveIconLibrary(
   icons: unknown,
 ): IconLibraryEntry[] {
   if (!isRecord(config)) throw new Error('無效的配置資料。')
-  if (config.extra !== undefined && !isRecord(config.extra)) {
-    throw new Error('配置的 extra 欄位不是物件，無法安全保存圖示庫。')
-  }
-  const extra = isRecord(config.extra) ? config.extra : {}
+  const { extra, toolSettings } = readToolSettingsForWrite(config, '安全保存圖示庫')
   config.extra = extra
-
-  const currentSettings = extra[TOOL_SETTINGS_KEY]
-  if (currentSettings !== undefined && !isRecord(currentSettings)) {
-    throw new Error(`配置的 extra.${TOOL_SETTINGS_KEY} 欄位不是物件，無法安全保存圖示庫。`)
-  }
 
   const validatedIcons = validateIconLibrary(icons)
   extra[TOOL_SETTINGS_KEY] = {
-    ...(isRecord(currentSettings) ? currentSettings : {}),
+    ...toolSettings,
     [ICON_LIBRARY_KEY]: validatedIcons,
   }
   return validatedIcons

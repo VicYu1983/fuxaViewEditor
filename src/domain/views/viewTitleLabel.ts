@@ -3,6 +3,11 @@ import { isRecord } from '../config/validateFuxaConfig'
 import { getErrorMessage } from '../shared/getErrorMessage'
 import { parseSvg } from '../svg/parseSvg'
 import type { SvgParserConstructor } from '../svg/parseSvg'
+import {
+  TOOL_SETTINGS_KEY,
+  getToolSettings,
+  readToolSettingsForWrite,
+} from '../config/toolSettings'
 
 export interface ViewTitleLabelSettings {
   color: string
@@ -19,7 +24,6 @@ export const DEFAULT_VIEW_TITLE_LABEL: Readonly<ViewTitleLabelSettings> = Object
   fontSize: 24,
 })
 
-const TOOL_SETTINGS_KEY = 'fuxaSetting'
 const VIEW_TITLE_LABEL_KEY = 'viewTitleLabel'
 
 export function normalizeViewTitleLabelSettings(value: unknown): ViewTitleLabelSettings {
@@ -43,12 +47,10 @@ export function getViewTitleLabelSettings(
   viewId?: string,
   Parser?: SvgParserConstructor,
 ): ViewTitleLabelSettings {
-  const toolSettings = isRecord(config.extra)
-      && isRecord(config.extra[TOOL_SETTINGS_KEY])
-    ? config.extra[TOOL_SETTINGS_KEY]
-    : undefined
+  const toolSettings = getToolSettings(config)
   const storedSettings = toolSettings?.[VIEW_TITLE_LABEL_KEY]
   if (isRecord(storedSettings)) return normalizeViewTitleLabelSettings(storedSettings)
+  // 舊檔遷移：extra 尚無設定時，才從 SVG 標題讀取樣式
   if (!viewId || !Parser) return { ...DEFAULT_VIEW_TITLE_LABEL }
 
   const view = config.hmi.views.find(
@@ -93,15 +95,7 @@ export function updateAllViewTitleLabels(
   Parser: SvgParserConstructor,
   serialize: (doc: XMLDocument) => string,
 ): UpdateViewTitleLabelResult {
-  if (source.extra !== undefined && !isRecord(source.extra)) {
-    throw new Error('配置的 extra 欄位不是物件，無法安全保存 View 名稱標籤設定。')
-  }
-  const extra = isRecord(source.extra) ? source.extra : {}
-  const currentToolSettings = extra[TOOL_SETTINGS_KEY]
-  if (currentToolSettings !== undefined && !isRecord(currentToolSettings)) {
-    throw new Error(`配置的 extra.${TOOL_SETTINGS_KEY} 欄位不是物件，無法安全保存 View 名稱標籤設定。`)
-  }
-  const toolSettings = isRecord(currentToolSettings) ? currentToolSettings : {}
+  const { extra, toolSettings } = readToolSettingsForWrite(source, '安全保存 View 名稱標籤設定')
   const normalized = normalizeViewTitleLabelSettings(value)
   const storedSettings = toolSettings[VIEW_TITLE_LABEL_KEY]
   const hasStoredSettings = isRecord(storedSettings)

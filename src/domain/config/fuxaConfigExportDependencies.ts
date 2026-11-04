@@ -79,6 +79,8 @@ function reserveExistingIds(
     if (isRecord(view.items)) {
       for (const id of Object.keys(view.items)) ids.add(id)
     }
+    // FUXA 的空白 View 的 svgcontent 可以是空字串，沒有任何 SVG ID 需要保留
+    if (!view.svgcontent.trim()) continue
     let doc: XMLDocument
     try {
       doc = parseSvg(view.svgcontent, Parser)
@@ -147,6 +149,9 @@ export function createFuxaConfigExportDependencies(
   }
 
   return {
+    buildingFloorsNeedSync(output) {
+      return buildingFloorButtonsNeedSync(output, runtime.Parser)
+    },
     syncBuildingFloors(output) {
       const changedViewIds = syncBuildingFloorButtons(
         output,
@@ -154,7 +159,7 @@ export function createFuxaConfigExportDependencies(
         runtime.serialize,
         allocateId,
       )
-      if (buildingFloorButtonsNeedSync(output)) {
+      if (buildingFloorButtonsNeedSync(output, runtime.Parser)) {
         throw new Error('樓層按鈕未正確寫入 View。')
       }
       return changedViewIds

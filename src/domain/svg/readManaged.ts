@@ -28,6 +28,7 @@ export function readManaged(
   floorGroupArtifacts: unknown = {},
   iconAssetIds: ReadonlyMap<string, string> = new Map(),
   iconSets: readonly MultiStateIconSet[] = [],
+  reservedIds: ReadonlySet<string> = new Set(),
 ): ReadManagedResult {
   const records: ManagedComponentRecord[] = []
   const unmanaged: MovableTagCandidate[] = []
@@ -51,7 +52,12 @@ export function readManaged(
     iconAssetIds,
     iconSets,
   )
-  const movable = readMovableTags(view.items, doc, managed.consumed)
+  // 已由 extra 保存定義的元件，即使 SVG 受損也不能被當成既有 Tag 元件
+  const movable = readMovableTags(
+    view.items,
+    doc,
+    new Set([...managed.consumed, ...reservedIds]),
+  )
   return {
     records: managed.records,
     unmanaged: movable.unmanaged,

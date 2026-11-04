@@ -176,6 +176,14 @@ function applyModelToViewInPlace(
 
   const previousItems = { ...view.items }
   removeManagedFromView(view, model, doc)
+  if (model.floorPlan === true) {
+    // 平面圖 View 不保留群組標題與底框；舊輸出殘留的項目已由上一行移除
+    model.floorTitles = {}
+    model.floorTitleIds = {}
+    model.floorFrames = {}
+    model.floorFrameIds = {}
+    model.floorFrameShapeIds = {}
+  }
   const layout = layoutFloorViewComponents(
     model,
     options.tags,
@@ -185,13 +193,7 @@ function applyModelToViewInPlace(
 
   for (const section of layout.sections) {
     const key = floorKey(section.floor)
-    if (model.floorPlan === true) {
-      delete model.floorTitles[key]
-      model.floorTitleIds[key] = []
-      delete model.floorFrames[key]
-      delete model.floorFrameIds[key]
-      delete model.floorFrameShapeIds[key]
-    } else {
+    if (model.floorPlan !== true) {
       const frameId = model.floorFrames[key] || options.allocateId('svg')
       const frameShapeId = model.floorFrameShapeIds[key]
         || (model.floorFrameShapeIds[key] = options.allocateId('SHE'))
