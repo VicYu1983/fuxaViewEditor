@@ -37,6 +37,7 @@ export interface GeneratedViewModel {
   originalComponents?: GeneratedComponent[]
   grid: GridSettings
   floorGroupFrame: FloorGroupFrameSettings
+  floorPlan?: boolean
   floorTitles: Record<string, string>
   floorTitleIds: Record<string, string[]>
   floorFrames: Record<string, string>
@@ -361,6 +362,15 @@ function validateFloorArtifacts(
         || titleNode.getAttribute('data-floor-group') !== section.floor) {
       throw new Error(`View「${viewLabel(view)}」的「${section.title}」樓層標題未正確寫入。`)
     }
+    if ((model.floorTitleIds[key] ?? []).length !== 1) {
+      throw new Error(`View「${viewLabel(view)}」的「${section.title}」樓層元件仍有重複項目。`)
+    }
+    if (model.floorPlan) {
+      if (model.floorFrames[key] || (model.floorFrameIds[key] ?? []).length) {
+        throw new Error(`平面圖 View「${viewLabel(view)}」不應保留「${section.title}」樓層底框。`)
+      }
+      continue
+    }
     const frameId = model.floorFrames[key]
     const frameNode = frameId ? findSvgElementById(doc, frameId) : null
     if (!frameNode
@@ -368,8 +378,7 @@ function validateFloorArtifacts(
         || frameNode.getAttribute('data-floor-group') !== section.floor) {
       throw new Error(`View「${viewLabel(view)}」的「${section.title}」樓層底框未正確寫入。`)
     }
-    if ((model.floorTitleIds[key] ?? []).length !== 1
-        || (model.floorFrameIds[key] ?? []).length !== 1) {
+    if ((model.floorFrameIds[key] ?? []).length !== 1) {
       throw new Error(`View「${viewLabel(view)}」的「${section.title}」樓層元件仍有重複項目。`)
     }
   }
@@ -379,7 +388,8 @@ function validateFloorArtifacts(
     .filter((item) => isRecord(item) && item.name === FLOOR_TITLE_NAME).length
   const frameCount = Object.values(items)
     .filter((item) => isRecord(item) && item.name === FLOOR_FRAME_NAME).length
-  if (titleCount !== expectedCount || frameCount !== expectedCount) {
+  const expectedFrameCount = model.floorPlan ? 0 : expectedCount
+  if (titleCount !== expectedCount || frameCount !== expectedFrameCount) {
     throw new Error(`View「${viewLabel(view)}」的樓層標題或底框數量與分組不一致。`)
   }
 }

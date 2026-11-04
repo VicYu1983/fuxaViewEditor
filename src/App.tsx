@@ -72,6 +72,7 @@ import { PreviewPanel } from './ui/preview/PreviewPanel'
 import { FloorsTab } from './ui/device/FloorsTab'
 import { ViewSidebar } from './ui/view/ViewSidebar'
 import { ViewNameDialog } from './ui/view/ViewNameDialog'
+import { FloorPlanViewCard } from './ui/view/FloorPlanViewCard'
 import { GridSettingsCard } from './ui/view/GridSettingsCard'
 import { ManagedComponentCard } from './ui/view/ManagedComponentCard'
 import {
@@ -718,6 +719,12 @@ function EditorWorkspace() {
       ...model,
       grid: { ...model.grid, ...update },
     })
+  }
+
+  function handleUpdateFloorPlan(viewId: string, floorPlan: boolean) {
+    const model = models.get(viewId)
+    if (!model) return
+    editView(viewId, { ...model, floorPlan })
   }
 
   function openBatchAddTab() {
@@ -1897,6 +1904,12 @@ function EditorWorkspace() {
                             viewId={selectedView.id}
                             grid={selectedModel.grid}
                             onUpdateGrid={handleUpdateGrid}
+                          />
+                        )}
+                        {selectedModel && (
+                          <FloorPlanViewCard
+                            floorPlan={selectedModel.floorPlan === true}
+                            onChange={(floorPlan) => handleUpdateFloorPlan(selectedView.id, floorPlan)}
                           />
                         )}
                       <ManagedComponentCard

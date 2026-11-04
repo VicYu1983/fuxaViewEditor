@@ -3,6 +3,7 @@ import { getErrorMessage } from '../shared/getErrorMessage'
 import { getFloorGroupFrameSettings } from '../layout/floorGroupFrame'
 import type { FloorLayoutComponent, Bounds } from '../layout/floorLayout'
 import { getViewGridSettings } from '../layout/gridSettings'
+import { getViewFloorPlanSetting } from '../layout/floorPlanViews'
 import { getFloorGroupArtifacts } from '../layout/floorGroupArtifacts'
 import { getIconAssets, getIconLibrary } from '../icons/iconLibrary'
 import type { MultiStateIconSet } from '../icons/iconLibrary'
@@ -181,6 +182,7 @@ export function buildViewEditorModels(
       originalComponents: structuredClone(components),
       grid: getViewGridSettings(config, view.id),
       floorGroupFrame: getFloorGroupFrameSettings(config),
+      floorPlan: getViewFloorPlanSetting(config, view.id),
       floorTitles: titles,
       floorTitleIds: titleIds,
       floorFrames: frames,

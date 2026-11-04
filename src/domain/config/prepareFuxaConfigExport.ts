@@ -7,6 +7,7 @@ import { serializeFuxaConfig } from './serialization'
 import { saveViewGridSettings } from '../layout/gridSettings'
 import { navigationNeedsSync, syncNavigationItems } from '../views/syncNavigation'
 import { saveFloorGroupFrameSettings } from '../layout/floorGroupFrame'
+import { saveFloorPlanViewSettings } from '../layout/floorPlanViews'
 import { saveFloorGroupArtifacts } from '../layout/floorGroupArtifacts'
 import { groupComponentsByFloor } from '../layout/floorLayout'
 import type { FloorTag } from '../layout/floorLayout'
@@ -522,6 +523,11 @@ export function prepareFuxaConfigExport(
   if (input.floorGroupFrame) {
     saveFloorGroupFrameSettings(output, input.floorGroupFrame)
   }
+  saveFloorPlanViewSettings(
+    output,
+    allViewIds,
+    new Map(models.map((model) => [model.viewId, model.floorPlan === true])),
+  )
   saveFloorGroupArtifacts(
     output,
     allViewIds,

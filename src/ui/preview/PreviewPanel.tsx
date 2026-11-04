@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import type { MouseEvent } from 'react'
 import { Alert, Button, Card, Empty, Space, Switch, Tag, Typography } from 'antd'
 
 const { Text } = Typography
@@ -29,6 +31,17 @@ export function PreviewPanel({
   viewName,
   stale,
 }: PreviewPanelProps) {
+  const [selectedTag, setSelectedTag] = useState<{ id: string; label: string } | null>(null)
+
+  function handlePreviewClick(event: MouseEvent<HTMLDivElement>) {
+    const target = (event.target as Element).closest?.('[data-preview-tag-id]')
+    if (!target) return
+    setSelectedTag({
+      id: target.getAttribute('data-preview-tag-id') ?? '',
+      label: target.getAttribute('data-preview-tag-label') ?? '',
+    })
+  }
+
   return (
     <Card
       title="SVG 預覽"
@@ -68,12 +81,20 @@ export function PreviewPanel({
           description={preview.error}
         />
       ) : preview?.svgMarkup ? (
-        <div
-          className="svg-preview"
-          role="img"
-          aria-label={`${viewName ?? 'View'} 唯讀 SVG 預覽`}
-          dangerouslySetInnerHTML={{ __html: preview.svgMarkup }}
-        />
+        <>
+          <div
+            className="svg-preview"
+            role="img"
+            aria-label={`${viewName ?? 'View'} 唯讀 SVG 預覽`}
+            onClick={handlePreviewClick}
+            dangerouslySetInnerHTML={{ __html: preview.svgMarkup }}
+          />
+          {selectedTag && (
+            <Text type="secondary">
+              已選取 Tag：{selectedTag.label}（{selectedTag.id}）
+            </Text>
+          )}
+        </>
       ) : (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}

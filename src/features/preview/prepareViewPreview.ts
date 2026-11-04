@@ -11,6 +11,7 @@ import { findSvgLayer } from '../../domain/svg/findSvgLayer'
 import { buildTagIndex } from '../../domain/tags/index'
 import { isRecord } from '../../domain/config/validateFuxaConfig'
 import { drawPreviewSwitchArtwork } from './drawPreviewSwitchArtwork'
+import { drawPreviewTagTargets } from './drawPreviewTagTargets'
 
 export interface ViewPreview {
   width: number
@@ -105,6 +106,7 @@ export function prepareViewPreview(
     const layer = findSvgLayer(doc)
     if (!layer) throw new Error(`View「${view.name || view.id}」找不到可顯示 Switch 預覽的 SVG 圖層。`)
     drawPreviewSwitchArtwork(layer, previewLayout.placements)
+    if (model?.floorPlan) drawPreviewTagTargets(layer, previewLayout.placements)
   }
   for (const node of Array.from(doc.getElementsByTagName('*'))) {
     if (node.getAttribute('data-fuxa-icon-set-id')

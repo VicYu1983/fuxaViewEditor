@@ -45,6 +45,7 @@ export interface ApplyModel {
   components: ApplyModelComponent[]
   originalComponents?: ApplyModelComponent[]
   grid: GridSettings
+  floorPlan?: boolean
   floorTitles: Record<string, string>
   floorTitleIds: Record<string, string[]>
   floorFrames: Record<string, string>
@@ -182,30 +183,48 @@ function applyModelToViewInPlace(
 
   for (const section of layout.sections) {
     const key = floorKey(section.floor)
-    const frameId = model.floorFrames[key] || options.allocateId('svg')
-    model.floorFrames[key] = frameId
-    model.floorFrameIds[key] = [frameId]
-    const frameShapeId = model.floorFrameShapeIds[key]
-      || (model.floorFrameShapeIds[key] = options.allocateId('SHE'))
+    const floorPlan = model.floorPlan === true
+    const frameId = floorPlan ? '' : model.floorFrames[key] || options.allocateId('svg')
+    const frameShapeId = floorPlan
+      ? ''
+      : model.floorFrameShapeIds[key] || (model.floorFrameShapeIds[key] = options.allocateId('SHE'))
     const titleId = model.floorTitles[key] || options.allocateId('svg')
     model.floorTitles[key] = titleId
     model.floorTitleIds[key] = [titleId]
-    const floorNodes = buildFloorArtifactNodes(
-      doc,
-      section,
-      { titleId, frameId, frameShapeId },
-      model.grid,
-      options.floorGroupFrame,
-      {
-        title: previousItems[titleId],
-        frame: previousItems[frameId],
-      },
-    )
+    if (floorPlan) {
+      delete model.floorFrames[key]
+      delete model.floorFrameIds[key]
+      delete model.floorFrameShapeIds[key]
+      const titleNodes = buildFloorArtifactNodes(
+        doc,
+        section,
+        { titleId, frameId },
+        model.grid,
+        options.floorGroupFrame,
+        { title: previousItems[titleId] },
+      )
+      layer.appendChild(titleNodes.titleNode)
+      view.items[titleId] = titleNodes.titleEntry
+    } else {
+      model.floorFrames[key] = frameId
+      model.floorFrameIds[key] = [frameId]
+      const floorNodes = buildFloorArtifactNodes(
+        doc,
+        section,
+        { titleId, frameId, frameShapeId },
+        model.grid,
+        options.floorGroupFrame,
+        {
+          title: previousItems[titleId],
+          frame: previousItems[frameId],
+        },
+      )
 
-    insertFloorFrame(layer, floorNodes.frameNode, section, doc)
-    view.items[frameId] = floorNodes.frameEntry
-    layer.appendChild(floorNodes.titleNode)
-    view.items[titleId] = floorNodes.titleEntry
+      insertFloorFrame(layer, floorNodes.frameNode, section, doc)
+      view.items[frameId] = floorNodes.frameEntry
+      layer.appendChild(floorNodes.titleNode)
+      view.items[titleId] = floorNodes.titleEntry
+    }
 
     for (const { component, placement } of section.entries) {
       if (component.managed === false) {

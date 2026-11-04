@@ -10,6 +10,7 @@ export function createEmptyViewModel(raw: FuxaConfig, viewId: string): ExportVie
     originalComponents: [],
     grid: { ...DEFAULT_GRID },
     floorGroupFrame: getFloorGroupFrameSettings(raw),
+    floorPlan: false,
     floorTitles: {},
     floorTitleIds: {},
     floorFrames: {},
