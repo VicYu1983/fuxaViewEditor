@@ -228,9 +228,9 @@ export const TagCreateTab = forwardRef<TagCreateTabHandle, TagCreateTabProps>(
             />
           </label>
           <label>
-            預設樓層
+            預設群組
             <Input
-              aria-label="Tag 批次預設樓層"
+              aria-label="Tag 批次預設群組"
               value={floor}
               placeholder="例如：4F"
               onChange={(event) => setFloor(event.target.value)}
@@ -245,7 +245,7 @@ export const TagCreateTab = forwardRef<TagCreateTabHandle, TagCreateTabProps>(
             setInput(event.target.value)
             setNameOverrides({})
           }}
-          placeholder={'泵浦運轉\n風機告警\n也可用欄位：名稱, 位址, 型別, 區段, 備註, 樓層'}
+          placeholder={'泵浦運轉\n風機告警\n也可用欄位：名稱, 位址, 型別, 區段, 備註, 群組'}
         />
         <div className="tag-create-preview-heading">
           <Text strong>建立預覽</Text>
@@ -261,7 +261,7 @@ export const TagCreateTab = forwardRef<TagCreateTabHandle, TagCreateTabProps>(
                   <th>位址</th>
                   <th>區段</th>
                   <th>型別</th>
-                  <th>樓層</th>
+                  <th>群組</th>
                   <th>名稱檢查</th>
                   <th>位址檢查</th>
                 </tr>

@@ -1,6 +1,6 @@
 # FUXA View Editor
 
-FUXA 配置編輯工具，使用 React、TypeScript、Ant Design 與 Vite。View、Tag、ModbusTCP、圖示庫與樓層管理功能已接入工作台；舊版原生工具仍保留在上一層目錄，供比對與回退使用。
+FUXA 配置編輯工具，使用 React、TypeScript、Ant Design 與 Vite。View、Tag、ModbusTCP、圖示庫、Tag 群組管理與跨 View 樓層導覽功能已接入工作台；舊版原生工具仍保留在上一層目錄，供比對與回退使用。
 
 ## 與 FUXA 的關係
 
@@ -20,17 +20,18 @@ FUXA 配置編輯工具，使用 React、TypeScript、Ant Design 與 Vite。View
 - 驗證配置需包含 `devices` 與 `hmi.views`。
 - 顯示 View 清單及選取 View 的基本資訊。
 - 新增空白 View、重新命名及刪除 View；刪除時會清理起始頁與導覽引用，並保留至少一個 View。
-- 在選取的 View 批次加入既有 Tag，支援搜尋、全選搜尋結果，並沿用 Tag 已設定的樓層；Boolean Coil 可建立綁定 click 事件的 Switch，並以 Tag 名稱作為文字標籤，也可關閉此行為改用一般元件。
+- View 名稱符合「系統/樓層」（例如 `排風系統/2F`）時會啟用跨 View 樓層導覽：同系統有多個樓層時，在 View 上方產生切換按鈕並標示目前樓層，導覽列每個系統只保留一筆並指向最低樓層；單一樓層不產生切換按鈕。編輯器會顯示「樓層功能已開啟」提示，匯出時保留平面圖及其他既有 SVG 元件。
+- 在選取的 View 批次加入既有 Tag，支援搜尋、全選搜尋結果，並沿用 Tag 已設定的群組；Boolean Coil 可建立綁定 click 事件的 Switch，並以 Tag 名稱作為文字標籤，也可關閉此行為改用一般元件。
 - 新增、修改、刪除 ModbusTCP 設備；管理 addressCount 補位及整台設備 Tag 位址 ±1，越界時整批取消；設備管理可一次移除該設備所有自動補位 Tag。
-- 「設備與 Tag 管理」會依數值 address 由小到大列出所選 ModbusTCP 設備的 Tag；匯出 JSON 時也會依相同規則排列設備 Tag，無效或空白位址排在最後。同位址 Tag 保留原順序。管理畫面會檢查全專案已建立 Tag 的重複名稱，標示重名 Tag 並列出所在設備；可修改名稱、位址、型別、記憶體區段、備註與樓層，儲存時不可使用其他 Tag 已使用的名稱，或刪除 Tag。刪除時會同步移除引用該 Tag 的受管理元件，唯讀元件仍有引用時會阻止刪除。
-- 可在「設備與 Tag 管理」中批次建立 Tag；支援逐行名稱或 CSV／Tab 欄位、起始位址／步長、型別、記憶體區段、樓層預設及建立預覽，也可選擇同步加入目前 View。預覽會檢查全專案 Tag 名稱是否重複，可直接修改名稱，名稱重複或空白時不可建立；位址重複會提示但不阻擋。ModbusTCP 設備會依 addressCount 自動補齊缺漏位址，自動補位名稱也會避開全專案既有名稱。
+- 「設備與 Tag 管理」會依數值 address 由小到大列出所選 ModbusTCP 設備的 Tag；匯出 JSON 時也會依相同規則排列設備 Tag，無效或空白位址排在最後。同位址 Tag 保留原順序。管理畫面會檢查全專案已建立 Tag 的重複名稱，標示重名 Tag 並列出所在設備；可修改名稱、位址、型別、記憶體區段、備註與群組，儲存時不可使用其他 Tag 已使用的名稱，或刪除 Tag。刪除時會同步移除引用該 Tag 的受管理元件，唯讀元件仍有引用時會阻止刪除。
+- 可在「設備與 Tag 管理」中批次建立 Tag；支援逐行名稱或 CSV／Tab 欄位、起始位址／步長、型別、記憶體區段、群組預設及建立預覽，也可選擇同步加入目前 View。預覽會檢查全專案 Tag 名稱是否重複，可直接修改名稱，名稱重複或空白時不可建立；位址重複會提示但不阻擋。ModbusTCP 設備會依 addressCount 自動補齊缺漏位址，自動補位名稱也會避開全專案既有名稱。
 - 可由「設備與 Tag 管理」開啟獨立的「批次設定 Tag 告警」視窗，多選 Tag 後一次設定共用告警文字與等級，並為每個 Tag 指定觸發時要跳轉的 View。Tag 只出現在一個 View 時會自動帶入；出現在多個 View 時需明確選擇。已存在的 Tag 告警會更新而不重複新增。
-- 管理 Tag 樓層，支援搜尋、多選、全選可見項目、批次套用及依樓層分組／平面清單切換。
+- 管理 Tag 群組（沿用 FUXA 配置中的 `extra.floor` 資料欄位），支援搜尋、多選、全選可見項目、批次套用及依群組／平面清單切換。
 - 管理圖示庫中的一般圖示、正常／告警圖示組與多狀態圖示組；支援 PNG、JPEG、GIF 原始資料保存、預覽，以及阻止刪除仍被 View 使用的圖示或狀態。重新匯入經 FUXA 匯出的配置時，即使 SVG 擴充屬性被移除，也會依內嵌圖片、項目名稱及 FUXA actions 還原多狀態元件關聯。
-- 設定所有 View 共用的樓層 Group 底框底色、透明度、邊框、圓角及上下內距；框框左右固定對齊畫面邊緣並各內縮 10px。舊專案既有底框會在下一次匯出時同步校正。
+- 設定所有 View 共用的 Tag 群組底框底色、透明度、邊框、圓角及上下內距；框框左右固定對齊畫面邊緣並各內縮 10px。舊專案既有底框會在下一次匯出時同步校正。
 - 「View 屬性」可設定所有 View 的背景色，以及 View 名稱標籤的顏色與字級；背景保存於 `profile.bkcolor`，名稱標籤設定保存於 `extra.fuxaSetting.viewTitleLabel`，並同步更新標題 SVG。
 - 編輯可管理元件的標籤、Tag 綁定、圖形（矩形、圓柱、一般圖示、正常／告警圖示組或多狀態圖示組）、狀態配色及圖示組狀態反轉，或移除元件。
-- 可在「已管理元件」清單中使用上移／下移按鈕調整同一樓層內的排列順序；變更會反映在預覽及匯出配置中。
+- 可在「已管理元件」清單中使用上移／下移按鈕調整同一群組內的排列順序；變更會反映在預覽及匯出配置中。
 - 多狀態圖示組可設定正常圖與最多 8 個具優先順序的狀態圖；元件各狀態個別綁定不同的 Boolean Tag。狀態重疊時由較高優先的圖層顯示；尚未綁定的狀態會阻止預覽／匯出。
 - 批次加入 Tag 可套用多狀態圖示組；每筆 Tag 仍各自建立一個元件，並先綁定至圖示組的最高優先狀態。
 - 批次建立並同步加入 View 的 Boolean Coil Tag 會建立為 Switch，並顯示 Tag 名稱標籤。
@@ -77,7 +78,7 @@ Vite 使用相對資產路徑，適用於 FUXA 的子路徑部署；目前尚未
 
 ## 範圍與注意事項
 
-- 設備、Tag、樓層與 View 管理功能已可在新版工作台使用；其他設備通訊類型及進階 Tag 維護尚未遷移。
+- 設備、Tag、Tag 群組與 View 管理功能已可在新版工作台使用；其他設備通訊類型及進階 Tag 維護尚未遷移。
 - 編輯歷程使用 reducer 管理並支援 Undo/Redo，但完整應用 Store 尚未依設計文件的完整架構拆分。
 - 新舊版本輸出尚未完成黃金檔逐位元組比對；產生的配置仍需在目標 FUXA 環境驗證。
 - 多狀態圖示組的輸出結構已加入編輯器驗證；FUXA 執行期的初始可見性、圖層順序及 Boolean 狀態切換仍待在目標 FUXA 環境確認。
@@ -103,7 +104,7 @@ Vite 使用相對資產路徑，適用於 FUXA 的子路徑部署；目前尚未
 | 設備 Tag 管理、重名檢查、刪除 | `ui/device/DeviceTagManager.tsx`、`DeviceTagEditDialog.tsx` | `features/devices/manageDeviceTags.ts`、`findTagReferences.ts`、`domain/devices/deviceTagAddressSort.ts` |
 | 設備 Tag 批次移動（位址 ±1） | `ui/device/DeviceTagMoveDialog.tsx` | `features/devices/moveDeviceTags.ts` |
 | 批次建立 Tag | `ui/device/TagCreateTab.tsx` | `features/tags/createTagsForDevice.ts` |
-| Tag 樓層管理 | `ui/device/FloorsTab.tsx` | `features/floors/applyTagFloors.ts`、`features/floors/updateFloorGroupFrame.ts`、`domain/tags/floor.ts`、`domain/layout/floorLayout.ts` |
+| Tag 群組管理 | `ui/device/FloorsTab.tsx` | `features/floors/applyTagFloors.ts`、`features/floors/updateFloorGroupFrame.ts`、`domain/tags/floor.ts`、`domain/layout/floorLayout.ts` |
 | Tag 告警設定 | `ui/device/TagAlarmsTab.tsx` | `domain/alarms/manageTagAlarms.ts`、`readTagAlarms.ts` |
 | 專案管理 | `ui/device/ProjectManagerDialog.tsx` | `domain/config/` |
 | 圖示庫、多狀態圖示組 | `ui/icons/IconLibraryDialog.tsx`、`MultiStateIconDialog.tsx` | `features/icons/iconLibraryManagement.ts`、`componentGraphics.ts`、`domain/icons/iconLibrary.ts` |

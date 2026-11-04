@@ -1,3 +1,4 @@
+// Here, floor means a Tag group within one View, not a cross-View building floor.
 import type { FloorGroupFrameSettings, GridSettings } from '../config/types'
 import type { FloorLayoutSection } from '../layout/floorLayout'
 

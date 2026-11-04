@@ -1,3 +1,4 @@
+// Here, floor means a Tag group within one View, not a cross-View building floor.
 import type { FuxaConfig } from '../../domain/config/types'
 import { isRecord } from '../../domain/config/validateFuxaConfig'
 import { normalizeFloor, setTagFloor } from '../../domain/tags/floor'

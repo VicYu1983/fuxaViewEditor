@@ -92,6 +92,8 @@ import {
 } from './domain/views/viewTitleLabel'
 import { getSiteNameSettings, updateAllSiteNameLabels } from './domain/views/siteNameLabel'
 import { navigationNeedsSync } from './domain/views/syncNavigation'
+import { buildingFloorButtonsNeedSync } from './domain/buildingFloors/buildingFloorButtons'
+import { parseBuildingFloorName } from './domain/buildingFloors/buildingFloors'
 import {
   AUTO_FILLED_TAG_DESCRIPTION,
   buildTagIndex,
@@ -340,6 +342,7 @@ function EditorWorkspace() {
       || deviceTagsNeedAddressSorting(config.rawConfig)
       || needsVoiceBridgeUpdate(config.rawConfig)
       || navigationNeedsSync(config.rawConfig)
+      || buildingFloorButtonsNeedSync(config.rawConfig)
     const dependencies = exportDirty
       ? createFuxaConfigExportDependencies(config.rawConfig, createBrowserSvgDeps())
       : undefined
@@ -1179,14 +1182,14 @@ function EditorWorkspace() {
     try {
       const result = applyTagFloors(config.rawConfig, tagIds, value)
       if (!result.changedCount) {
-        messageApi.info('選取的 Tag 樓層沒有變更。')
+        messageApi.info('選取的 Tag 群組沒有變更。')
         return
       }
       commitDocumentEdit(config, result.config)
-      messageApi.success(`已更新 ${result.changedCount} 個 Tag 的樓層。`)
+      messageApi.success(`已更新 ${result.changedCount} 個 Tag 的群組。`)
     } catch (error) {
       const detail = getErrorMessage(error)
-      messageApi.error(`更新 Tag 樓層失敗：${detail}`)
+      messageApi.error(`更新 Tag 群組失敗：${detail}`)
     }
   }
 
@@ -1233,7 +1236,7 @@ function EditorWorkspace() {
       })
       if (!result.changed) {
         setViewSettingsOpen(false)
-        messageApi.info('樓層底框設定沒有變更。')
+        messageApi.info('群組底框設定沒有變更。')
         return
       }
       const updatedFrame = getFloorGroupFrameSettings(result.config)
@@ -1245,9 +1248,9 @@ function EditorWorkspace() {
       )
       commitDocumentEdit(config, result.config, nextModels)
       setViewSettingsOpen(false)
-      messageApi.success('已更新所有 View 的樓層底框設定。')
+      messageApi.success('已更新所有 View 的群組底框設定。')
     } catch (error) {
-      messageApi.error(`更新樓層底框設定失敗：${getErrorMessage(error)}`)
+      messageApi.error(`更新群組底框設定失敗：${getErrorMessage(error)}`)
     }
   }
 
@@ -1805,7 +1808,7 @@ function EditorWorkspace() {
             },
             {
               key: 'floors',
-              label: '樓層管理',
+              label: '群組管理',
               children: <FloorsTab
                 key={floorSession}
                 tags={tags}
@@ -1863,9 +1866,14 @@ function EditorWorkspace() {
                     <Text className="eyebrow">CONFIGURATION</Text>
                     <Title level={3}>{selectedView?.name ?? 'View'}</Title>
                   </div>
-                  <Tag color={isDirty ? 'orange' : 'blue'}>
-                    {isDirty ? '有未匯出修改' : 'View 元件管理'}
-                  </Tag>
+                  <Space size="small">
+                    {selectedView && parseBuildingFloorName(selectedView.name) && (
+                      <Tag color="blue">樓層功能已開啟</Tag>
+                    )}
+                    <Tag color={isDirty ? 'orange' : 'blue'}>
+                      {isDirty ? '有未匯出修改' : 'View 元件管理'}
+                    </Tag>
+                  </Space>
                 </div>
 
                 {selectedView ? (

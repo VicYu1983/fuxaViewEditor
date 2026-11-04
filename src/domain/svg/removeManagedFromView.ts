@@ -1,9 +1,11 @@
+// Here, floor means a Tag group within one View, not a cross-View building floor.
 import { isRecord } from '../config/validateFuxaConfig'
 import { findSvgElementById } from './parseSvg'
 
 const FLOOR_ARTIFACT_NAMES = new Set([
   'fuxa_floor_section_title',
   'fuxa_floor_section_frame',
+  'fuxa_building_floor_button',
 ])
 
 interface ManagedComponentRef {

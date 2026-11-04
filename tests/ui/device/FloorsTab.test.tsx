@@ -53,7 +53,7 @@ describe('FloorsTab', () => {
 
   it('filters rows by the search text', () => {
     renderTab()
-    fireEvent.change(screen.getByLabelText('搜尋樓層 Tag'), { target: { value: 'valve' } })
+    fireEvent.change(screen.getByLabelText('搜尋群組 Tag'), { target: { value: 'valve' } })
     expect(screen.queryByLabelText('選取 PLC-A／Pump1')).toBeNull()
     expect(screen.getByLabelText('選取 PLC-B／Valve2')).toBeTruthy()
   })
@@ -71,7 +71,7 @@ describe('FloorsTab', () => {
     const { onApplyFloor } = renderTab()
     fireEvent.click(screen.getByLabelText('選取 PLC-A／Pump1'))
     fireEvent.click(screen.getByLabelText('選取 PLC-A／Fan3'))
-    const input = screen.getByLabelText('批次設定樓層') as HTMLInputElement
+    const input = screen.getByLabelText('批次設定群組') as HTMLInputElement
     fireEvent.change(input, { target: { value: '3F' } })
     fireEvent.click(screen.getByRole('button', { name: /套用/ }))
     expect(onApplyFloor).toHaveBeenCalledWith(['t1', 't3'], '3F')
@@ -86,20 +86,20 @@ describe('FloorsTab', () => {
 
   it('applies a per-tag floor on blur only when it changed', () => {
     const { onApplyFloor } = renderTab()
-    const input = screen.getByLabelText('Fan3 的樓層') as HTMLInputElement
+    const input = screen.getByLabelText('Fan3 的群組') as HTMLInputElement
     fireEvent.change(input, { target: { value: '4F' } })
     fireEvent.blur(input)
     expect(onApplyFloor).toHaveBeenCalledWith(['t3'], '4F')
 
     onApplyFloor.mockClear()
-    const unchanged = screen.getByLabelText('Pump1 的樓層') as HTMLInputElement
+    const unchanged = screen.getByLabelText('Pump1 的群組') as HTMLInputElement
     fireEvent.blur(unchanged)
     expect(onApplyFloor).not.toHaveBeenCalled()
   })
 
   it('shows an empty state when no tag matches', () => {
     renderTab()
-    fireEvent.change(screen.getByLabelText('搜尋樓層 Tag'), { target: { value: 'no-such-tag' } })
+    fireEvent.change(screen.getByLabelText('搜尋群組 Tag'), { target: { value: 'no-such-tag' } })
     expect(screen.getByText('沒有符合條件的 Tag。')).toBeTruthy()
   })
 })

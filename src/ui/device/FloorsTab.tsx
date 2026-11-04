@@ -1,3 +1,4 @@
+// Here, floor means a Tag group within one View, not a cross-View building floor.
 import { useMemo, useState } from 'react'
 import { Button, Checkbox, Empty, Input, Radio, Typography } from 'antd'
 import { groupByFloor, normalizeFloor } from '../../domain/tags/floor'
@@ -48,7 +49,7 @@ export function FloorsTab({ tags, onApplyFloor, onNotify }: FloorsTabProps) {
 
   function handleApplyBulkFloor() {
     if (!selection.size) {
-      onNotify('warning', '請先選取要設定樓層的 Tag。')
+      onNotify('warning', '請先選取要設定群組的 Tag。')
       return
     }
     onApplyFloor([...selection], bulkFloor)
@@ -58,22 +59,22 @@ export function FloorsTab({ tags, onApplyFloor, onNotify }: FloorsTabProps) {
   return (
     <>
       <Input
-        aria-label="搜尋樓層 Tag"
+        aria-label="搜尋群組 Tag"
         allowClear
-        placeholder="搜尋設備、Tag、型別、ID 或樓層"
+        placeholder="搜尋設備、Tag、型別、ID 或群組"
         value={search}
         onChange={(event) => setSearch(event.target.value)}
         style={{ margin: '12px 0' }}
       />
       <div className="floor-manager-toolbar">
         <Radio.Group
-          aria-label="樓層顯示方式"
+          aria-label="群組顯示方式"
           optionType="button"
           buttonStyle="solid"
           value={displayMode}
           onChange={(event) => setDisplayMode(event.target.value)}
           options={[
-            { label: '依樓層分組', value: 'group' },
+            { label: '依群組分組', value: 'group' },
             { label: '平面清單', value: 'list' },
           ]}
         />
@@ -91,9 +92,9 @@ export function FloorsTab({ tags, onApplyFloor, onNotify }: FloorsTabProps) {
           全選可見 Tag
         </Checkbox>
         <Input
-          aria-label="批次設定樓層"
+          aria-label="批次設定群組"
           list="known-floor-options"
-          placeholder="輸入或選擇樓層"
+          placeholder="輸入或選擇群組"
           value={bulkFloor}
           onChange={(event) => setBulkFloor(event.target.value)}
           style={{ maxWidth: 220 }}
@@ -109,7 +110,7 @@ export function FloorsTab({ tags, onApplyFloor, onNotify }: FloorsTabProps) {
           套用至選取項目
         </Button>
       </div>
-      <div className="floor-tag-list" role="group" aria-label="Tag 樓層清單">
+      <div className="floor-tag-list" role="group" aria-label="Tag 群組清單">
         {filteredTags.length ? tagGroups.map((group) => (
           <section className="floor-tag-group" key={group.floor || 'all'}>
             {group.title && (
@@ -143,10 +144,10 @@ export function FloorsTab({ tags, onApplyFloor, onNotify }: FloorsTabProps) {
                   Address: {String(tag.record.address ?? '未設定')}
                 </Text>
                 <Input
-                  aria-label={`${tag.name} 的樓層`}
+                  aria-label={`${tag.name} 的群組`}
                   key={`${tag.id}-${tag.floor}`}
                   defaultValue={tag.floor}
-                  placeholder="未設定樓層"
+                  placeholder="未設定群組"
                   onPressEnter={(event) => event.currentTarget.blur()}
                   onBlur={(event) => {
                     const value = normalizeFloor(event.currentTarget.value)

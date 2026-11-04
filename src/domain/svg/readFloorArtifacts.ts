@@ -1,3 +1,4 @@
+// Here, floor means a Tag group within one View, not a cross-View building floor.
 import { normalizeFloor } from '../tags/floor'
 import { isRecord } from '../config/validateFuxaConfig'
 import { findSvgElementById } from './parseSvg'

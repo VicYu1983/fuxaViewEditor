@@ -102,7 +102,7 @@ export function DeviceTagManager({
         <Input
           aria-label="搜尋設備 Tag"
           allowClear
-          placeholder="搜尋 Tag 名稱、位址、型別或樓層"
+          placeholder="搜尋 Tag 名稱、位址、型別或群組"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           className="device-tag-search"

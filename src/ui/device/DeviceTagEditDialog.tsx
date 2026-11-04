@@ -88,7 +88,7 @@ export function DeviceTagEditDialog({
         <Form.Item name="description" label="備註">
           <Input />
         </Form.Item>
-        <Form.Item name="floor" label="樓層">
+        <Form.Item name="floor" label="群組">
           <Input placeholder="例如 4F" />
         </Form.Item>
       </Form>

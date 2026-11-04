@@ -32,3 +32,4 @@ export function insertFloorFrame(
   if (firstTagChild) layer.insertBefore(frameNode, firstTagChild)
   else layer.appendChild(frameNode)
 }
+// Here, floor means a Tag group within one View, not a cross-View building floor.

@@ -11,6 +11,7 @@ import { saveFloorGroupArtifacts } from '../layout/floorGroupArtifacts'
 import { groupComponentsByFloor } from '../layout/floorLayout'
 import type { FloorTag } from '../layout/floorLayout'
 import { saveIconLibrary } from '../icons/iconLibrary'
+import { buildingFloorButtonsNeedSync } from '../buildingFloors/buildingFloorButtons'
 import {
   deviceTagsNeedAddressSorting,
   sortDeviceTagsByAddress,
@@ -82,6 +83,7 @@ export interface PrepareFuxaConfigExportInput {
 }
 
 export interface PrepareFuxaConfigExportDependencies {
+  syncBuildingFloors?: (config: FuxaConfig) => ReadonlySet<string> | void
   applyView?: (
     view: Record<string, unknown>,
     model: ExportViewModel,
@@ -445,6 +447,7 @@ export function prepareFuxaConfigExport(
       && !deviceTagsNeedSorting
       && !needsVoiceBridgeUpdate(input.config)
       && !navigationNeedsSync(input.config)
+      && !buildingFloorButtonsNeedSync(input.config)
       && findLegacySwitchViewIds(input.models ?? []).size === 0) {
     return {
       config: input.config,
@@ -499,6 +502,11 @@ export function prepareFuxaConfigExport(
     modifiedViewIds.add(viewId)
   }
 
+  const floorButtonViewIds = dependencies.syncBuildingFloors?.(output)
+  if (buildingFloorButtonsNeedSync(output)) {
+    throw new Error('尚未設定樓層按鈕同步函式，無法匯出樓層 View。')
+  }
+  for (const viewId of floorButtonViewIds ?? []) modifiedViewIds.add(viewId)
   dependencies.alignFloorFrames?.(output)
 
   if (input.iconLibrary !== undefined

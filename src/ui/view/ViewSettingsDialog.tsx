@@ -1,3 +1,4 @@
+// Here, floor means a Tag group within one View, not a cross-View building floor.
 import { Form, Input, InputNumber, Modal, Space, Switch, Tabs, Typography } from 'antd'
 import type { FormInstance } from 'antd'
 import type { FloorGroupFrameSettings } from '../../domain/config/types'
@@ -63,10 +64,10 @@ export function ViewSettingsDialog({
         items={[
           {
             key: 'floor-frame',
-            label: '樓層框樣式',
+            label: '群組框樣式',
             children: <>
         <Text type="secondary">
-          設定會套用至所有 View 的樓層 Group 底框；左右固定內縮 10px，上下可調整內距，並可使用 Undo/Redo 還原。
+          設定會套用至所有 View 的 Tag 群組底框；左右固定內縮 10px，上下可調整內距，並可使用 Undo/Redo 還原。
         </Text>
         <Form
           form={floorFrameForm}
@@ -76,7 +77,7 @@ export function ViewSettingsDialog({
           style={{ marginTop: 16 }}
         >
           <Form.Item label="底色" name="fill" rules={[{ required: true }]}>
-            <Input type="color" aria-label="樓層底框底色" />
+            <Input type="color" aria-label="群組底框底色" />
           </Form.Item>
           <Form.Item
             label="透明度 (%)"
@@ -88,7 +89,7 @@ export function ViewSettingsDialog({
             <InputNumber min={0} max={100} step={1} />
           </Form.Item>
           <Form.Item label="邊框色" name="stroke" rules={[{ required: true }]}>
-            <Input type="color" aria-label="樓層底框邊框色" />
+            <Input type="color" aria-label="群組底框邊框色" />
           </Form.Item>
           <Form.Item
             label="邊框粗細"

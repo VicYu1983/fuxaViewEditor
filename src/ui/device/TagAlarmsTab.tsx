@@ -296,7 +296,7 @@ export const TagAlarmsTab = forwardRef<TagAlarmsTabHandle, TagAlarmsTabProps>(
         <Input
           aria-label="搜尋告警 Tag"
           allowClear
-          placeholder="搜尋設備、Tag、型別、ID 或樓層"
+          placeholder="搜尋設備、Tag、型別、ID 或群組"
           value={tagAlarmSearch}
           onChange={(event) => setTagAlarmSearch(event.target.value)}
           style={{ margin: '12px 0' }}

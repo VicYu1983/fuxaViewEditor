@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
 import type { FuxaConfig, SourceTextFormat } from '../../src/domain/config/types'
 import {
@@ -120,6 +121,45 @@ describe('prepareFuxaConfigExport', () => {
     expect(result.dirty).toBe(false)
     expect(result.modifiedViewIds.size).toBe(0)
     expect(original.extra).toEqual({ customField: { keep: true } })
+  })
+
+  it('creates floor buttons during export and preserves existing SVG artwork', () => {
+    const original = config()
+    const svgcontent = '<svg xmlns="http://www.w3.org/2000/svg"><g>'
+      + '<title>Layer 1</title><image id="background" href="resources/Drawing2.svg"/>'
+      + '</g></svg>'
+    original.hmi.views = [
+      { id: 'floor-2', name: '排風系統/2F', items: {}, svgcontent },
+      { id: 'floor-3', name: '排風系統/3F', items: {}, svgcontent },
+    ]
+    original.hmi.layout = { navigation: { items: [] } }
+    const result = prepareFuxaConfigExport(input({ config: original }),
+      createFuxaConfigExportDependencies(original, {
+        Parser: DOMParser,
+        serialize: (doc) => new XMLSerializer().serializeToString(doc),
+        crypto: globalThis.crypto,
+      }))
+    const exported = JSON.parse(result.text) as FuxaConfig
+    const views = exported.hmi.views as Array<{
+      svgcontent: string
+      items: Record<string, { name: string; property: { events: Array<{ actparam: string }> } }>
+    }>
+
+    expect(result.dirty).toBe(true)
+    expect(exported.hmi.layout).toMatchObject({
+      navigation: {
+        items: [expect.objectContaining({ text: '排風系統', view: 'floor-2' })],
+      },
+    })
+    for (const view of views) {
+      const buttons = Object.values(view.items)
+        .filter((item) => item.name === 'fuxa_building_floor_button')
+      expect(buttons).toHaveLength(2)
+      expect(view.svgcontent).toContain('resources/Drawing2.svg')
+      expect(buttons.map((button) => button.property.events[0]?.actparam))
+        .toEqual(['floor-2', 'floor-3'])
+    }
+    expect(original.hmi.views[0]).toMatchObject({ name: '排風系統/2F', items: {} })
   })
 
   it('writes the edited project name to the top-level JSON name', () => {

@@ -21,6 +21,10 @@ import {
 } from '../layout/floorGroupFrame'
 import type { FloorGroupFrameSettings } from './types'
 import { alignFloorFramesToCanvas } from '../svg/alignFloorFramesToCanvas'
+import {
+  buildingFloorButtonsNeedSync,
+  syncBuildingFloorButtons,
+} from '../buildingFloors/buildingFloorButtons'
 
 export interface FuxaConfigExportRuntime {
   Parser: SvgParserConstructor
@@ -143,6 +147,18 @@ export function createFuxaConfigExportDependencies(
   }
 
   return {
+    syncBuildingFloors(output) {
+      const changedViewIds = syncBuildingFloorButtons(
+        output,
+        runtime.Parser,
+        runtime.serialize,
+        allocateId,
+      )
+      if (buildingFloorButtonsNeedSync(output)) {
+        throw new Error('樓層按鈕未正確寫入 View。')
+      }
+      return changedViewIds
+    },
     alignFloorFrames(output) {
       alignFloorFramesToCanvas(
         output,

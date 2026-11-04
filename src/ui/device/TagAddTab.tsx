@@ -97,7 +97,7 @@ export const TagAddTab = forwardRef<TagAddTabHandle, TagAddTabProps>(
     return (
       <>
         <Text type="secondary">
-          Tag 會沿用配置中的樓層；未設定樓層的 Tag 會歸入「未設定樓層」。
+          Tag 會沿用配置中的群組；未設定群組的 Tag 會歸入「未設定群組」。
         </Text>
         <Select
           aria-label="批次圖形"
@@ -189,7 +189,7 @@ export const TagAddTab = forwardRef<TagAddTabHandle, TagAddTabProps>(
               <span className="batch-tag-option">
                 <span>{tag.deviceName} / {tag.name} ({tag.type || '未設定型別'})</span>
                 <Text type="secondary">
-                  {tag.floor || '未設定樓層'} · {tag.memaddress || '未設定區段'}
+                  {tag.floor || '未設定群組'} · {tag.memaddress || '未設定區段'}
                   {isCoilTag(tag) ? ' · Coil' : ''}
                   {' · '}{tag.id}
                   {currentViewTagIds.has(tag.id) ? ' · 此 View 已使用' : ''}

@@ -1,3 +1,4 @@
+// Here, floor means a Tag group within one View, not a cross-View building floor.
 import {
   Alert,
   Button,
@@ -127,7 +128,7 @@ export function ManagedComponentCard({
       {managedCount > 0 ? (
         <div className="component-list">
           <Text type="secondary">
-            使用箭頭調整同一樓層內的元件順序；排序會同步套用至預覽與匯出。
+            使用箭頭調整同一群組內的元件順序；排序會同步套用至預覽與匯出。
           </Text>
           {groups.map((group) => (
             <section className="managed-component-floor" key={group.floor}>
@@ -316,7 +317,7 @@ export function ManagedComponentCard({
                       size="small"
                       type="text"
                       aria-label={`上移 ${component.label || '元件'}`}
-                      title="在此樓層上移"
+                      title="在此群組上移"
                       disabled={index === 0}
                       onClick={() => onMoveComponent(viewId, component.key, -1)}
                       icon={<UpOutlined />}
@@ -325,7 +326,7 @@ export function ManagedComponentCard({
                       size="small"
                       type="text"
                       aria-label={`下移 ${component.label || '元件'}`}
-                      title="在此樓層下移"
+                      title="在此群組下移"
                       disabled={index === group.items.length - 1}
                       onClick={() => onMoveComponent(viewId, component.key, 1)}
                       icon={<DownOutlined />}
