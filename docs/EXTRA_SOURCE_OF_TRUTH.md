@@ -354,6 +354,21 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 
 ### Phase 3：群組標題與底框、標題樣式遷移路徑整理
 
+**狀態：已完成（2026-11-04）。**
+
+- [readFloorArtifacts.ts](../src/domain/svg/readFloorArtifacts.ts)：
+  - 以 `extra.floorGroupArtifacts` 認定的標題與底框優先，且之後不再被 `data-floor-group` 或文字推測重複登記到其他群組。**修正一個實際缺陷**：原本即使索引已認定，只要標題文字與群組名稱不同，同一個標題還會被登記到第二個群組。
+  - 以 `data-floor-group`、文字推測的分支加註「僅用於 extra 索引不存在的舊檔」。FUXA 往返後 `data-floor-group` 會遺失（demo2 可見），所以索引是主要來源。
+  - 索引認定的標題也納入標題位置比對，供沒有 id 對應的底框使用。
+- [viewTitleLabel.ts](../src/domain/views/viewTitleLabel.ts)：從 SVG 讀標題樣式的分支加註為舊檔遷移；`extra` 已有設定時一律以 `extra` 為準。
+- INV-8：除了 Phase 0 的「匯出時重新套用」，另外補上驗證器與套用函式的單元測試：
+  - 平面圖 View 保留群組標題或底框時，驗證器拒絕。
+  - 套用平面圖 View 時清除殘留標題與底框，且不重新產生（有元件與沒有元件兩種情況）。
+- 測試：[readFloorArtifacts.test.ts](../tests/domain/readFloorArtifacts.test.ts)（索引優先於衝突的 SVG 標記、FUXA 移除標記後仍可由索引解析）、[applyModelToView.test.ts](../tests/domain/applyModelToView.test.ts)、[validateGeneratedView.test.ts](../tests/domain/validateGeneratedView.test.ts)、[viewTitleLabel.test.ts](../tests/domain/viewTitleLabel.test.ts)。
+- 驗證：完整測試 376 個全數通過，`tsc`、`eslint`、`build` 通過。
+
+原計畫（保留供對照）：
+
 - `readFloorArtifacts` 的推測分支加註「僅舊檔遷移」，並以 `extra.floorGroupArtifacts` 優先。
 - 平面圖 View 的不變量（INV-8）已在 Phase 0 以「重新套用」修正；此處補上匯出前驗證與更完整的測試。
 - `viewTitleLabel`、`siteNameLabel` 從 SVG 取預設值的分支明確標示為遷移。

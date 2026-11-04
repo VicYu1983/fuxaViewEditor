@@ -231,6 +231,61 @@ describe('applyModelToView', () => {
     expect(floorFrameNode?.children[0]?.getAttribute('width')).toBe('780')
   })
 
+  it('INV-8: removes leftover group titles and frames from a floor-plan View without regenerating them', () => {
+    const root = new TestElement('svg')
+    const layer = root.appendChild(new TestElement('g', { id: 'layer-1' }))
+    layer.appendChild(new TestElement('text', {
+      id: 'old-title', 'data-name': 'fuxa_floor_section_title',
+    }))
+    layer.appendChild(new TestElement('g', {
+      id: 'old-frame', 'data-name': 'fuxa_floor_section_frame',
+    }))
+    const userNode = layer.appendChild(new TestElement('circle', { id: 'user-node' }))
+    const currentView = view({
+      'old-title': { id: 'old-title', name: 'fuxa_floor_section_title' },
+      'old-frame': { id: 'old-frame', name: 'fuxa_floor_section_frame' },
+      'user-item': { id: 'user-item', name: 'unmanaged' },
+    })
+    const currentModel: ApplyModel = {
+      ...model(),
+      floorPlan: true,
+      floorTitles: { 'floor:': 'old-title' },
+      floorTitleIds: { 'floor:': ['old-title'] },
+      floorFrames: { 'floor:': 'old-frame' },
+      floorFrameIds: { 'floor:': ['old-frame'] },
+      floorFrameShapeIds: { 'floor:': 'old-shape' },
+    }
+
+    applyModelToView(currentView, currentModel, options(new TestDocument(root)))
+
+    expect(Object.keys(currentView.items)).toEqual(['user-item'])
+    expect(layer.children).toEqual([userNode])
+    expect(currentModel.floorTitles).toEqual({})
+    expect(currentModel.floorTitleIds).toEqual({})
+    expect(currentModel.floorFrames).toEqual({})
+    expect(currentModel.floorFrameIds).toEqual({})
+    expect(currentModel.floorFrameShapeIds).toEqual({})
+  })
+
+  it('INV-8: does not generate group titles or frames for floor-plan Views with components', () => {
+    const root = new TestElement('svg')
+    const layer = root.appendChild(new TestElement('g', { id: 'layer-1' }))
+    const currentView = view()
+    currentView.profile = { width: 800 }
+    const currentModel: ApplyModel = { ...model([component()]), floorPlan: true }
+
+    applyModelToView(currentView, currentModel, options(new TestDocument(root)))
+
+    const names = layer.children.map((node) => node.getAttribute('data-name'))
+    expect(names).not.toContain('fuxa_floor_section_title')
+    expect(names).not.toContain('fuxa_floor_section_frame')
+    expect(Object.values(currentView.items).map((item) => (item as { name?: string }).name))
+      .not.toContain('fuxa_floor_section_title')
+    expect(currentModel.floorTitles).toEqual({})
+    expect(currentModel.floorFrames).toEqual({})
+    expect(layer.children.some((node) => node.getAttribute('id') === 'shape-1')).toBe(true)
+  })
+
   it('declares XLink namespace for icon-based components', () => {
     const root = new TestElement('svg')
     root.appendChild(new TestElement('g'))

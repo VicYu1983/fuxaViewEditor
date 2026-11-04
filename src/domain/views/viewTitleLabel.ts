@@ -50,6 +50,7 @@ export function getViewTitleLabelSettings(
   const toolSettings = getToolSettings(config)
   const storedSettings = toolSettings?.[VIEW_TITLE_LABEL_KEY]
   if (isRecord(storedSettings)) return normalizeViewTitleLabelSettings(storedSettings)
+  // 舊檔遷移：extra 尚無設定時，才從 SVG 標題讀取樣式
   if (!viewId || !Parser) return { ...DEFAULT_VIEW_TITLE_LABEL }
 
   const view = config.hmi.views.find(

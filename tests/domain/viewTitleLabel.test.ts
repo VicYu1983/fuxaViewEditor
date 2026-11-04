@@ -141,6 +141,21 @@ describe('viewTitleLabel', () => {
       .toEqual(DEFAULT_VIEW_TITLE_LABEL)
   })
 
+  it('prefers stored extra settings and reads the SVG title only as a migration fallback', () => {
+    const runtime = createRuntime()
+    const title = runtime.documents.get('view-a')!.getElementsByTagName('text')[0] as unknown as TestElement
+    title.setAttribute('fill', '#ff0000')
+    title.setAttribute('font-size', '40')
+
+    expect(getViewTitleLabelSettings(createConfig(), 'a', runtime.Parser))
+      .toEqual({ color: '#ff0000', fontSize: 40 })
+
+    const stored = createConfig()
+    stored.extra = { fuxaSetting: { viewTitleLabel: { color: '#00ff00', fontSize: 30 } } }
+    expect(getViewTitleLabelSettings(stored, 'a', runtime.Parser))
+      .toEqual({ color: '#00ff00', fontSize: 30 })
+  })
+
   it('updates every View title and stores the settings in extra', () => {
     const source = createConfig()
     const runtime = createRuntime()

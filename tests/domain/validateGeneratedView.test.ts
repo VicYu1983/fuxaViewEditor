@@ -338,6 +338,39 @@ describe('validateGeneratedView', () => {
     )).not.toThrow()
   })
 
+  it('INV-8: rejects a floor-plan View that still keeps group titles or frames', () => {
+    const model = { ...makeModel([managedComponent()]), floorPlan: true }
+    expect(() => validateGeneratedView(
+      makeView(validItems()),
+      model,
+      { Parser: parserFor(validDocument()), tags: new Map([['tag-1', { floor: '1F' }]]) },
+    )).toThrow('平面圖 View「Main」不應保留「1F」群組標題或底框。')
+  })
+
+  it('INV-8: accepts a floor-plan View without group titles or frames', () => {
+    const root = new TestElement('svg')
+    const layer = root.appendChild(new TestElement('g'))
+    layer.appendChild(new TestElement('g', { id: 'shape-id' }))
+    layer.appendChild(new TestElement('text', { id: 'label-id' }, 'Pump'))
+    const items = validItems()
+    delete items['title-id']
+    delete items['frame-id']
+    const model: GeneratedViewModel = {
+      ...makeModel([managedComponent()]),
+      floorPlan: true,
+      floorTitles: {},
+      floorTitleIds: {},
+      floorFrames: {},
+      floorFrameIds: {},
+    }
+
+    expect(() => validateGeneratedView(
+      makeView(items),
+      model,
+      { Parser: parserFor(root), tags: new Map([['tag-1', { floor: '1F' }]]) },
+    )).not.toThrow()
+  })
+
   it('accepts multi-state images with unique Boolean Tag visibility rules and matching priority', () => {
     const { doc, model, items } = validMultiStateArtifacts()
     expect(() => validateGeneratedView(

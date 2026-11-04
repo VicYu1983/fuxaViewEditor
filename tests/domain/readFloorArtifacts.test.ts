@@ -107,4 +107,43 @@ describe('readFloorArtifacts', () => {
     expect(result.floorFrames['floor:']).toBe('frame-new')
     expect(result.floorFrameShapeIds['floor:']).toBe('shape-new')
   })
+
+  it('prefers configured artifacts over conflicting SVG markers', () => {
+    const root = new TestElement('svg', {}, '', [
+      new TestElement('text', {
+        id: 'title-1', x: '10', y: '20', 'data-floor-group': '3F',
+      }, '3F'),
+      new TestElement('g', { id: 'frame-1', 'data-floor-group': '3F' }, '', [
+        new TestElement('rect', { id: 'shape-1' }),
+      ]),
+    ])
+    const result = readFloorArtifacts({
+      'title-1': { name: 'fuxa_floor_section_title' },
+      'frame-1': { name: 'fuxa_floor_section_frame' },
+    }, makeDocument(root), {
+      'floor:1F': { titleId: 'title-1', frameId: 'frame-1', frameShapeId: 'shape-1' },
+    })
+
+    expect(result.floorTitles['floor:1F']).toBe('title-1')
+    expect(result.floorFrames['floor:1F']).toBe('frame-1')
+  })
+
+  it('resolves artifacts from the extra index after FUXA strips data-floor-group', () => {
+    const root = new TestElement('svg', {}, '', [
+      new TestElement('text', { id: 'title-1', x: '10', y: '20' }, '任意文字'),
+      new TestElement('g', { id: 'frame-1' }, '', [
+        new TestElement('rect', { id: 'shape-1' }),
+      ]),
+    ])
+    const result = readFloorArtifacts({
+      'title-1': { name: 'fuxa_floor_section_title' },
+      'frame-1': { name: 'fuxa_floor_section_frame' },
+    }, makeDocument(root), {
+      'floor:2F': { titleId: 'title-1', frameId: 'frame-1', frameShapeId: 'shape-1' },
+    })
+
+    expect(result.floorTitles).toEqual({ 'floor:2F': 'title-1' })
+    expect(result.floorFrames).toEqual({ 'floor:2F': 'frame-1' })
+    expect(result.floorFrameShapeIds).toEqual({ 'floor:2F': 'shape-1' })
+  })
 })
