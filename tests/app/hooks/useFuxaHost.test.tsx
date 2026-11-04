@@ -2,7 +2,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import type { MessageInstance } from 'antd/es/message/interface'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useFuxaHost } from '../../../src/features/fuxa/useFuxaHost'
+import { useFuxaHost } from '../../../src/app/hooks/useFuxaHost'
 
 describe('useFuxaHost', () => {
   const originalOpener = window.opener

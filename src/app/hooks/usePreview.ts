@@ -1,42 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { ExportViewModel } from '../../domain/config/prepareFuxaConfigExport'
 import type { FuxaViewSummary, ParsedFuxaConfig } from '../../domain/config/types'
-import { getErrorMessage } from '../../domain/shared/getErrorMessage'
-import { prepareViewPreview } from './prepareViewPreview'
-
-export interface PreviewState {
-  width: number
-  height: number
-  outsideCanvas?: boolean
-  svgMarkup?: string
-  error?: string
-}
+import { createPreviewState, type PreviewState } from '../../features/preview/createPreviewState'
+import { createBrowserSvgDeps } from '../lib/browserSvgDeps'
 
 interface PreviewSnapshot {
   result: PreviewState
   config: ParsedFuxaConfig
   models: Map<string, ExportViewModel>
   viewId: string
-}
-
-export function createPreviewState(
-  config: ParsedFuxaConfig,
-  view: FuxaViewSummary,
-  models: Map<string, ExportViewModel>,
-): PreviewState {
-  try {
-    return prepareViewPreview(config.rawConfig, view.id, [...models.values()], {
-      Parser: DOMParser,
-      serialize: (doc) => new XMLSerializer().serializeToString(doc),
-      crypto: window.crypto,
-    })
-  } catch (error) {
-    return {
-      width: view.width || 1024,
-      height: view.height || 768,
-      error: getErrorMessage(error),
-    }
-  }
 }
 
 export interface UsePreviewOptions {
@@ -71,7 +43,7 @@ export function usePreview({ config, models, selectedView }: UsePreviewOptions):
     if (!realtime || !config || !selectedView) return
     const timeout = window.setTimeout(() => {
       setSnapshot({
-        result: createPreviewState(config, selectedView, models),
+        result: createPreviewState(config, selectedView, models, createBrowserSvgDeps()),
         config,
         models,
         viewId: selectedView.id,
@@ -83,7 +55,7 @@ export function usePreview({ config, models, selectedView }: UsePreviewOptions):
   function refresh() {
     if (!config || !selectedView) return
     setSnapshot({
-      result: createPreviewState(config, selectedView, models),
+      result: createPreviewState(config, selectedView, models, createBrowserSvgDeps()),
       config,
       models,
       viewId: selectedView.id,

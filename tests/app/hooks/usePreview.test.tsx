@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { usePreview } from '../../../src/features/preview/usePreview'
+import { usePreview } from '../../../src/app/hooks/usePreview'
 
 describe('usePreview', () => {
   afterEach(() => {
