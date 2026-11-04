@@ -96,6 +96,10 @@ import {
 import { getSiteNameSettings, updateAllSiteNameLabels } from './domain/views/siteNameLabel'
 import { navigationNeedsSync } from './domain/views/syncNavigation'
 import { buildingFloorButtonsNeedSync } from './domain/buildingFloors/buildingFloorButtons'
+import {
+  TOOL_SETTINGS_OUTDATED_MESSAGE,
+  isToolSettingsOutdated,
+} from './domain/config/toolSettings'
 import { parseBuildingFloorName } from './domain/buildingFloors/buildingFloors'
 import {
   AUTO_FILLED_TAG_DESCRIPTION,
@@ -1915,6 +1919,15 @@ function EditorWorkspace() {
                     </Tag>
                   </Space>
                 </div>
+
+                {isToolSettingsOutdated(config.rawConfig) && (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    title="工具版本可能過舊"
+                    description={TOOL_SETTINGS_OUTDATED_MESSAGE}
+                  />
+                )}
 
                 {selectedView ? (
                   <Space className="view-panels" orientation="vertical" size="middle">

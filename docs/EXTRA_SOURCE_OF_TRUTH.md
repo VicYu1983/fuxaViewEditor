@@ -299,6 +299,15 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 
 ### Phase 1：集中 `extra` 存取（不改行為）
 
+**狀態：已完成（2026-11-04）。**
+
+- 新增 [toolSettings.ts](../src/domain/config/toolSettings.ts)：`getToolSettings`（寬鬆讀取）、`readToolSettingsForWrite`（嚴格讀取以便寫入，錯誤訊息與原本逐字相同）、版本函式（`getToolSettingsVersion`、`isToolSettingsOutdated`、`nextToolSettingsVersion`）。
+- 9 個模組已改用它：格線、群組框、群組元件索引、平面圖、樓層按鈕索引、View 名稱標籤、案場名稱、語音重複、圖示庫。各模組仍負責自己那個鍵的正規化與驗證。
+- 格線寫入的 `version` 不再固定為 `1`，改為不降級較新的版本（`nextToolSettingsVersion`）。
+- App 載入配置後，若 `version` 高於工具支援版本，在工作區顯示「工具版本可能過舊」警告，不阻擋編輯與匯出（D4）。
+- 測試：[toolSettings.test.ts](../tests/domain/toolSettings.test.ts)（寬鬆／嚴格讀取、版本缺少、INV-10 不降級且保留未知鍵）。
+- 驗證：重構前後以固定亂數與固定時間匯出 4 份 fixture（含 `旭峰建設.json`），輸出**逐位元相同**。
+
 - 實作 `toolSettings.ts`（5.1）。
 - 逐一改寫 9 個模組使用它，每改一個跑一次完整測試。
 - 新增測試：未知鍵保留、`extra` 型別錯誤的錯誤訊息、`version` 缺少與高於支援版本的行為（提示、不阻擋、不降級）。

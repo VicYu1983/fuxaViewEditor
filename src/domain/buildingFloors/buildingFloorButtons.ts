@@ -3,13 +3,13 @@ import type { FuxaConfig } from '../config/types'
 import { groupBuildingFloors, parseBuildingFloorName } from './buildingFloors'
 import type { BuildingFloor } from './buildingFloors'
 import { findSvgLayer } from '../svg/findSvgLayer'
+import { TOOL_SETTINGS_KEY, readToolSettingsForWrite } from '../config/toolSettings'
 import { findSvgElementById, parseSvg } from '../svg/parseSvg'
 import type { SvgParserConstructor } from '../svg/parseSvg'
 
 export const BUILDING_FLOOR_BUTTON_NAME = 'fuxa_building_floor_button'
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg'
-const TOOL_SETTINGS_KEY = 'fuxaSetting'
 const BUILDING_FLOOR_BUTTONS_KEY = 'buildingFloorButtons'
 const BUTTON_WIDTH = 80
 const BUTTON_HEIGHT = 32
@@ -27,14 +27,8 @@ interface BuildingFloorViewRecord extends Record<string, unknown> {
 type BuildingFloorButtonIndex = Record<string, Record<string, string>>
 
 function getBuildingFloorButtonIndex(config: FuxaConfig): BuildingFloorButtonIndex {
-  if (config.extra !== undefined && !isRecord(config.extra)) {
-    throw new Error('配置的 extra 欄位不是物件，無法安全保存樓層按鈕索引。')
-  }
-  const toolSettings = isRecord(config.extra) ? config.extra[TOOL_SETTINGS_KEY] : undefined
-  if (toolSettings !== undefined && !isRecord(toolSettings)) {
-    throw new Error(`配置的 extra.${TOOL_SETTINGS_KEY} 欄位不是物件，無法安全保存樓層按鈕索引。`)
-  }
-  const index = isRecord(toolSettings) ? toolSettings[BUILDING_FLOOR_BUTTONS_KEY] : undefined
+  const { toolSettings } = readToolSettingsForWrite(config, '安全保存樓層按鈕索引')
+  const index = toolSettings[BUILDING_FLOOR_BUTTONS_KEY]
   if (index === undefined) return {}
   if (!isRecord(index)) {
     throw new Error(
@@ -57,8 +51,7 @@ function saveBuildingFloorButtonIndex(
   config: FuxaConfig,
   index: BuildingFloorButtonIndex,
 ): void {
-  const extra = isRecord(config.extra) ? config.extra : {}
-  const toolSettings = isRecord(extra[TOOL_SETTINGS_KEY]) ? extra[TOOL_SETTINGS_KEY] : {}
+  const { extra, toolSettings } = readToolSettingsForWrite(config, '安全保存樓層按鈕索引')
   config.extra = {
     ...extra,
     [TOOL_SETTINGS_KEY]: {
