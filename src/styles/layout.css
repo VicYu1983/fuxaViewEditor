@@ -1,0 +1,300 @@
+/* ============================================================
+   FUXA View Editor — 科技感 × 簡潔（明亮風）
+   設計 token 定義於 index.css 的 :root CSS 變數
+   ============================================================ */
+
+/* ---------- 外殼 ---------- */
+
+.editor-shell {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ---------- 頂欄 ---------- */
+
+.editor-header {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding-inline: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  line-height: normal;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand-mark {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(160deg, #2563eb 0%, #4f7df5 100%);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.brand-name,
+.brand-caption {
+  display: block;
+}
+
+.brand-name {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.brand-caption {
+  margin-top: 1px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.project-name-input {
+  width: 200px;
+  flex: 0 0 200px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+/* ---------- 主體 ---------- */
+
+.editor-body {
+  min-height: calc(100vh - 56px);
+}
+
+/* ---------- 左側 View 清單 ---------- */
+
+.view-sidebar {
+  overflow: auto;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.sidebar-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 12px 12px;
+}
+
+.sidebar-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-title .ant-typography {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.view-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 10px 16px;
+}
+
+.view-item {
+  position: relative;
+  display: flex !important;
+  height: auto !important;
+  flex-direction: column;
+  align-items: flex-start !important;
+  padding: 10px 12px !important;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 120ms ease;
+}
+
+.view-item::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 3px;
+  border-radius: 2px;
+  background: transparent;
+  content: '';
+  transition: background-color 120ms ease;
+}
+
+.view-item:hover,
+.view-item:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+
+.view-item.selected {
+  background: var(--primary-tint);
+}
+
+.view-item.selected::before {
+  background: var(--primary);
+}
+
+.view-item.selected .ant-typography:first-child {
+  color: var(--primary-strong);
+}
+
+.view-item .ant-typography {
+  display: block;
+  width: 100%;
+}
+
+.view-item .view-id {
+  margin-top: 3px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.01em;
+}
+
+.sidebar-empty {
+  padding: 8px 18px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ---------- 工作區 ---------- */
+
+.workspace {
+  min-width: 0;
+  padding: 28px clamp(20px, 4vw, 52px);
+}
+
+.welcome-panel {
+  display: grid;
+  min-height: calc(100vh - 140px);
+  place-items: center;
+}
+
+.welcome-panel .ant-empty {
+  max-width: 520px;
+}
+
+.welcome-panel .ant-empty-description {
+  margin-bottom: 20px;
+}
+
+.welcome-panel h4.ant-typography {
+  margin: 4px 0;
+  color: var(--text);
+}
+
+.workspace-content {
+  max-width: 1440px;
+  margin-inline: auto;
+}
+
+.workspace-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.workspace-title h3.ant-typography {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.eyebrow {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ---------- 卡片 ---------- */
+
+.view-details {
+  margin-top: 16px;
+  border-color: var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+
+.view-panels,
+.view-panels > .ant-space-item {
+  width: 100%;
+}
+
+.editor-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.editor-controls {
+  min-width: 0;
+}
+
+.editor-controls > * + * {
+  margin-top: 16px;
+}
+
+.editor-controls .view-details,
+.preview-card.view-details {
+  margin-top: 10px;
+}
+
+.preview-card {
+  min-width: 0;
+}
+
+/* ---------- SVG 預覽（藍圖點狀網格） ---------- */
+
+.svg-preview {
+  max-height: calc(100vh - 250px);
+  min-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--surface);
+  background-image: radial-gradient(circle, rgba(100, 116, 139, 0.16) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.svg-preview svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}

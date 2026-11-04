@@ -85,6 +85,33 @@ Vite 使用相對資產路徑，適用於 FUXA 的子路徑部署；目前尚未
 - SVG 預覽會複製並套用目前 View／模型、建立預覽 SVG 並清理危險內容；大型配置或頻繁編輯時可能增加主執行緒工作量。即時模式採短暫 debounce；若仍覺得操作卡頓，可關閉即時更新並用「更新預覽」手動刷新。
 - 未修改的配置會沿用原始 JSON 文字；有修改時會套用變更、驗證並另存為新檔。
 
+## 功能流程索引
+
+路徑皆相對於 `fuxaViewEditor/src/`。`App.tsx` 負責組裝工作台與狀態；以下列出各功能的主要實作位置，供查閱與參考。
+
+| 功能 | 介面元件 | 流程／邏輯 |
+| --- | --- | --- |
+| 開啟 JSON、清空專案、匯出 | `ui/layout/EditorHeader.tsx` | `domain/config/parseFuxaConfig.ts`、`prepareFuxaConfigExport.ts`、`createEmptyFuxaConfig.ts`、`features/views/createBlankView.ts` |
+| FUXA 同源開啟與同步至 FUXA | `App.tsx` | `features/fuxa/useFuxaHost.ts` |
+| 編輯歷程（Undo/Redo） | `App.tsx` | `app/store/editorHistory.ts`、`app/store/EditorProvider.tsx`、`app/hooks/useConfigEdit.ts` |
+| View 清單、新增、重新命名、刪除 | `ui/view/ViewSidebar.tsx`、`ViewNameDialog.tsx` | `domain/views/viewManagement.ts`、`domain/views/syncNavigation.ts` |
+| View 屬性（背景、名稱標籤） | `ui/view/ViewSettingsDialog.tsx` | `domain/views/viewBackground.ts`、`viewTitleLabel.ts` |
+| Grid 排版設定 | `ui/view/GridSettingsCard.tsx` | `domain/layout/gridSettings.ts`、`gridLayout.ts` |
+| 已管理元件清單、排序、移動 | `ui/view/ManagedComponentCard.tsx`、`ComponentMoveDialog.tsx`、`BatchMoveDialog.tsx` | `features/views/moveManagedComponent.ts`、`moveComponentsBetweenViews.ts`、`domain/svg/readManagedComponents.ts` |
+| 批次加入 Tag 至 View | `ui/device/TagAddTab.tsx` | `features/tags/createViewComponents.ts`、`domain/tags/batch.ts` |
+| ModbusTCP 設備管理 | `ui/device/DevicesTab.tsx` | `features/devices/manageModbusDevice.ts`、`domain/devices/modbusTcp.ts`、`readModbusDevices.ts` |
+| 設備 Tag 管理、重名檢查、刪除 | `ui/device/DeviceTagManager.tsx`、`DeviceTagEditDialog.tsx` | `features/devices/manageDeviceTags.ts`、`findTagReferences.ts`、`domain/devices/deviceTagAddressSort.ts` |
+| 設備 Tag 批次移動（位址 ±1） | `ui/device/DeviceTagMoveDialog.tsx` | `features/devices/moveDeviceTags.ts` |
+| 批次建立 Tag | `ui/device/TagCreateTab.tsx` | `features/tags/createTagsForDevice.ts` |
+| Tag 樓層管理 | `ui/device/FloorsTab.tsx` | `features/floors/applyTagFloors.ts`、`features/floors/updateFloorGroupFrame.ts`、`domain/tags/floor.ts`、`domain/layout/floorLayout.ts` |
+| Tag 告警設定 | `ui/device/TagAlarmsTab.tsx` | `domain/alarms/manageTagAlarms.ts`、`readTagAlarms.ts` |
+| 專案管理 | `ui/device/ProjectManagerDialog.tsx` | `domain/config/` |
+| 圖示庫、多狀態圖示組 | `ui/icons/IconLibraryDialog.tsx`、`MultiStateIconDialog.tsx` | `features/icons/iconLibraryManagement.ts`、`componentGraphics.ts`、`domain/icons/iconLibrary.ts` |
+| 預覽（即時／手動、唯讀） | `ui/preview/PreviewPanel.tsx` | `features/preview/usePreview.ts`、`prepareViewPreview.ts`、`drawPreviewSwitchArtwork.ts`、`domain/svg/sanitizePreview.ts` |
+| SVG 寫入與驗證 | — | `domain/svg/applyModelToView.ts`、`buildComponentNodes.ts`、`validateGeneratedView.ts`、`domain/config/validateFuxaConfig.ts` |
+| 配置序列化（保留換行與原始文字） | — | `domain/config/serialization.ts`、`app/lib/parseUpdatedConfig.ts` |
+| 樣式 | — | `styles/index.css`（匯入順序即層疊順序，請勿任意重排）；`index.css` 為全域基礎樣式 |
+
 ## 開發
 
 使用 Yarn（專案已提交 `yarn.lock`）。上述開發指令需在 `fuxaViewEditor/` 目錄執行。

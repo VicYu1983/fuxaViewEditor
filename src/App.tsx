@@ -151,7 +151,7 @@ import type { GeneratedComponent } from './domain/svg/validateGeneratedView'
 import type { GridSettings } from './domain/config/types'
 import { EditorProvider } from './app/store/EditorProvider'
 import { useConfigEdit } from './app/hooks/useConfigEdit'
-import './App.css'
+import './styles/index.css'
 
 const { Content } = Layout
 const { Text, Title } = Typography

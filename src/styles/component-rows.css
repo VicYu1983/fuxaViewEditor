@@ -1,0 +1,95 @@
+/* ---------- 元件列 ---------- */
+
+.component-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-inline: -14px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: 6px;
+  transition: background-color 120ms ease;
+}
+
+.component-row:last-child {
+  border-bottom: 0;
+}
+
+.component-row:hover {
+  background: var(--hover);
+}
+
+.component-row-multi {
+  align-items: start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.component-meta {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.component-meta .ant-input,
+.component-meta .ant-select {
+  min-width: min(100%, 220px);
+  flex: 1 1 180px;
+}
+
+.multi-state-bindings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  grid-column: 1;
+  margin-inline-start: 8px;
+  min-width: 0;
+}
+
+.component-row-multi > .component-actions {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.multi-state-binding-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.multi-state-binding-row .ant-select {
+  flex: 1 1 260px;
+  min-width: min(100%, 260px);
+}
+
+.icon-state-draft-list {
+  width: 100%;
+}
+
+.icon-state-draft-list .ant-space-item {
+  max-width: 100%;
+}
+
+/* ---------- Grid 排版設定 ---------- */
+
+.grid-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px 18px;
+}
+
+.grid-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.grid-settings .ant-input-number,
+.grid-settings .ant-select {
+  width: 100%;
+}

@@ -131,7 +131,7 @@ src/
     views/createViewModel.ts   # 新增空白 View 的 model 初值、改名同步標題
     views/moveComponentsBetweenViews.ts
     devices/findTagReferences.ts   # 刪除 Tag 前的引用掃描
-  styles/                      # App.css 依元件拆分
+  styles/                      # 依主題拆分（index.css 匯入順序即層疊順序）
 ```
 
 預期結果：`App.tsx` 由 4848 → 約 200 行；最大的新元件（`DevicesTab`）預估 400–500 行，仍需視情況再拆。
@@ -193,7 +193,7 @@ commit({
 - 風險：中。留意 `handleFuxaMessage` 的 effect 依賴 `[messageApi]`，抽出後需維持相同依賴語意（目前內部只呼叫穩定的 setter 與 `replaceWorkspace`）。
 
 ### 階段 5：收尾
-- `App.css` 依元件拆分到 `src/styles/`（或改 CSS Module，需使用者決定）。
+- `App.css` 依主題拆分到 `src/styles/`（已完成；採純 CSS 拆分，未改 CSS Module，類別名稱不變；建置 CSS 與拆分前逐位元組相同）。
 - README 補「流程索引」（功能 → 檔案），並確認／修正與現況不符的段落。
 - 驗收：全部驗證通過；`npx vite build --outDir <暫存目錄>` 成功；README 索引可用。
 
