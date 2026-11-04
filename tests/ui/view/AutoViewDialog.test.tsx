@@ -80,6 +80,8 @@ describe('AutoViewDialog', () => {
     expect(onApply.mock.calls[0]?.[1]).toEqual({
       includeAutoFilled: false,
       coilSwitchEnabled: false,
+      stateMapping: expect.any(Array),
+      iconOverrides: {},
     })
   })
 
@@ -91,7 +93,7 @@ describe('AutoViewDialog', () => {
     })
 
     expect(screen.getByRole('button', { name: '清除並建立 2 個 View' })).toBeTruthy()
-    expect(screen.getByText(/B1F消防泵運轉/)).toBeTruthy()
+    expect(screen.getAllByText(/B1F消防泵運轉/).length).toBeGreaterThan(0)
   })
 
   it('disables apply when the mapping is invalid', () => {

@@ -120,7 +120,11 @@ import {
   deviceTagsNeedAddressSorting,
 } from './domain/devices/deviceTagAddressSort'
 import { getIconLibrary } from './domain/icons/iconLibrary'
-import type { MultiStateIconSet } from './domain/icons/iconLibrary'
+import type { IconLibraryEntry, MultiStateIconSet } from './domain/icons/iconLibrary'
+import {
+  loadDefaultIconLibrary,
+  mergeIconLibraries,
+} from './features/icons/defaultIconLibrary'
 import { generateId } from './domain/ids'
 import {
   deleteManagedDevice,
@@ -151,6 +155,10 @@ import { createBlankView } from './features/views/createBlankView'
 import { createAutoViews } from './features/views/createAutoViews'
 import type { AutoViewGroup } from './domain/views/autoViewMapping'
 import { readAutoViewMapping } from './domain/views/autoViewMapping'
+import {
+  DEFAULT_AUTO_STATE_MAPPING,
+  readAutoViewStateMapping,
+} from './domain/views/autoViewStateMapping'
 import { createEmptyViewModel } from './features/views/createViewModel'
 import { syncViewTitleText } from './features/views/syncViewTitleText'
 import { moveManagedComponent } from './features/views/moveManagedComponent'
@@ -229,6 +237,9 @@ function EditorWorkspace() {
   const [iconLibraryOpen, setIconLibraryOpen] = useState(false)
   const [floorPlanLibraryOpen, setFloorPlanLibraryOpen] = useState(false)
   const [autoViewDialogOpen, setAutoViewDialogOpen] = useState(false)
+  const [defaultIconLibrary, setDefaultIconLibrary] = useState<IconLibraryEntry[] | null>(null)
+  const [defaultIconLibraryLoading, setDefaultIconLibraryLoading] = useState(false)
+  const [defaultIconLibraryError, setDefaultIconLibraryError] = useState<string>()
   const [editingMultiStateIconId, setEditingMultiStateIconId] = useState('')
   const [multiStateAddDrafts, setMultiStateAddDrafts] = useState<
     Record<string, MultiStateIconDraft>
@@ -317,6 +328,15 @@ function EditorWorkspace() {
   const autoViewMapping = useMemo(
     () => config ? readAutoViewMapping(config.rawConfig) : [],
     [config],
+  )
+  const autoViewStateMapping = useMemo(
+    () => config ? readAutoViewStateMapping(config.rawConfig) : DEFAULT_AUTO_STATE_MAPPING,
+    [config],
+  )
+  // 專案既有圖示優先；預設圖示庫只補上名稱與圖片 ID 不重複的項目。
+  const autoViewIconLibrary = useMemo(
+    () => mergeIconLibraries(iconLibrary, defaultIconLibrary ?? []),
+    [iconLibrary, defaultIconLibrary],
   )
   const buildingFloorGroups = useMemo(
     () => groupBuildingFloors(config?.views ?? []),
@@ -565,6 +585,18 @@ function EditorWorkspace() {
     })
   }
 
+  function openAutoViewDialog() {
+    setAutoViewDialogOpen(true)
+    if (defaultIconLibrary || defaultIconLibraryLoading) return
+    // 只在開啟一鍵配置時載入預設圖示庫，避免其圖片資料進入 JS bundle。
+    setDefaultIconLibraryLoading(true)
+    setDefaultIconLibraryError(undefined)
+    loadDefaultIconLibrary()
+      .then((icons) => setDefaultIconLibrary(icons))
+      .catch((error: unknown) => setDefaultIconLibraryError(getErrorMessage(error)))
+      .finally(() => setDefaultIconLibraryLoading(false))
+  }
+
   function handleApplyAutoViews(groups: AutoViewGroup[], options: AutoViewApplyOptions) {
     if (!config) return
 
@@ -574,6 +606,9 @@ function EditorWorkspace() {
         tags,
         includeAutoFilled: options.includeAutoFilled,
         coilSwitchEnabled: options.coilSwitchEnabled,
+        stateMapping: options.stateMapping,
+        iconLibrary: autoViewIconLibrary,
+        iconOverrides: options.iconOverrides,
       }, createBrowserSvgDeps())
       const nextModifiedViewIds = new Set(result.viewIds)
       commitDocumentEdit(config, result.config, result.models, nextModifiedViewIds)
@@ -587,8 +622,11 @@ function EditorWorkspace() {
       const skippedMessage = result.skippedTagCount > 0
         ? `，並排除 ${result.skippedTagCount} 筆自動補位 Tag`
         : ''
+      const warningMessage = result.iconWarningCount > 0
+        ? `；${result.iconWarningCount} 個裝置有配對警告，已退回開關／矩形`
+        : ''
       messageApi.success(
-        `已清除舊 View，建立 ${result.viewIds.length} 個 View，加入 ${result.addedTagCount} 個 Tag 元件${skippedMessage}。`,
+        `已清除舊 View，建立 ${result.viewIds.length} 個 View，加入 ${result.addedTagCount} 個 Tag 元件（多狀態 ${result.multiStateComponentCount}、正常／告警 ${result.pairComponentCount}、一般圖示 ${result.singleIconComponentCount}）${skippedMessage}${warningMessage}。`,
       )
     } catch (error) {
       messageApi.error(`一鍵配置失敗：${getErrorMessage(error)}`)
@@ -1818,6 +1856,10 @@ function EditorWorkspace() {
         open={autoViewDialogOpen}
         mapping={autoViewMapping}
         tags={tags}
+        stateMapping={autoViewStateMapping}
+        iconLibrary={autoViewIconLibrary}
+        iconLibraryLoading={defaultIconLibraryLoading}
+        iconLibraryError={defaultIconLibraryError}
         onApply={handleApplyAutoViews}
         onCancel={() => setAutoViewDialogOpen(false)}
       />
@@ -2028,7 +2070,7 @@ function EditorWorkspace() {
           onExportConfig={handleExportConfig}
           onSyncToFuxa={fuxaSync.sync}
           onOpenProjectManager={openDeviceManager}
-          onOpenAutoView={() => setAutoViewDialogOpen(true)}
+          onOpenAutoView={openAutoViewDialog}
           onOpenIconLibrary={() => setIconLibraryOpen(true)}
           onOpenFloorPlanLibrary={() => setFloorPlanLibraryOpen(true)}
           onOpenViewSettings={openFloorFrameDialog}

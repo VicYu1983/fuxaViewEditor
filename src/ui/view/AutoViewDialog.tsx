@@ -5,7 +5,20 @@ import {
   DeleteOutlined,
   PlusOutlined,
 } from '@ant-design/icons'
-import { Alert, Button, Checkbox, Divider, Empty, Input, Modal, Space, Tag, Typography } from 'antd'
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Divider,
+  Empty,
+  Input,
+  Modal,
+  Select,
+  Space,
+  Tag,
+  Typography,
+} from 'antd'
+import type { IconLibraryEntry } from '../../domain/icons/iconLibrary'
 import type { IndexedTag } from '../../domain/tags/index'
 import {
   classifyTagsForViews,
@@ -14,18 +27,39 @@ import {
   validateAutoViewMapping,
   type AutoViewGroup,
 } from '../../domain/views/autoViewMapping'
+import {
+  AUTO_VIEW_ICON_AUTO,
+  AUTO_VIEW_ICON_ENTRY_PREFIX,
+  AUTO_VIEW_ICON_NONE,
+  buildAutoViewComponentPlans,
+  summarizeAutoViewPlans,
+  type AutoViewDevicePlan,
+  type AutoViewIconOverrides,
+} from '../../domain/views/autoViewComponentPlans'
+import { getAutoViewIconTypeLabel } from '../../domain/views/autoViewIconMatching'
+import {
+  DEFAULT_AUTO_STATE_MAPPING,
+  validateAutoViewStateMapping,
+  type AutoViewStateGroup,
+} from '../../domain/views/autoViewStateMapping'
 
 const { Text } = Typography
 
 export interface AutoViewApplyOptions {
   includeAutoFilled: boolean
   coilSwitchEnabled: boolean
+  stateMapping: AutoViewStateGroup[]
+  iconOverrides: AutoViewIconOverrides
 }
 
 export interface AutoViewDialogProps {
   open: boolean
   mapping: readonly AutoViewGroup[]
   tags: readonly IndexedTag[]
+  stateMapping?: readonly AutoViewStateGroup[]
+  iconLibrary?: readonly IconLibraryEntry[]
+  iconLibraryLoading?: boolean
+  iconLibraryError?: string
   onApply: (groups: AutoViewGroup[], options: AutoViewApplyOptions) => void
   onCancel: () => void
 }
@@ -33,6 +67,12 @@ export interface AutoViewDialogProps {
 interface GroupDraft {
   id: number
   name: string
+  keywordsText: string
+}
+
+interface StateDraft {
+  id: number
+  state: string
   keywordsText: string
 }
 
@@ -51,34 +91,65 @@ function tagSummary(tags: readonly IndexedTag[]): string {
     : names.join('、')
 }
 
+function summaryText(plans: readonly AutoViewDevicePlan[]): string {
+  const summary = summarizeAutoViewPlans(plans)
+  const parts = [
+    summary.multiComponentCount > 0 ? `多狀態 ${summary.multiComponentCount}` : '',
+    summary.pairComponentCount > 0 ? `正常／告警 ${summary.pairComponentCount}` : '',
+    summary.singleIconComponentCount > 0 ? `一般圖示 ${summary.singleIconComponentCount}` : '',
+    summary.switchComponentCount > 0 ? `Switch ${summary.switchComponentCount}` : '',
+    summary.rectComponentCount > 0 ? `矩形 ${summary.rectComponentCount}` : '',
+  ].filter(Boolean)
+  return parts.length > 0 ? parts.join('、') : '沒有可建立的元件'
+}
+
 export function AutoViewDialog({
   open,
   mapping,
   tags,
+  stateMapping = DEFAULT_AUTO_STATE_MAPPING,
+  iconLibrary = [],
+  iconLibraryLoading = false,
+  iconLibraryError,
   onApply,
   onCancel,
 }: AutoViewDialogProps) {
   const nextDraftId = useRef(0)
+  const nextStateDraftId = useRef(0)
   const [drafts, setDrafts] = useState<GroupDraft[]>([])
+  const [stateDrafts, setStateDrafts] = useState<StateDraft[]>([])
   const [includeAutoFilled, setIncludeAutoFilled] = useState(false)
   const [coilSwitchEnabled, setCoilSwitchEnabled] = useState(true)
+  const [iconOverrides, setIconOverrides] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!open) return
     nextDraftId.current = 0
+    nextStateDraftId.current = 0
     setDrafts(mapping.map((group) => ({
       id: nextDraftId.current++,
       name: group.name,
       keywordsText: group.keywords.join(', '),
     })))
+    setStateDrafts(stateMapping.map((group) => ({
+      id: nextStateDraftId.current++,
+      state: group.state,
+      keywordsText: group.keywords.join(', '),
+    })))
     setIncludeAutoFilled(false)
     setCoilSwitchEnabled(true)
-  }, [open, mapping])
+    setIconOverrides({})
+  }, [open, mapping, stateMapping])
 
   const groups = useMemo<AutoViewGroup[]>(() => drafts.map((draft) => ({
     name: draft.name.trim(),
     keywords: splitKeywords(draft.keywordsText),
   })), [drafts])
+
+  const stateGroups = useMemo<AutoViewStateGroup[]>(() => stateDrafts.map((draft) => ({
+    state: draft.state.trim(),
+    keywords: splitKeywords(draft.keywordsText),
+  })), [stateDrafts])
 
   const eligibleTags = useMemo(
     () => filterAutoViewTags(tags, includeAutoFilled),
@@ -88,7 +159,56 @@ export function AutoViewDialog({
     () => classifyTagsForViews(eligibleTags, groups),
     [eligibleTags, groups],
   )
-  const errors = useMemo(() => validateAutoViewMapping(groups), [groups])
+  const mappingErrors = useMemo(() => validateAutoViewMapping(groups), [groups])
+  const stateErrors = useMemo(
+    () => validateAutoViewStateMapping(stateGroups),
+    [stateGroups],
+  )
+  const errors = useMemo(
+    () => [...mappingErrors, ...stateErrors],
+    [mappingErrors, stateErrors],
+  )
+
+  const viewPlans = useMemo(() => classification.groups
+    .filter((group) => group.tags.length > 0)
+    .map((group) => ({
+      viewKey: group.name,
+      name: group.name,
+      plans: buildAutoViewComponentPlans({
+        tags: group.tags,
+        viewKey: group.name,
+        stateMapping: stateGroups,
+        icons: iconLibrary,
+        coilSwitchEnabled,
+        iconOverrides,
+      }),
+    }))
+    .concat(classification.unclassified.length > 0
+      ? [{
+        viewKey: '__unclassified__',
+        name: UNCLASSIFIED_VIEW_NAME,
+        plans: buildAutoViewComponentPlans({
+          tags: classification.unclassified,
+          viewKey: '__unclassified__',
+          stateMapping: stateGroups,
+          icons: iconLibrary,
+          coilSwitchEnabled,
+          iconOverrides,
+        }),
+      }]
+      : []), [
+    classification,
+    stateGroups,
+    iconLibrary,
+    coilSwitchEnabled,
+    iconOverrides,
+  ])
+
+  const allPlans = useMemo(
+    () => viewPlans.flatMap((view) => view.plans),
+    [viewPlans],
+  )
+  const totalSummary = useMemo(() => summarizeAutoViewPlans(allPlans), [allPlans])
 
   const excludedTagCount = tags.length - eligibleTags.length
   const willCreateCount = classification.groups.filter((group) => group.tags.length > 0).length
@@ -125,11 +245,31 @@ export function AutoViewDialog({
     setDrafts((current) => [...current, { id, name: '', keywordsText: '' }])
   }
 
+  function updateStateDraft(index: number, patch: Partial<StateDraft>) {
+    setStateDrafts((current) => current.map((draft, draftIndex) => (
+      draftIndex === index ? { ...draft, ...patch } : draft
+    )))
+  }
+
+  function removeStateDraft(index: number) {
+    setStateDrafts((current) => current.filter((_, draftIndex) => draftIndex !== index))
+  }
+
+  function addStateDraft() {
+    const id = nextStateDraftId.current
+    nextStateDraftId.current += 1
+    setStateDrafts((current) => [...current, { id, state: '', keywordsText: '' }])
+  }
+
+  function updateIconOverride(plan: AutoViewDevicePlan, value: string) {
+    setIconOverrides((current) => ({ ...current, [plan.key]: value }))
+  }
+
   return (
     <Modal
       open={open}
       title="一鍵配置"
-      width={960}
+      width={1040}
       onCancel={onCancel}
       destroyOnHidden
       footer={[
@@ -138,8 +278,13 @@ export function AutoViewDialog({
           key="apply"
           type="primary"
           danger
-          disabled={errors.length > 0}
-          onClick={() => onApply(groups, { includeAutoFilled, coilSwitchEnabled })}
+          disabled={errors.length > 0 || iconLibraryLoading}
+          onClick={() => onApply(groups, {
+            includeAutoFilled,
+            coilSwitchEnabled,
+            stateMapping: stateGroups,
+            iconOverrides,
+          })}
         >
           {`清除並建立 ${effectiveViewCount} 個 View`}
         </Button>,
@@ -150,7 +295,7 @@ export function AutoViewDialog({
           type="warning"
           showIcon
           title="套用後會刪除目前所有 View"
-          description="系統會依下方分類表重新建立 View 並加入 Tag 元件。尚未匯出的修改請先確認；套用後仍可使用 Undo 復原。"
+          description="系統會依下方分類表重新建立 View 並加入 Tag 元件，同時依 Tag 名稱自動綁定狀態與圖示。尚未匯出的修改請先確認；套用後仍可使用 Undo 復原。"
         />
 
         <div>
@@ -210,11 +355,54 @@ export function AutoViewDialog({
           </Button>
         </div>
 
+        <div>
+          <Text strong>狀態關鍵字對應表</Text>
+          <div>
+            <Text type="secondary">
+              Tag 名稱結尾符合關鍵字時，會去掉關鍵字後依裝置名稱分組；多個狀態 Tag 搭配多狀態圖示組，單一 Tag 搭配正常／告警圖示組。`(NC)` 會自動反轉正常／告警狀態。
+            </Text>
+          </div>
+          <Space orientation="vertical" size="small" style={{ width: '100%', marginTop: 8 }}>
+            {stateDrafts.map((draft, index) => (
+              <div className="auto-view-state-row" key={draft.id}>
+                <Input
+                  aria-label={`第 ${index + 1} 列狀態名稱`}
+                  placeholder="狀態名稱，例如：運轉"
+                  value={draft.state}
+                  onChange={(event) => updateStateDraft(index, { state: event.target.value })}
+                />
+                <Input
+                  aria-label={`第 ${index + 1} 列狀態關鍵字`}
+                  placeholder="狀態關鍵字，以逗號分隔，例如：運轉, 啟動"
+                  value={draft.keywordsText}
+                  onChange={(event) => updateStateDraft(index, {
+                    keywordsText: event.target.value,
+                  })}
+                />
+                <Button
+                  aria-label={`刪除第 ${index + 1} 列狀態`}
+                  title="刪除狀態"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => removeStateDraft(index)}
+                />
+              </div>
+            ))}
+          </Space>
+          <Button
+            icon={<PlusOutlined />}
+            onClick={addStateDraft}
+            style={{ marginTop: 8 }}
+          >
+            新增狀態
+          </Button>
+        </div>
+
         {errors.length > 0 && (
           <Alert
             type="error"
             showIcon
-            title="分類表需要修正"
+            title={mappingErrors.length > 0 ? '分類表需要修正' : '狀態表需要修正'}
             description={(
               <ul className="auto-view-error-list">
                 {errors.map((error) => <li key={error}>{error}</li>)}
@@ -232,6 +420,11 @@ export function AutoViewDialog({
               可分類 Tag {eligibleTags.length} 筆
               {excludedTagCount > 0 ? `（已排除 ${excludedTagCount} 筆自動補位 Tag）` : ''}
               ；將建立 {effectiveViewCount} 個 View。
+              多狀態 {totalSummary.multiComponentCount}、正常／告警 {totalSummary.pairComponentCount}
+              、Switch {totalSummary.switchComponentCount}、矩形 {totalSummary.rectComponentCount}
+              {totalSummary.warningDeviceCount > 0
+                ? `；${totalSummary.warningDeviceCount} 個裝置有配對警告。`
+                : '。'}
             </Text>
           </div>
           {eligibleTags.length === 0 && drafts.length === 0 ? (
@@ -242,20 +435,35 @@ export function AutoViewDialog({
             />
           ) : (
             <div className="auto-view-preview">
-              {classification.groups.map((group, index) => (
-                <div className="auto-view-preview-row" key={`mapped-${index}`}>
-                  <Tag color={group.tags.length > 0 ? 'blue' : 'default'}>
-                    {group.tags.length} 筆
-                  </Tag>
-                  <Text strong>{group.name || `（未命名分類 ${index + 1}）`}</Text>
-                  <Text type="secondary">{tagSummary(group.tags)}</Text>
-                </div>
-              ))}
+              {classification.groups.map((group, index) => {
+                const plans = viewPlans.find((view) => view.viewKey === group.name)?.plans ?? []
+                return (
+                  <div className="auto-view-preview-row" key={`mapped-${index}`}>
+                    <Tag color={group.tags.length > 0 ? 'blue' : 'default'}>
+                      {group.tags.length} 筆
+                    </Tag>
+                    <div className="auto-view-preview-meta">
+                      <Text strong>{group.name || `（未命名分類 ${index + 1}）`}</Text>
+                      <Text type="secondary">{tagSummary(group.tags)}</Text>
+                      {group.tags.length > 0 && (
+                        <Text type="secondary">{summaryText(plans)}</Text>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
               {classification.unclassified.length > 0 && (
                 <div className="auto-view-preview-row">
                   <Tag color="orange">{classification.unclassified.length} 筆</Tag>
-                  <Text strong>{UNCLASSIFIED_VIEW_NAME}</Text>
-                  <Text type="secondary">{tagSummary(classification.unclassified)}</Text>
+                  <div className="auto-view-preview-meta">
+                    <Text strong>{UNCLASSIFIED_VIEW_NAME}</Text>
+                    <Text type="secondary">{tagSummary(classification.unclassified)}</Text>
+                    <Text type="secondary">
+                      {summaryText(
+                        viewPlans.find((view) => view.viewKey === '__unclassified__')?.plans ?? [],
+                      )}
+                    </Text>
+                  </div>
                 </div>
               )}
             </div>
@@ -271,6 +479,77 @@ export function AutoViewDialog({
                 .join('、')}`}
             />
           )}
+        </div>
+
+        <div>
+          <Text strong>圖示與狀態配對</Text>
+          <div>
+            <Text type="secondary">
+              依 Tag 名稱自動配對圖示組；名稱越長優先，並套用異體字、水位與通用泵浦後備規則。可在下方逐一改選。
+            </Text>
+          </div>
+          {iconLibraryLoading && (
+            <Alert
+              type="info"
+              showIcon
+              title="正在載入預設圖示庫"
+              description="載入完成後會自動更新配對結果。"
+            />
+          )}
+          {iconLibraryError && (
+            <Alert
+              type="warning"
+              showIcon
+              title="預設圖示庫載入失敗"
+              description={iconLibraryError}
+            />
+          )}
+          <details className="auto-view-plan-details">
+            <summary>
+              {`檢視／調整 ${allPlans.length} 個裝置（已配對 ${totalSummary.matchedDeviceCount}，警告 ${totalSummary.warningDeviceCount}）`}
+            </summary>
+            <div className="auto-view-plan-list">
+              {viewPlans.map((view) => (
+                <div key={view.viewKey}>
+                  <Text strong>{view.name}</Text>
+                  {view.plans.map((plan) => (
+                    <div className="auto-view-plan-row" key={plan.key}>
+                      <div className="auto-view-plan-meta">
+                        <Tag color={plan.warnings.length > 0 ? 'orange' : plan.iconId ? 'blue' : 'default'}>
+                          {plan.iconId ? (plan.autoIconName ?? '已選圖示') : '無圖示'}
+                        </Tag>
+                        <Text strong>{plan.base}</Text>
+                        <Text type="secondary">{tagSummary(plan.tags)}</Text>
+                        {plan.warnings.map((warning) => (
+                          <Text type="warning" key={warning}>{warning}</Text>
+                        ))}
+                      </div>
+                      <Select
+                        aria-label={`${plan.base} 圖示組`}
+                        showSearch
+                        optionFilterProp="label"
+                        value={plan.overrideValue}
+                        options={[
+                          {
+                            value: AUTO_VIEW_ICON_AUTO,
+                            label: plan.autoIconId
+                              ? `自動（${plan.autoIconName ?? plan.autoIconId}）`
+                              : '自動（未配對）',
+                          },
+                          { value: AUTO_VIEW_ICON_NONE, label: '不使用圖示' },
+                          ...iconLibrary.map((icon) => ({
+                            value: `${AUTO_VIEW_ICON_ENTRY_PREFIX}${icon.id}`,
+                            label: `${icon.name}（${getAutoViewIconTypeLabel(icon)}）`,
+                          })),
+                        ]}
+                        onChange={(value) => updateIconOverride(plan, value)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </details>
         </div>
 
         <Space size="large">

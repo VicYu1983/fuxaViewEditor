@@ -1,6 +1,8 @@
 import type { ExportViewModel } from '../../domain/config/prepareFuxaConfigExport'
 import type { FuxaConfig } from '../../domain/config/types'
 import { isRecord } from '../../domain/config/validateFuxaConfig'
+import type { IconLibraryEntry } from '../../domain/icons/iconLibrary'
+import { saveIconLibrary } from '../../domain/icons/iconLibrary'
 import { isCoilTag, type IndexedTag } from '../../domain/tags/index'
 import {
   AUTO_VIEW_EMPTY_VIEW_NAME,
@@ -11,6 +13,18 @@ import {
   validateAutoViewMapping,
   type AutoViewGroup,
 } from '../../domain/views/autoViewMapping'
+import {
+  buildAutoViewComponentPlans,
+  summarizeAutoViewPlans,
+  type AutoViewIconOverrides,
+} from '../../domain/views/autoViewComponentPlans'
+import {
+  DEFAULT_AUTO_STATE_MAPPING,
+  saveAutoViewStateMapping,
+  validateAutoViewStateMapping,
+  type AutoViewStateGroup,
+} from '../../domain/views/autoViewStateMapping'
+import { createAutoViewComponents } from '../tags/createAutoViewComponents'
 import { createViewComponents } from '../tags/createViewComponents'
 import { createBlankView, type CreateBlankViewRuntime } from './createBlankView'
 import { createEmptyViewModel } from './createViewModel'
@@ -21,6 +35,12 @@ export interface CreateAutoViewsOptions {
   includeAutoFilled?: boolean
   /** Boolean Coil 是否建立為 Switch，預設 true。 */
   coilSwitchEnabled?: boolean
+  /** 狀態關鍵字表；未提供時使用內建預設值。 */
+  stateMapping?: readonly AutoViewStateGroup[]
+  /** Tag 名稱 → 狀態自動配對用的圖示庫。 */
+  iconLibrary?: readonly IconLibraryEntry[]
+  /** 以裝置鍵覆寫圖示組；值為 auto／none／entry:<iconId>。 */
+  iconOverrides?: AutoViewIconOverrides
 }
 
 export interface CreateAutoViewsResult {
@@ -31,6 +51,13 @@ export interface CreateAutoViewsResult {
   unclassifiedTagCount: number
   /** 因「排除自動補位 Tag」而未加入的數量。 */
   skippedTagCount: number
+  multiStateComponentCount: number
+  pairComponentCount: number
+  singleIconComponentCount: number
+  switchComponentCount: number
+  rectComponentCount: number
+  /** 有圖示／狀態警告的裝置數。 */
+  iconWarningCount: number
 }
 
 function isBooleanTag(tag: IndexedTag): boolean {
@@ -49,6 +76,11 @@ export function createAutoViews(
   const errors = validateAutoViewMapping(options.groups)
   if (errors.length) throw new Error(errors[0])
 
+  const stateMapping = options.stateMapping ?? DEFAULT_AUTO_STATE_MAPPING
+  const stateErrors = validateAutoViewStateMapping(stateMapping)
+  if (stateErrors.length) throw new Error(stateErrors[0])
+
+  const iconLibrary = options.iconLibrary ?? []
   const tags = filterAutoViewTags(options.tags, options.includeAutoFilled === true)
   const classification = classifyTagsForViews(tags, options.groups)
   const next = structuredClone(config)
@@ -75,23 +107,28 @@ export function createAutoViews(
     if (navigation) navigation.items = []
   }
   saveAutoViewMapping(next, options.groups)
+  saveAutoViewStateMapping(next, stateMapping)
+  if (options.iconLibrary !== undefined) saveIconLibrary(next, iconLibrary)
 
-  const groupsToCreate: Array<{ name: string; tags: IndexedTag[] }> = classification.groups
-    .filter((group) => group.tags.length > 0)
-    .map((group) => ({ name: group.name, tags: group.tags }))
+  const groupsToCreate: Array<{ name: string; tags: IndexedTag[]; viewKey: string }> =
+    classification.groups
+      .filter((group) => group.tags.length > 0)
+      .map((group) => ({ name: group.name, tags: group.tags, viewKey: group.name }))
   if (classification.unclassified.length > 0) {
     groupsToCreate.push({
       name: UNCLASSIFIED_VIEW_NAME,
       tags: classification.unclassified,
+      viewKey: '__unclassified__',
     })
   }
   if (groupsToCreate.length === 0) {
-    groupsToCreate.push({ name: AUTO_VIEW_EMPTY_VIEW_NAME, tags: [] })
+    groupsToCreate.push({ name: AUTO_VIEW_EMPTY_VIEW_NAME, tags: [], viewKey: '' })
   }
 
   const models = new Map<string, ExportViewModel>()
   const viewIds: string[] = []
   let addedTagCount = 0
+  const allPlans = []
 
   for (const group of groupsToCreate) {
     const { view } = createBlankView(
@@ -111,21 +148,38 @@ export function createAutoViews(
 
     let model = createEmptyViewModel(next, viewId)
     if (group.tags.length > 0) {
-      const switchTagIds = options.coilSwitchEnabled === false
-        ? new Set<string>()
-        : new Set(group.tags
-          .filter((tag) => isCoilTag(tag) && isBooleanTag(tag))
-          .map((tag) => tag.id))
-      model = createViewComponents(
-        next,
-        model,
-        models,
-        group.tags,
-        runtime,
-        'rect',
-        [],
-        switchTagIds,
-      )
+      const plans = buildAutoViewComponentPlans({
+        tags: group.tags,
+        viewKey: group.viewKey,
+        stateMapping,
+        icons: iconLibrary,
+        coilSwitchEnabled: options.coilSwitchEnabled !== false,
+        iconOverrides: options.iconOverrides,
+      })
+      allPlans.push(...plans)
+      const hasIconPlans = plans.some((plan) => plan.components.some(
+        (component) => component.kind !== 'switch' && component.kind !== 'rect',
+      ))
+      if (hasIconPlans || iconLibrary.length > 0) {
+        model = createAutoViewComponents(next, model, models, plans, runtime)
+      } else {
+        // 沒有圖示庫時維持原有行為：Boolean Coil 使用 Switch，其餘矩形。
+        const switchTagIds = options.coilSwitchEnabled === false
+          ? new Set<string>()
+          : new Set(group.tags
+            .filter((tag) => isCoilTag(tag) && isBooleanTag(tag))
+            .map((tag) => tag.id))
+        model = createViewComponents(
+          next,
+          model,
+          models,
+          group.tags,
+          runtime,
+          'rect',
+          [],
+          switchTagIds,
+        )
+      }
       addedTagCount += group.tags.length
     }
 
@@ -135,6 +189,7 @@ export function createAutoViews(
 
   if (layout) layout.start = viewIds[0] ?? ''
 
+  const summary = summarizeAutoViewPlans(allPlans)
   return {
     config: next,
     models,
@@ -142,5 +197,11 @@ export function createAutoViews(
     addedTagCount,
     unclassifiedTagCount: classification.unclassified.length,
     skippedTagCount: options.tags.length - tags.length,
+    multiStateComponentCount: summary.multiComponentCount,
+    pairComponentCount: summary.pairComponentCount,
+    singleIconComponentCount: summary.singleIconComponentCount,
+    switchComponentCount: summary.switchComponentCount,
+    rectComponentCount: summary.rectComponentCount,
+    iconWarningCount: summary.warningDeviceCount,
   }
 }

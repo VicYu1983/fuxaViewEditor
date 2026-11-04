@@ -56,13 +56,14 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 | `floorGroupArtifacts` | `{ [viewId]: { [floorKey]: { titleId, frameId, frameShapeId } } }` | `layout/floorGroupArtifacts.ts` | 群組標題與底框的 SVG id 索引 |
 | `viewComponents` | `{ [viewId]: StoredViewComponent[] }` | `views/viewComponents.ts` | 每個 View 的受管 Tag 元件定義（Phase 4；不含位置） |
 | `viewAutoMapping` | `Array<{ name: string; keywords: string[] }>` | `views/autoViewMapping.ts` | 「一鍵配置」的分類表；依關鍵字比對 Tag 名稱並重建 View。未保存時使用內建基礎分類，保存空陣列則代表不套用任何分類 |
+| `viewAutoStateMapping` | `Array<{ state: string; keywords: string[] }>` | `views/autoViewStateMapping.ts` | 「一鍵配置」的狀態關鍵字表（運轉、異常、停止、水位過高、水位過低）；Tag 名稱含關鍵字即判定為該狀態。未保存時使用內建預設 |
 | `buildingFloorButtons` | `{ [viewId]: { [targetViewId]: buttonItemId } }` | `buildingFloors/buildingFloorButtons.ts` | 樓層按鈕的 `items` id 索引 |
 | `floorPlanViewIds` | `string[]` | `layout/floorPlanViews.ts` | 開啟「平面圖 View」的 View |
 | `floorPlanTagOffsets` | `{ [viewId]: { [tagId]: { dx, dy } } }` | `layout/floorPlanViews.ts` | 平面圖 Tag 的手動偏移 |
 | `viewTitleLabel` | `{ color, fontSize }` | `views/viewTitleLabel.ts` | View 名稱標籤樣式 |
 | `siteNameLabel` | `{ name, color, fontSize, bold, italic, underline }` | `views/siteNameLabel.ts` | 專案名稱標籤 |
 | `voiceRepeat` | `{ highhigh, high, low, info }` | `config/voiceRepeat.ts` | 語音播放次數 |
-| `icons` | 圖示庫 | `icons/iconLibrary.ts` | 圖示庫 |
+| `icons` | 圖示庫 | `icons/iconLibrary.ts` | 圖示庫。一鍵配置的預設圖示庫不在 `extra` 內，而是靜態資源 `public/default-icon-library.json`，開啟一鍵配置時才載入（避免打進 JS bundle），套用時與專案既有圖示合併 |
 
 `demo2.json` 的 `extra.fuxaSetting`（約 L636–L710）可作為實例。注意其中 `floorGroupArtifacts` 對平面圖 View 為空物件 `{}`。
 

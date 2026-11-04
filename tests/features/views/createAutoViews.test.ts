@@ -208,6 +208,37 @@ function readMapping(config: FuxaConfig) {
   return ((config.extra as Record<string, unknown>)?.fuxaSetting as Record<string, unknown>)[VIEW_AUTO_MAPPING_KEY]
 }
 
+describe('createAutoViews with icon library', () => {
+  it('binds a pair icon and saves the state mapping and icon library', () => {
+    const config = makeConfig()
+    const d1 = (config.devices as Record<string, { tags: Record<string, unknown> }>).d1!
+    d1.tags.t5 = {
+      id: 't5',
+      name: 'B4F排煙風機運轉(NC)',
+      type: 'Bool',
+      memaddress: '103',
+    }
+    const iconLibrary = [{
+      id: 'pair-smoke',
+      name: '排煙風機',
+      type: 'pair' as const,
+      normal: { id: 'smoke-n', mimeType: 'image/png' as const, dataUrl: 'data:image/png;base64,AA==' },
+      alarm: { id: 'smoke-a', mimeType: 'image/png' as const, dataUrl: 'data:image/png;base64,AA==' },
+    }]
+    const result = createAutoViews(config, {
+      groups: [{ name: '風機系統', keywords: ['風機'] }],
+      tags: [...buildTagIndex(config).values()].filter((tag) => tag.id === 't5'),
+      iconLibrary,
+    }, createRuntime())
+
+    expect(result.pairComponentCount).toBe(1)
+    expect(result.iconWarningCount).toBe(0)
+    const extra = result.config.extra as Record<string, unknown>
+    expect(extra.fuxaSetting).toMatchObject({ viewAutoStateMapping: expect.any(Array) })
+    expect(JSON.stringify(result.config.extra)).toContain('smoke-n')
+  })
+})
+
 describe('saveAutoViewMapping via createAutoViews', () => {
   it('does not downgrade a newer settings version', () => {
     const config = makeConfig()

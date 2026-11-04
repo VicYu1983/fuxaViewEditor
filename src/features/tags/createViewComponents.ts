@@ -10,7 +10,7 @@ import type { IndexedTag } from '../../domain/tags/index'
 import { buildTagIndex, isCoilTag } from '../../domain/tags/index'
 import { updateComponentGraphic } from '../icons/componentGraphics'
 
-function collectUsedIds(
+export function collectUsedIds(
   config: FuxaConfig,
   models: ReadonlyMap<string, ExportViewModel>,
   Parser: SvgParserConstructor,
