@@ -1,6 +1,6 @@
 # JSON 同步架構：以 `extra` 為唯一來源，SVG 每次重建
 
-狀態：**設計階段，尚未實作**。待決事項已於 2026-11-04 全數決議（見第 12 節），可從 Phase 0 開始。
+狀態：**Phase 0–4 已完成（2026-11-04）**。待決事項已於 2026-11-04 決議（見第 12 節）。未完成項目：D5（瀏覽器冒煙測試）與第 9.2 節的手動 FUXA 檢查。
 撰寫日期：2026-11-04。適用範圍：View Editor 與 FUXA 之間的 JSON 匯入／匯出。
 
 相關文件：[FLOOR_VIEW_FEATURE.md](./FLOOR_VIEW_FEATURE.md)（樓層與平面圖功能）、[REFACTOR_PLAN.md](./REFACTOR_PLAN.md)（App 拆分，與本文件獨立）。
@@ -15,7 +15,7 @@ View Editor 產生的 JSON 要交給 FUXA 載入，使用者也會在 FUXA 內�
 | # | 現象 | 根因 | 處置 |
 |---|---|---|---|
 | 1 | FUXA 匯入 → View Editor → FUXA，樓層按鈕被破壞 | 按鈕的 `data-name` 與標記在 FUXA 往返後遺失，工具無法辨識自己產生的元件 | 在 `extra` 保存按鈕索引 `buildingFloorButtons` 作為補救 |
-| 2 | 往返後樓層按鈕只剩文字（`測試樓層demo2.json`） | 工具以 XHTML namespace 建立 `<BUTTON>`，序列化後變成 `html:BUTTON`；同時同步判斷不檢查 `<BUTTON>` 是否存在，所以不會重建 | 改用 SVG namespace 建立；同步判斷加入 `<BUTTON>` 數量檢查（**尚未 commit**，已通過測試） |
+| 2 | 往返後樓層按鈕只剩文字（`測試樓層demo2.json`） | 工具以 XHTML namespace 建立 `<BUTTON>`，序列化後變成 `html:BUTTON`；同時同步判斷不檢查 `<BUTTON>` 是否存在，所以不會重建 | 改用 SVG namespace 建立；同步判斷加入 `<BUTTON>` 數量檢查（已 commit） |
 | 3 | 平面圖 View 仍殘留群組標題「未設定樓層」 | 舊版輸出留在 SVG 裡，工具把 SVG 內容當成事實保留 | 平面圖分支不再建立群組標題，驗證同步調整 |
 | 4 | 匯出 `demo2` 直接報錯（事件 3 的修正造成，Phase 0 發現） | 殘留標題的平面圖 View 未被重新套用，卻被驗證器檢查 | 殘留標題的平面圖 View 於匯出時重新套用（`findStaleFloorPlanViewIds`） |
 
@@ -49,7 +49,7 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 
 | 鍵 | 結構 | 讀寫位置 | 用途 |
 |---|---|---|---|
-| `version` | `1` | `layout/gridSettings.ts`（寫入時固定帶 `1`） | 目前沒有明確語意，只在儲存格線設定時順便寫入 |
+| `version` | `2`（Phase 4 起） | `config/toolSettings.ts`、`layout/gridSettings.ts`（寫入時不降級較新版本） | 資料結構版本，見 5.2；版本 1 的舊檔不需遷移 |
 | `viewGrids` | `{ [viewId]: GridSettings }` | `layout/gridSettings.ts` | 每個 View 的排列格線 |
 | `floorGroupFrames` | `FloorGroupFrameSettings` | `layout/floorGroupFrame.ts` | 群組框樣式 |
 | `floorFrameLayoutVersion` | `1` | `layout/floorGroupFrame.ts` | 群組框排版演算法版本（不是資料版本） |
@@ -77,7 +77,7 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 | `buildingFloorButtons.ts`：`buildingFloorButtonY` | 讀 `view_title` 文字的 `y` 與字級決定按鈕位置 | 屬於幾何量測，符合 P3；但結果必須是確定的，不能因 FUXA 微調而震盪 | 保留，補測試 |
 | `svg/readFloorArtifacts.ts` | 先用 `extra.floorGroupArtifacts`，再用 `data-floor-group`、文字「未設定樓層」等推測 | 推測規則是為了修補先前的遺失而加，容易誤認 | Phase 3 縮小為「只做舊檔遷移」 |
 | `views/viewTitleLabel.ts`、`views/siteNameLabel.ts` | `extra` 沒有設定時，從 SVG 讀取標題樣式當預設 | 屬於舊檔遷移，合理，但應明確標示且只在缺資料時發生 | Phase 3 標示為遷移路徑 |
-| `svg/readManagedComponents.ts`、`svg/readMovableTags.ts`、`views/buildViewEditorModels.ts` | 從 `items`（`name` 為 `tc_<seq>`）、`property`、SVG 的 `data-fuxa-*` 還原 Tag 元件的樣板、圖示、多狀態 | 與本次問題同一類，但範圍大，**本次不處理** | 列為 Phase 4，見 12 節 D3 |
+| `svg/readManagedComponents.ts`、`svg/readMovableTags.ts`、`views/buildViewEditorModels.ts` | 從 `items`（`name` 為 `tc_<seq>`）、`property`、SVG 的 `data-fuxa-*` 還原 Tag 元件的樣板、圖示、多狀態 | 與本次問題同一類，但範圍大 | 已於 Phase 4 處理（定義保存於 `extra.fuxaSetting.viewComponents`，見第 7 節 Phase 4；D3） |
 
 ### 3.3 FUXA 對往返資料的行為（觀察）
 
@@ -309,6 +309,8 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 - 測試：[toolSettings.test.ts](../tests/domain/toolSettings.test.ts)（寬鬆／嚴格讀取、版本缺少、INV-10 不降級且保留未知鍵）。
 - 驗證：重構前後以固定亂數與固定時間匯出 4 份 fixture（含 `旭峰建設.json`），輸出**逐位元相同**。
 
+原計畫（保留供對照）：
+
 - 實作 `toolSettings.ts`（5.1）。
 - 逐一改寫 9 個模組使用它，每改一個跑一次完整測試。
 - 新增測試：未知鍵保留、`extra` 型別錯誤的錯誤訊息、`version` 缺少與高於支援版本的行為（提示、不阻擋、不降級）。
@@ -445,6 +447,8 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 
 ### 9.2 手動（每個 Phase 結束時執行）
 
+**狀態：未完成。** 以下檢查尚未在真實 FUXA 中執行；完成後請逐項記錄結果與日期。
+
 1. 用 View Editor 開啟 `floor-demo2.json`，不做任何修改直接匯出。
 2. 檢查匯出檔文字：搜尋 `html:`、`svg:BUTTON`，不應出現在 `<BUTTON>` 與按鈕節點上。
 3. 在 FUXA 載入匯出檔：每個多樓層 View 的按鈕可點擊並切換 View；目前樓層為藍底。
@@ -475,7 +479,7 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 | Tag 元件在 FUXA 內被改動後，下次匯出會被 `extra` 的定義覆蓋 | 使用者困惑 | 已知限制（見 Phase 4）；在使用說明註明「Tag 元件請在 View Editor 內修改」 |
 | 規格比對的容差設定錯誤 | 無限重建或漏重建 | 規格比對有獨立單元測試；連續匯出的冪等測試（INV-2） |
 
-## 12. 決議事項（2026-11-04 已確認）
+## 12. 決議事項（2026-11-04）
 
 | 編號 | 問題 | 決議 |
 |---|---|---|
@@ -483,9 +487,9 @@ FUXA 對 SVG 的改寫行為工具無法控制，也沒有契約保證，所以�
 | D2 | 按鈕內部 id 是否由外層 id 決定（5.4） | 是，以取得可重複的輸出 |
 | D3 | Tag 元件是否也改為以 `extra` 為來源（Phase 4） | 是，Phase 0–3 完成後執行（2026-11-04） |
 | D4 | `version` 高於工具支援版本時 | **不阻擋編輯與匯出，但提示「工具版本可能過舊」**；行為細節見 5.2 |
-| D7 | `extra` 有、SVG 沒有的 Tag 元件（Phase 4） | **以 `extra` 為主**：元件仍存在，匯出時重建；刪除要在工具內進行；對應 Tag 已不存在的元件自動移除並提示 |
-| D5 | 是否引入真實瀏覽器的冒煙測試 | Phase 2 完成後評估成本 |
+| D5 | 是否引入真實瀏覽器的冒煙測試 | **未決**：Phase 2 已完成，尚待評估成本 |
 | D6 | 使用者在 FUXA 內修改樓層按鈕外觀是否保留 | 不保留（P1／P8），在使用說明註明 |
+| D7 | `extra` 有、SVG 沒有的 Tag 元件（Phase 4） | **以 `extra` 為主**：元件仍存在，匯出時重建；刪除要在工具內進行；對應 Tag 已不存在的元件自動移除並提示 |
 
 ## 13. 之後修改同步邏輯時的檢查清單
 
