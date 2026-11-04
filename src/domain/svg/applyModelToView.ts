@@ -1,6 +1,6 @@
 import type { FloorGroupFrameSettings, GridSettings } from '../config/types'
 import type { FloorTag, FloorLayoutComponent } from '../layout/floorLayout'
-import { getCanvasWidth } from '../layout/floorLayout'
+import { getCanvasHeight, getCanvasWidth } from '../layout/floorLayout';
 import { layoutFloorViewComponents } from '../layout/floorPlanViews'
 import type { FloorPlanTagOffsets } from '../layout/floorPlanViews'
 import { applyExistingTagLayout } from './applyExistingTagLayout'
@@ -183,7 +183,8 @@ function applyModelToViewInPlace(
   removeManagedFromView(view, model, doc)
   if (floorPlanImage) {
     // 底圖放在最底層，確保位於 Tag 與圖示之下
-    layer.insertBefore(buildFloorPlanNode(doc, floorPlanImage), layer.firstChild)
+    const floorPlanSize = { width: getCanvasWidth(view.profile), height: getCanvasHeight(view.profile) }
+    layer.insertBefore(buildFloorPlanNode(doc, floorPlanImage, floorPlanSize), layer.firstChild)
   }
   if (model.floorPlan === true) {
     // 平面圖 View 不保留群組標題與底框；舊輸出殘留的項目已由上一行移除

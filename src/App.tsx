@@ -1640,12 +1640,15 @@ function EditorWorkspace() {
   const selectedRawView = config?.rawConfig.hmi.views.find(
     (view) => isRecord(view) && view.id === selectedView?.id,
   )
+  const selectedFloorKey = selectedView ? floorPlanKeyForView(selectedView.name) : null
+  const selectedFloorPlan = selectedFloorKey ? floorPlanLibrary[selectedFloorKey] ?? null : null
   const floorPlanLayoutPanel = config && selectedView && selectedModel?.floorPlan === true ? (
     <FloorPlanLayoutPanel
       model={selectedModel}
       profile={isRecord(selectedRawView) ? selectedRawView.profile : undefined}
       tags={buildTagIndex(config.rawConfig)}
       floorGroupFrame={getFloorGroupFrameSettings(config.rawConfig)}
+      floorPlanImage={selectedFloorPlan}
       onMoveTag={(tagId, dx, dy) => handleMoveFloorTag(selectedView.id, tagId, dx, dy)}
     />
   ) : null

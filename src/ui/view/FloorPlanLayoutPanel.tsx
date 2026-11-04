@@ -3,15 +3,12 @@ import type { PointerEvent } from 'react'
 import { Card, Typography } from 'antd'
 import type { FloorGroupFrameSettings, GridSettings } from '../../domain/config/types'
 import type { FloorLayoutComponent, FloorTag } from '../../domain/layout/floorLayout'
-import { getCanvasWidth } from '../../domain/layout/floorLayout'
+import { getCanvasHeight, getCanvasWidth } from '../../domain/layout/floorLayout'
 import { layoutFloorViewComponents } from '../../domain/layout/floorPlanViews'
 import type { FloorPlanTagOffsets } from '../../domain/layout/floorPlanViews'
-import { isRecord } from '../../domain/config/validateFuxaConfig'
+import type { FloorPlanImage } from '../../domain/floorPlans/floorPlanLibrary'
 
 const { Text } = Typography
-
-const DEFAULT_WIDTH = 1024
-const DEFAULT_HEIGHT = 768
 
 type FloorPlanLayoutModel = {
   components: FloorLayoutComponent[]
@@ -25,6 +22,7 @@ type FloorPlanLayoutPanelProps = {
   profile: unknown
   tags: Map<string, FloorTag>
   floorGroupFrame: FloorGroupFrameSettings
+  floorPlanImage?: FloorPlanImage | null
   onMoveTag: (tagId: string, dx: number, dy: number) => void
 }
 
@@ -36,10 +34,6 @@ type DragState = {
   dy: number
 }
 
-function dimension(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
-}
-
 function roundToTenth(value: number): number {
   return Math.round(value * 10) / 10
 }
@@ -49,18 +43,18 @@ export function FloorPlanLayoutPanel({
   profile,
   tags,
   floorGroupFrame,
+  floorPlanImage,
   onMoveTag,
 }: FloorPlanLayoutPanelProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
-  const safeProfile = isRecord(profile) ? profile : {}
-  const width = dimension(safeProfile.width, DEFAULT_WIDTH)
-  const height = dimension(safeProfile.height, DEFAULT_HEIGHT)
+  const width = getCanvasWidth(profile)
+  const height = getCanvasHeight(profile)
   const layout = layoutFloorViewComponents(
     model,
     tags,
     floorGroupFrame,
-    getCanvasWidth(profile),
+    width,
   )
   const movable = layout.placements.filter(({ component }) => component.managed !== false)
 
@@ -92,8 +86,8 @@ export function FloorPlanLayoutPanel({
       <Text type="secondary">拖拉 Tag 群組調整位置，位置會記錄在匯出的 extra 中。</Text>
       {movable.length === 0 ? (
         <Text type="secondary">此 View 沒有可拖拉的 Tag。</Text>
-      ) : (
-        <svg
+      ) : null}
+      <svg
           ref={svgRef}
           viewBox={`0 0 ${width} ${height}`}
           style={{ width: '100%', background: '#fff', border: '1px solid #d9d9d9', touchAction: 'none' }}
@@ -101,6 +95,17 @@ export function FloorPlanLayoutPanel({
           onPointerUp={finishDrag}
           onPointerCancel={finishDrag}
         >
+          {floorPlanImage ? (
+            <image
+              href={floorPlanImage.dataUrl}
+              x={0}
+              y={0}
+              width={width}
+              height={height}
+              preserveAspectRatio="none"
+              pointerEvents="none"
+            />
+          ) : null}
           {layout.sections.map((section) => (
             <text key={section.floor} x={section.x} y={section.titleY} fontSize={16} fontWeight="bold">
               {section.title}
@@ -139,7 +144,6 @@ export function FloorPlanLayoutPanel({
             )
           })}
         </svg>
-      )}
     </Card>
   )
 }

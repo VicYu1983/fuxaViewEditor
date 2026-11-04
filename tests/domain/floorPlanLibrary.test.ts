@@ -137,15 +137,16 @@ describe('applyModelToView floor plan image', () => {
   const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1152" height="768">'
     + '<g data-name="layer"><rect id="keep" x="1" y="1" width="2" height="2"/></g></svg>'
 
-  it('inserts the plan image at the bottom of the layer with its own data URL', () => {
-    const view = { id: 'v1', name: 'A棟/1F', svgcontent: svg, items: {} }
+  it('inserts the plan image at the bottom of the layer, sized to the view profile', () => {
+    const view = { id: 'v1', name: 'A棟/1F', svgcontent: svg, items: {}, profile: { width: 1024, height: 600 } }
     applyModelToView(view, floorModel(), applyOptions(floorPlan))
 
     const doc = new DOMParser().parseFromString(view.svgcontent, 'image/svg+xml')
     const image = doc.querySelector(`image[${FLOOR_PLAN_ATTRIBUTE}]`)
     expect(image).not.toBeNull()
-    expect(image!.getAttribute('width')).toBe('1152')
-    expect(image!.getAttribute('height')).toBe('768')
+    expect(image!.getAttribute('width')).toBe('1024')
+    expect(image!.getAttribute('height')).toBe('600')
+    expect(image!.getAttribute('preserveAspectRatio')).toBe('none')
     expect(image!.getAttributeNS('http://www.w3.org/1999/xlink', 'href')).toBe(floorPlan.dataUrl)
     expect(image!.parentElement!.firstElementChild).toBe(image)
     expect(doc.querySelector('#keep')).not.toBeNull()

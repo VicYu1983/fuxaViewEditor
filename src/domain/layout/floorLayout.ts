@@ -90,6 +90,15 @@ export function getCanvasWidth(profile: unknown): number {
     : 1024
 }
 
+export function getCanvasHeight(profile: unknown): number {
+  return isRecord(profile)
+      && typeof profile.height === 'number'
+      && Number.isFinite(profile.height)
+      && profile.height > 0
+    ? profile.height
+    : 768
+}
+
 function tagFor(
   tags: Map<string, FloorTag> | Record<string, FloorTag>,
   tagId: string,
