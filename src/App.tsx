@@ -18,7 +18,7 @@ import {
   message,
 } from 'antd'
 import zhTW from 'antd/locale/zh_TW'
-import { normalizeProjectName } from './domain/config/serialization'
+import { normalizeProjectName, projectFileName } from './domain/config/serialization'
 import { getErrorMessage } from './domain/shared/getErrorMessage'
 import { isRecord } from './domain/shared/isRecord'
 import { parseUpdatedConfig } from './app/lib/parseUpdatedConfig'
@@ -382,6 +382,45 @@ function EditorWorkspace() {
         modifiedViewIds,
         tags: buildTagIndex(config.rawConfig),
       }, dependencies)
+  }
+
+  function handleExportConfig() {
+    if (!config) return
+
+    try {
+      const prepared = prepareCurrentExport()
+      if (!prepared) return
+      const blob = new Blob([prepared.text], { type: 'application/json;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = projectFileName(normalizedProjectName)
+      link.hidden = true
+      document.body.append(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 0)
+      let modelsToReset = models
+      if (prepared.dirty) {
+        const savedModels = new Map<string, ExportViewModel>()
+        for (const model of prepared.models) {
+          savedModels.set(model.viewId, {
+            ...model,
+            originalComponents: structuredClone(model.components),
+            originalFloorTitleIds: structuredClone(model.floorTitleIds),
+            originalFloorFrameIds: structuredClone(model.floorFrameIds),
+          })
+        }
+        modelsToReset = savedModels
+      }
+      const savedConfig = prepared.dirty
+        ? parseUpdatedConfig(prepared.text, config)
+        : config
+      resetEditor(modelsToReset, savedConfig)
+      messageApi.success(prepared.dirty ? '已匯出修改後的配置 JSON。' : '已另存配置 JSON。')
+    } catch (error) {
+      messageApi.error(`匯出失敗：${getErrorMessage(error)}`)
+    }
   }
 
   function openViewDialog(mode: 'create' | 'rename') {
@@ -1939,6 +1978,8 @@ function EditorWorkspace() {
           onRedo={() => redo()}
           fuxaSyncStatus={fuxaSync.status}
           hasConfig={Boolean(config)}
+          isDirty={isDirty}
+          onExportConfig={handleExportConfig}
           onSyncToFuxa={fuxaSync.sync}
           onOpenProjectManager={openDeviceManager}
           onOpenIconLibrary={() => setIconLibraryOpen(true)}

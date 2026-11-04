@@ -13,6 +13,8 @@ export interface EditorHeaderProps {
   onRedo: () => void
   fuxaSyncStatus: 'disconnected' | 'ready' | 'pending'
   hasConfig: boolean
+  isDirty: boolean
+  onExportConfig: () => void
   onSyncToFuxa: () => void
   onOpenProjectManager: () => void
   onOpenIconLibrary: () => void
@@ -29,6 +31,8 @@ export function EditorHeader({
   onRedo,
   fuxaSyncStatus,
   hasConfig,
+  isDirty,
+  onExportConfig,
   onSyncToFuxa,
   onOpenProjectManager,
   onOpenIconLibrary,
@@ -70,6 +74,9 @@ export function EditorHeader({
             onClick={onRedo}
           />
         </Tooltip>
+        <Button disabled={!hasConfig} onClick={onExportConfig}>
+          {isDirty ? '匯出修改' : '另存新 JSON'}
+        </Button>
         {fuxaSyncStatus !== 'disconnected' && (
           <Button
             type="primary"
