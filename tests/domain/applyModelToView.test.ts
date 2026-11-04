@@ -315,6 +315,31 @@ describe('applyModelToView', () => {
     expect(layer.children[0]).toBe(plans[0])
   })
 
+  it('INV-8: replaces a floor-plan node whose FUXA-side markers were stripped, without duplicating it or touching tag icons', () => {
+    const root = new TestElement('svg')
+    const layer = root.appendChild(new TestElement('g', { id: 'layer-1' }))
+    layer.appendChild(new TestElement('image', {
+      x: '0', y: '0', width: '800', height: '600', 'xlink:href': 'data:image/png;base64,OLD',
+    }))
+    layer.appendChild(new TestElement('image', {
+      id: 'tag-icon', 'data-name': 'tc_1', x: '100', y: '100', width: '20', height: '20',
+      'xlink:href': 'data:image/png;base64,ICON',
+    }))
+    const currentView = view()
+    currentView.profile = { width: 800, height: 600 }
+    const currentModel: ApplyModel = { ...model(), floorPlan: true }
+    const floorPlanImage = { mimeType: 'image/png' as const, dataUrl: 'data:image/png;base64,NEW', width: 1, height: 1 }
+
+    applyModelToView(currentView, currentModel, { ...options(new TestDocument(root)), floorPlanImage })
+    applyModelToView(currentView, currentModel, { ...options(new TestDocument(root)), floorPlanImage })
+
+    const plans = layer.children.filter((node) => node.getAttribute('id') === 'fuxa-floor-plan')
+    expect(plans).toHaveLength(1)
+    expect(plans[0]!.getAttribute('xlink:href')).toBe('data:image/png;base64,NEW')
+    expect(layer.children.filter((node) => node.getAttribute('xlink:href')?.includes('OLD'))).toHaveLength(0)
+    expect(layer.children.some((node) => node.getAttribute('data-name') === 'tc_1')).toBe(true)
+  })
+
   it('declares XLink namespace for icon-based components', () => {
     const root = new TestElement('svg')
     root.appendChild(new TestElement('g'))

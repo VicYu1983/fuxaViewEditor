@@ -1,6 +1,6 @@
 // Here, floor means a Tag group within one View, not a cross-View building floor.
 import { isRecord } from '../config/validateFuxaConfig'
-import { FLOOR_PLAN_ATTRIBUTE } from './buildFloorPlanNode'
+import { FLOOR_PLAN_ATTRIBUTE, FLOOR_PLAN_ID } from './buildFloorPlanNode'
 import { findSvgElementById } from './parseSvg'
 
 const FLOOR_ARTIFACT_NAMES = new Set([
@@ -8,6 +8,23 @@ const FLOOR_ARTIFACT_NAMES = new Set([
   'fuxa_floor_section_frame',
   'fuxa_building_floor_button',
 ])
+
+function hasImageDataHref(node: Element): boolean {
+  const href = node.getAttribute('xlink:href') ?? node.getAttribute('href')
+  return href?.startsWith('data:image/') === true
+}
+
+// 平面圖節點可能因 FUXA 往返遺失 data-* 標記，平面圖 View 中改以 id 或「未命名、位於 0,0 的 base64 圖片」辨識，避免重複新增。
+function isFloorPlanNode(node: Element, floorPlanView: boolean): boolean {
+  if (node.getAttribute(FLOOR_PLAN_ATTRIBUTE) !== null) return true
+  if (node.getAttribute('id') === FLOOR_PLAN_ID) return true
+  return floorPlanView
+    && node.localName === 'image'
+    && node.getAttribute('data-name') === null
+    && node.getAttribute('x') === '0'
+    && node.getAttribute('y') === '0'
+    && hasImageDataHref(node)
+}
 
 interface ManagedComponentRef {
   managed?: boolean
@@ -18,6 +35,7 @@ interface ManagedComponentRef {
 }
 
 export interface ManagedSvgModelRef {
+  floorPlan?: boolean
   components?: readonly ManagedComponentRef[]
   originalComponents?: readonly ManagedComponentRef[]
   floorTitles?: Record<string, unknown>
@@ -91,7 +109,7 @@ export function removeManagedFromView(
 
   for (const node of allNodes) {
     if (!FLOOR_ARTIFACT_NAMES.has(node.getAttribute('data-name') ?? '')
-        && node.getAttribute(FLOOR_PLAN_ATTRIBUTE) === null) continue
+        && !isFloorPlanNode(node, model.floorPlan === true)) continue
     node.parentNode?.removeChild(node)
   }
 
