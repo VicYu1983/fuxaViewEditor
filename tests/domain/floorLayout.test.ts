@@ -171,4 +171,26 @@ describe('Floor layout', () => {
     expect(result.sections.map(({ frame }) => frame.x)).toEqual([10, 10])
     expect(result.sections.map(({ frame }) => frame.width)).toEqual([780, 780])
   })
+
+  it('applies tag offsets to section entries, placements, and frames alike', () => {
+    const components = [{ key: 'a', tagId: 'tag-a', template: 'rect' as const, label: 'A' }]
+    const tags = new Map([['tag-a', { floor: '1F' }]])
+    const base = layoutFloorComponents(components, DEFAULT_GRID, tags)
+    const moved = layoutFloorComponents(components, DEFAULT_GRID, tags, DEFAULT_FLOOR_GROUP_FRAME, 1024, {
+      'tag-a': { dx: 40, dy: 30 },
+    })
+    const basePlacement = base.placements[0]?.placement
+    const movedEntry = moved.sections[0]?.entries[0]
+    const movedPlacement = moved.placements[0]?.placement
+    if (!basePlacement || !movedEntry || !movedPlacement) throw new Error('Expected placements')
+
+    expect(movedEntry.placement.shape).toEqual(movedPlacement.shape)
+    expect(movedPlacement.shape.x).toBe(basePlacement.shape.x + 40)
+    expect(movedPlacement.shape.y).toBe(basePlacement.shape.y + 30)
+    expect(movedPlacement.label.x).toBe(basePlacement.label.x + 40)
+    expect(movedPlacement.label.y).toBe(basePlacement.label.y + 30)
+    const frame = moved.sections[0]?.frame
+    if (!frame) throw new Error('Expected a floor section')
+    expect(frame.y + frame.height).toBeGreaterThanOrEqual(movedPlacement.shape.y + movedPlacement.shape.height)
+  })
 })

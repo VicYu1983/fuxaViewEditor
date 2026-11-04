@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { FuxaConfig } from '../../src/domain/config/types'
-import type { FloorLayoutResult } from '../../src/domain/layout/floorLayout'
 import type { FloorPlanTagOffsets } from '../../src/domain/layout/floorPlanViews'
+import { DEFAULT_FLOOR_GROUP_FRAME } from '../../src/domain/layout/floorGroupFrame'
+import { DEFAULT_GRID } from '../../src/domain/layout/gridSettings'
 import {
   getViewFloorPlanSetting,
   getViewFloorPlanTagOffsets,
-  offsetFloorLayoutPlacements,
+  layoutFloorViewComponents,
   saveFloorPlanTagOffsets,
   saveFloorPlanViewSettings,
 } from '../../src/domain/layout/floorPlanViews'
@@ -66,35 +67,22 @@ describe('floorPlanViews', () => {
     expect(config.extra).toEqual({ fuxaSetting: { siteNameLabel: 'site' } })
   })
 
-  it('shifts only the placements of tags with offsets', () => {
-    const layout = {
-      sections: [],
-      placements: [
-        { component: { tagId: 'tag-1' }, placement: { shape: { x: 100, y: 50, width: 20, height: 10 }, label: { x: 110, y: 70, anchor: 'middle' } } },
-        { component: { tagId: 'tag-2' }, placement: { shape: { x: 0, y: 0, width: 20, height: 10 }, label: { x: 10, y: 20, anchor: 'middle' } } },
-      ],
-    } as unknown as FloorLayoutResult
-    const moved = offsetFloorLayoutPlacements(layout, { 'tag-1': { dx: 5, dy: -10 } })
-    expect(moved.placements[0]?.placement.shape).toMatchObject({ x: 105, y: 40, width: 20, height: 10 })
-    expect(moved.placements[1]?.placement.shape).toMatchObject({ x: 0, y: 0 })
-    expect(layout.placements[0]?.placement.shape).toMatchObject({ x: 100, y: 50 })
-  })
+  it('lays out floor-plan views with offsets and ignores them otherwise', () => {
+    const model = {
+      components: [{ key: 'a', tagId: 'tag-1', template: 'rect' as const, label: 'A' }],
+      grid: { ...DEFAULT_GRID },
+      floorPlanTagOffsets: { 'tag-1': { dx: 5, dy: -10 } },
+    }
+    const tags = new Map([['tag-1', { floor: '1F' }]])
+    const frame = DEFAULT_FLOOR_GROUP_FRAME
+    const plain = layoutFloorViewComponents({ ...model, floorPlan: false }, tags, frame, 1024)
+    const planned = layoutFloorViewComponents({ ...model, floorPlan: true }, tags, frame, 1024)
+    const plainShape = plain.placements[0]?.placement.shape
+    const plannedShape = planned.placements[0]?.placement.shape
+    if (!plainShape || !plannedShape) throw new Error('Expected placements')
 
-  it('moves the label together with the shape', () => {
-    const layout = {
-      sections: [],
-      placements: [
-        {
-          component: { tagId: 'tag-1' },
-          placement: {
-            shape: { x: 100, y: 50, width: 20, height: 10 },
-            label: { x: 110, y: 70, anchor: 'middle' },
-          },
-        },
-      ],
-    } as unknown as FloorLayoutResult
-    const moved = offsetFloorLayoutPlacements(layout, { 'tag-1': { dx: 5, dy: -10 } })
-    expect(moved.placements[0]?.placement.label).toMatchObject({ x: 115, y: 60, anchor: 'middle' })
-    expect(layout.placements[0]?.placement.label).toMatchObject({ x: 110, y: 70 })
+    expect(plannedShape.x).toBe(plainShape.x + 5)
+    expect(plannedShape.y).toBe(plainShape.y - 10)
+    expect(planned.sections[0]?.entries[0]?.placement.shape).toEqual(plannedShape)
   })
 })

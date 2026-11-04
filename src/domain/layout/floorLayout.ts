@@ -46,6 +46,21 @@ export interface FloorLayoutEntry {
   placement: ComponentPlacement
 }
 
+export type FloorTagOffsets = Record<string, { dx: number; dy: number }>
+
+function shiftPlacement(
+  placement: ComponentPlacement,
+  offset: { dx: number; dy: number } | undefined,
+): ComponentPlacement {
+  if (!offset) return placement
+  const { shape, label } = placement
+  return {
+    ...placement,
+    shape: { ...shape, x: shape.x + offset.dx, y: shape.y + offset.dy },
+    label: { ...label, x: label.x + offset.dx, y: label.y + offset.dy },
+  }
+}
+
 export interface FloorLayoutSection {
   floor: string
   title: string
@@ -108,6 +123,7 @@ export function layoutFloorComponents(
   tags: Map<string, FloorTag> | Record<string, FloorTag>,
   frameSettings: Partial<FloorGroupFrameSettings> = DEFAULT_FLOOR_GROUP_FRAME,
   canvasWidth = 1024,
+  tagOffsets: FloorTagOffsets = {},
 ): FloorLayoutResult {
   const grid = { ...DEFAULT_GRID, ...settings }
   const frame = normalizeFloorGroupFrameSettings(frameSettings)
@@ -129,7 +145,7 @@ export function layoutFloorComponents(
       if (!placement) {
         throw new Error(`無法計算樓層「${group.title}」中元件「${component.key}」的位置。`)
       }
-      return { component, placement }
+      return { component, placement: shiftPlacement(placement, tagOffsets[component.tagId]) }
     })
     const titleWidth = measureSvgText(group.title, titleFontSize)
     const bounds = {

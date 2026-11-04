@@ -116,30 +116,6 @@ export function layoutFloorViewComponents(
   floorGroupFrame: FloorGroupFrameSettings,
   canvasWidth: number,
 ): FloorLayoutResult {
-  const layout = layoutFloorComponents(model.components, model.grid, tags, floorGroupFrame, canvasWidth)
-  return model.floorPlan === true && model.floorPlanTagOffsets
-    ? offsetFloorLayoutPlacements(layout, model.floorPlanTagOffsets)
-    : layout
-}
-
-export function offsetFloorLayoutPlacements(
-  layout: FloorLayoutResult,
-  offsets: FloorPlanTagOffsets,
-): FloorLayoutResult {
-  return {
-    ...layout,
-    placements: layout.placements.map((entry) => {
-      const offset = offsets[entry.component.tagId]
-      if (!offset) return entry
-      const { shape, label } = entry.placement
-      return {
-        ...entry,
-        placement: {
-          ...entry.placement,
-          shape: { ...shape, x: shape.x + offset.dx, y: shape.y + offset.dy },
-          label: { ...label, x: label.x + offset.dx, y: label.y + offset.dy },
-        },
-      }
-    }),
-  }
+  const tagOffsets = model.floorPlan === true ? model.floorPlanTagOffsets ?? {} : {}
+  return layoutFloorComponents(model.components, model.grid, tags, floorGroupFrame, canvasWidth, tagOffsets)
 }
