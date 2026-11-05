@@ -309,7 +309,7 @@ describe('applyModelToView', () => {
     const plans = layer.children.filter((node) => node.getAttribute('data-fuxa-floor-plan') === 'true')
     expect(plans).toHaveLength(1)
     expect(plans[0]!.getAttribute('x')).toBe('0')
-    expect(plans[0]!.getAttribute('y')).toBe('0')
+    expect(plans[0]!.getAttribute('y')).toBe('2')
     expect(plans[0]!.getAttribute('width')).toBe('800')
     expect(plans[0]!.getAttribute('height')).toBe('600')
     expect(layer.children[0]).toBe(plans[0])
