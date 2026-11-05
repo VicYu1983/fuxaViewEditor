@@ -18,8 +18,7 @@ export function buildFloorPlanNode(
   node.setAttribute(FLOOR_PLAN_ATTRIBUTE, 'true')
   node.setAttribute('id', FLOOR_PLAN_ID)
   node.setAttribute('x', '0')
-  // 好像fuxa有bug，y轴從2開始才可以正常顯示
-  node.setAttribute('y', '2')
+  node.setAttribute('y', '0')
   node.setAttribute('width', String(size.width))
   node.setAttribute('height', String(size.height))
   node.setAttribute('preserveAspectRatio', 'none')
