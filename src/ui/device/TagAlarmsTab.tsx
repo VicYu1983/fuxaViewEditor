@@ -281,7 +281,7 @@ export const TagAlarmsTab = forwardRef<TagAlarmsTabHandle, TagAlarmsTabProps>(
           <Button
             disabled={alarmSettingsByTag.size === 0}
             onClick={handleQuickSetAlarmTexts}
-            title="將所有已啟用告警的文字更新為 Tag 名稱加上「異常」"
+            title="將所有已啟用告警的文字更新為 Tag 名稱"
           >
             快速設定
           </Button>

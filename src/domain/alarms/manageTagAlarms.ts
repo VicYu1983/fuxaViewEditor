@@ -82,7 +82,7 @@ export function updateExistingTagAlarmTexts(
     if (!tagName) continue
 
     let changed = false
-    const text = `${tagName}異常`
+    const text = tagName
     let hasEnabledLevel = false
     let actionMin = 1
     let actionMax = 1

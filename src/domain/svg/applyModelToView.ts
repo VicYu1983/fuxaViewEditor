@@ -124,26 +124,17 @@ function existingItemItems(
   }
 }
 
-function tagFor(
-  tags: Map<string, FloorTag> | Record<string, FloorTag>,
-  tagId: string,
-): FloorTag | undefined {
-  return tags instanceof Map ? tags.get(tagId) : tags[tagId]
-}
-
 function writeComponentEntries(
   view: ApplyModelView,
   previousItems: Record<string, unknown>,
   component: SvgComponent,
   shapeNodes: Element[],
-  tag: FloorTag | undefined,
   labelBackgroundNode?: Element,
 ): void {
   const entries = buildComponentEntries(
     component,
     shapeNodes,
     existingItemItems(previousItems, component),
-    tag,
     labelBackgroundNode,
   )
   view.items[component.shapeId] = entries.shapeEntries[0]!
@@ -278,7 +269,6 @@ function applyModelToViewInPlace(
         previousItems,
         component,
         nodes.shapeNodes,
-        tagFor(options.tags, component.tagId),
         nodes.labelBackgroundNode,
       )
     }

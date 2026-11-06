@@ -131,11 +131,14 @@ describe('sync round trip (characterization)', () => {
 
     it('INV-4：不屬於受管元件的 items 原樣保留', () => {
       const managed = new Set(['fuxa_building_floor_button', 'fuxa_floor_section_title'])
-      // 平面圖 View 的 Tag 標籤底框（tc_N_label_bg）由編輯器每次匯出重建，屬受管項目
-      const isManagedName = (name: string) => managed.has(name) || name.endsWith('_label_bg')
+      // 平面圖 View 的 Tag 標籤底框（tc_N_label_bg）由編輯器每次匯出重建，屬受管項目；
+      // Coil Switch（svg-ext-html_switch）也由編輯器重建並遷移為 variableId 綁定
+      const isManagedItem = (item: { name?: unknown; type?: unknown }) =>
+        managed.has(String(item.name)) || String(item.name).endsWith('_label_bg')
+        || item.type === 'svg-ext-html_switch'
       for (const id of [DEMO2.floor2, DEMO2.floor3]) {
         const strip = (items: ParsedView['items']) => Object.fromEntries(
-          Object.entries(items).filter(([, item]) => !isManagedName(String(item.name))),
+          Object.entries(items).filter(([, item]) => !isManagedItem(item)),
         )
         expect(strip(viewOf(exportText(source), id).items)).toEqual(strip(viewOf(source, id).items))
       }

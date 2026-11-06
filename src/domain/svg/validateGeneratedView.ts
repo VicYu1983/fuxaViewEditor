@@ -82,12 +82,7 @@ function tagProperty(item: unknown): Record<string, unknown> {
 }
 
 function hasSwitchClickBinding(property: Record<string, unknown>, tagId: string): boolean {
-  return Array.isArray(property.events) && property.events.some((event) => {
-    if (!isRecord(event) || event.type !== 'click' || event.action !== 'onToggleValue'
-        || !isRecord(event.actoptions)) return false
-    const variable = event.actoptions.variable
-    return isRecord(variable) && variable.variableId === tagId
-  })
+  return property.variableId === tagId
 }
 
 function hasVisibilityRule(actions: unknown, tagId: string, visibleValue: number): boolean {

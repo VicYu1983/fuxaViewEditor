@@ -55,13 +55,15 @@ function actionsFor(item: unknown): unknown[] {
 }
 
 function switchTagId(item: unknown): string {
-  if (!isRecord(item) || !isRecord(item.property)
-      || !Array.isArray(item.property.events)) return ''
+  if (!isRecord(item) || !isRecord(item.property)) return ''
+  const variableId = item.property.variableId
+  if (typeof variableId === 'string') return variableId
+  if (!Array.isArray(item.property.events)) return ''
   for (const event of item.property.events) {
     if (!isRecord(event) || !isRecord(event.actoptions)
         || !isRecord(event.actoptions.variable)) continue
-    const variableId = event.actoptions.variable.variableId
-    if (typeof variableId === 'string') return variableId
+    const legacyVariableId = event.actoptions.variable.variableId
+    if (typeof legacyVariableId === 'string') return legacyVariableId
   }
   return ''
 }

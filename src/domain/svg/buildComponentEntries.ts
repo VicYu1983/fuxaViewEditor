@@ -1,6 +1,5 @@
 import { isRecord } from '../config/validateFuxaConfig'
 import { buildVisibilityActions } from '../icons/iconLibrary'
-import type { FloorTag } from '../layout/floorLayout'
 import type { SvgComponent } from './buildComponentNodes'
 import { labelBackgroundId } from './buildComponentNodes'
 
@@ -166,32 +165,14 @@ function buildLabelBackgroundEntry(
 function buildSwitchEntry(
   existing: unknown,
   component: SvgComponent,
-  tag: FloorTag | undefined,
 ): Record<string, unknown> {
-  const variableRaw = {
-    ...(tag?.record ?? {}),
-    id: component.tagId,
-    name: typeof tag?.name === 'string' ? tag.name : component.label,
-    value: false,
-    type: 'boolean',
-  }
   return preserveItem(existing, {
     id: component.shapeId,
     type: 'svg-ext-html_switch',
     name: `tc_${component.seq}`,
     property: {
-      variableId: null,
-      events: [{
-        type: 'click',
-        action: 'onToggleValue',
-        actoptions: {
-          variable: {
-            variableId: component.tagId,
-            variableRaw,
-            bitmask: null,
-          },
-        },
-      }],
+      variableId: component.tagId,
+      events: [],
       actions: [],
       options: {
         offValue: 0,
@@ -226,7 +207,6 @@ export function buildComponentEntries(
     label?: unknown
     labelBackground?: unknown
   } = {},
-  tag?: FloorTag,
   labelBackgroundNode?: Element,
 ): ComponentItemEntries {
   const labelBackgroundEntry = labelBackgroundNode
@@ -270,7 +250,7 @@ export function buildComponentEntries(
   if (!shape) throw new Error(`元件「${component.label || '未命名'}」缺少圖示節點。`)
   return {
     shapeEntries: [component.template === 'switch'
-      ? buildSwitchEntry(existing.shape, component, tag)
+      ? buildSwitchEntry(existing.shape, component)
       : buildStandardEntry(existing.shape, component, shape)],
     labelEntry: buildLabelEntry(existing.label, component),
     labelBackgroundEntry,

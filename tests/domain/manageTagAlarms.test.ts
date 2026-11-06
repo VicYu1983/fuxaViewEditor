@@ -280,12 +280,12 @@ describe('updateExistingTagAlarmTexts', () => {
 
     expect(result).toMatchObject({ updated: 1, toastMessagesAdded: 0 })
     expect(alarms[0]).toMatchObject({
-      highhigh: { enabled: true, text: '水箱水位異常', custom: true },
+      highhigh: { enabled: true, text: '水箱水位', custom: true },
       high: { enabled: false, text: '停用文字' },
       actions: {
         enabled: true,
         values: [
-          { type: 'toastMessage', actparam: '水箱水位異常', actoptions: { type: 'warning' } },
+          { type: 'toastMessage', actparam: '水箱水位', actoptions: { type: 'warning' } },
           { type: 'notify', actparam: '保留' },
         ],
       },
@@ -319,7 +319,7 @@ describe('updateExistingTagAlarmTexts', () => {
 
     expect(result).toMatchObject({ updated: 1, toastMessagesAdded: 1 })
     expect(alarms[0]).toMatchObject({
-      high: { enabled: true, text: '水箱水位異常' },
+      high: { enabled: true, text: '水箱水位' },
       actions: {
         enabled: true,
         custom: true,
@@ -329,7 +329,7 @@ describe('updateExistingTagAlarmTexts', () => {
             min: 0,
             max: 0,
             type: 'toastMessage',
-            actparam: '水箱水位異常',
+            actparam: '水箱水位',
             actoptions: { type: 'error' },
             checkdelay: 1,
             timedelay: 0,
@@ -384,13 +384,13 @@ describe('updateExistingTagAlarmTexts', () => {
     expect(actions).toContainEqual(expect.objectContaining({
       type: 'setValue',
       variableId: messageTagId,
-      actparam: '水箱水位異常',
+      actparam: '水箱水位',
       min: 0,
       max: 0,
     }))
     expect(actions).toContainEqual(expect.objectContaining({
       type: 'toastMessage',
-      actparam: '水箱水位異常',
+      actparam: '水箱水位',
     }))
   })
 
@@ -398,11 +398,11 @@ describe('updateExistingTagAlarmTexts', () => {
     const source = createConfig()
     source.alarms = [{
       property: { variableId: 'tag-1' },
-      highhigh: { enabled: true, text: '水箱水位異常' },
+      highhigh: { enabled: true, text: '水箱水位' },
       high: { enabled: false, text: '舊文字' },
       actions: {
         enabled: true,
-        values: [{ type: 'toastMessage', actparam: '水箱水位異常' }],
+        values: [{ type: 'toastMessage', actparam: '水箱水位' }],
       },
     }]
 

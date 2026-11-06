@@ -252,7 +252,7 @@ function validMultiStateArtifacts() {
 }
 
 describe('validateGeneratedView', () => {
-  it('accepts a Coil Switch only when its click event is bound to a Boolean Coil Tag', () => {
+  it('accepts a Coil Switch only when its variableId is bound to a Boolean Coil Tag', () => {
     const doc = validDocument()
     const shape = doc.documentElement.children[0]?.children[0]
     if (!shape) throw new Error('Missing test shape')
@@ -267,12 +267,9 @@ describe('validateGeneratedView', () => {
       id: 'shape-id',
       type: 'svg-ext-html_switch',
       property: {
-        variableId: null,
-        events: [{
-          type: 'click',
-          action: 'onToggleValue',
-          actoptions: { variable: { variableId: 'tag-1' } },
-        }],
+        variableId: 'tag-1',
+        events: [],
+        actions: [],
       },
     }
     const options = {
@@ -306,12 +303,9 @@ describe('validateGeneratedView', () => {
       id: 'shape-id',
       type: 'svg-ext-html_switch',
       property: {
-        variableId: null,
-        events: [{
-          type: 'click',
-          action: 'onToggleValue',
-          actoptions: { variable: { variableId: 'tag-1' } },
-        }],
+        variableId: 'tag-1',
+        events: [],
+        actions: [],
       },
     }
     const baseModel = makeModel([{ ...managedComponent(), template: 'switch' }])

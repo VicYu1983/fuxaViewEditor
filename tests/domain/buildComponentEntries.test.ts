@@ -76,17 +76,11 @@ describe('buildComponentEntries', () => {
     })
   })
 
-  it('builds a FUXA click-to-toggle event for a Coil Switch', () => {
+  it('builds a Coil Switch bound through variableId with empty events and actions', () => {
     const result = buildComponentEntries(
       component({ template: 'switch' }),
       [new TestElement({ id: 'shape-3', type: 'svg-ext-html_switch' }) as unknown as Element],
       {},
-      {
-        name: 'Pump',
-        type: 'Bool',
-        memaddress: '000000',
-        record: { id: 'tag-3', name: 'Pump', type: 'Bool', init: '0' },
-      },
     )
 
     expect(result.shapeEntries[0]).toMatchObject({
@@ -95,24 +89,8 @@ describe('buildComponentEntries', () => {
       name: 'tc_3',
       label: 'HtmlSwitch',
       property: {
-        variableId: null,
-        events: [{
-          type: 'click',
-          action: 'onToggleValue',
-          actoptions: {
-            variable: {
-              variableId: 'tag-3',
-              variableRaw: {
-                id: 'tag-3',
-                name: 'Pump',
-                type: 'boolean',
-                value: false,
-                init: '0',
-              },
-              bitmask: null,
-            },
-          },
-        }],
+        variableId: 'tag-3',
+        events: [],
         actions: [],
         options: { offValue: 0, onValue: 1, height: 22 },
       },

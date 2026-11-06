@@ -77,11 +77,9 @@ describe('readManagedComponents', () => {
         name: 'tc_3',
         type: 'svg-ext-html_switch',
         property: {
-          events: [{
-            type: 'click',
-            action: 'onToggleValue',
-            actoptions: { variable: { variableId: 'coil-tag' } },
-          }],
+          variableId: 'coil-tag',
+          events: [],
+          actions: [],
         },
       },
       'switch-label': {
