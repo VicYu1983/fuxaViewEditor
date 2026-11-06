@@ -2,10 +2,13 @@ import { isRecord } from '../config/validateFuxaConfig'
 import { buildVisibilityActions } from '../icons/iconLibrary'
 import type { FloorTag } from '../layout/floorLayout'
 import type { SvgComponent } from './buildComponentNodes'
+import { labelBackgroundId } from './buildComponentNodes'
 
 export interface ComponentItemEntries {
   shapeEntries: Record<string, unknown>[]
   labelEntry: Record<string, unknown>
+  /** 平面圖 View 才會有：標籤底框的 items 記錄。 */
+  labelBackgroundEntry?: Record<string, unknown>
 }
 
 const PALETTES = {
@@ -144,6 +147,22 @@ function buildLabelEntry(
   })
 }
 
+function buildLabelBackgroundEntry(
+  existing: unknown,
+  component: SvgComponent,
+  node: Element,
+): Record<string, unknown> {
+  return preserveItem(existing, {
+    id: node.getAttribute('id') ?? labelBackgroundId(component.labelId),
+    type: 'svg-ext-shapes-rectangle',
+    name: `tc_${component.seq}_label_bg`,
+    property: null,
+    label: 'Shapes',
+    hide: false,
+    lock: false,
+  })
+}
+
 function buildSwitchEntry(
   existing: unknown,
   component: SvgComponent,
@@ -205,9 +224,14 @@ export function buildComponentEntries(
     alarmShape?: unknown
     states?: Record<string, unknown>
     label?: unknown
+    labelBackground?: unknown
   } = {},
   tag?: FloorTag,
+  labelBackgroundNode?: Element,
 ): ComponentItemEntries {
+  const labelBackgroundEntry = labelBackgroundNode
+    ? buildLabelBackgroundEntry(existing.labelBackground, component, labelBackgroundNode)
+    : undefined
   if (component.template === 'icon-pair') {
     const normalShape = shapeNodes[0]
     const alarmShape = shapeNodes[1]
@@ -220,6 +244,7 @@ export function buildComponentEntries(
         buildIconPairEntry(existing.alarmShape, component, alarmShape),
       ],
       labelEntry: buildLabelEntry(existing.label, component),
+      labelBackgroundEntry,
     }
   }
 
@@ -237,6 +262,7 @@ export function buildComponentEntries(
         )
       }),
       labelEntry: buildLabelEntry(existing.label, component),
+      labelBackgroundEntry,
     }
   }
 
@@ -247,5 +273,6 @@ export function buildComponentEntries(
       ? buildSwitchEntry(existing.shape, component, tag)
       : buildStandardEntry(existing.shape, component, shape)],
     labelEntry: buildLabelEntry(existing.label, component),
+    labelBackgroundEntry,
   }
 }

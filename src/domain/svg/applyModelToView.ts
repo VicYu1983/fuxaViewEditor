@@ -5,7 +5,7 @@ import { layoutFloorViewComponents } from '../layout/floorPlanViews'
 import type { FloorPlanTagOffsets } from '../layout/floorPlanViews'
 import { applyExistingTagLayout } from './applyExistingTagLayout'
 import { buildComponentEntries } from './buildComponentEntries'
-import { buildComponentNodes } from './buildComponentNodes'
+import { buildComponentNodes, labelBackgroundId } from './buildComponentNodes'
 import type {
   IconAssetResolver,
   SvgComponent,
@@ -101,7 +101,13 @@ function isManagedComponent(
 function existingItemItems(
   previousItems: Record<string, unknown>,
   component: SvgComponent,
-): { shape?: unknown; alarmShape?: unknown; states?: Record<string, unknown>; label?: unknown } {
+): {
+  shape?: unknown
+  alarmShape?: unknown
+  states?: Record<string, unknown>
+  label?: unknown
+  labelBackground?: unknown
+} {
   return {
     shape: previousItems[component.shapeId],
     alarmShape: component.alarmShapeId
@@ -114,6 +120,7 @@ function existingItemItems(
       ]),
     ),
     label: previousItems[component.labelId],
+    labelBackground: previousItems[labelBackgroundId(component.labelId)],
   }
 }
 
@@ -130,12 +137,14 @@ function writeComponentEntries(
   component: SvgComponent,
   shapeNodes: Element[],
   tag: FloorTag | undefined,
+  labelBackgroundNode?: Element,
 ): void {
   const entries = buildComponentEntries(
     component,
     shapeNodes,
     existingItemItems(previousItems, component),
     tag,
+    labelBackgroundNode,
   )
   view.items[component.shapeId] = entries.shapeEntries[0]!
   if (component.template === 'icon-pair') {
@@ -154,6 +163,9 @@ function writeComponentEntries(
     }
   }
   view.items[component.labelId] = entries.labelEntry
+  if (entries.labelBackgroundEntry) {
+    view.items[labelBackgroundId(component.labelId)] = entries.labelBackgroundEntry
+  }
 }
 
 function floorKey(floor: string): string {
@@ -255,7 +267,10 @@ function applyModelToViewInPlace(
         model.grid,
         options.resolveIcon,
         options.allocateId,
+        { labelBackground: model.floorPlan === true },
       )
+      // 底框要先放，才會墊在圖示與標籤之下
+      if (nodes.labelBackgroundNode) layer.appendChild(nodes.labelBackgroundNode)
       for (const shapeNode of nodes.shapeNodes) layer.appendChild(shapeNode)
       layer.appendChild(nodes.labelNode)
       writeComponentEntries(
@@ -264,6 +279,7 @@ function applyModelToViewInPlace(
         component,
         nodes.shapeNodes,
         tagFor(options.tags, component.tagId),
+        nodes.labelBackgroundNode,
       )
     }
   }

@@ -1,6 +1,7 @@
 import type { GridSettings } from '../config/types'
 import type { IconAsset } from '../icons/iconLibrary'
 import type { ComponentPlacement } from '../layout/gridLayout'
+import { getLabelBackgroundBounds } from '../layout/gridLayout'
 import type { ManagedComponentRecord } from './readManagedComponents'
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg'
@@ -9,6 +10,22 @@ const PALETTES = {
   normal: ['#00ff07ff', '#f80000ff'],
   alarm: ['#ff0000ff', '#00ff07ff'],
 } as const
+
+// 平面圖 View 的標籤底框樣式：白底加淡藍框，避免與底圖線條混淆。
+const LABEL_BACKGROUND_STYLE = {
+  fill: '#ffffff',
+  fillOpacity: 0.85,
+  stroke: '#93c5fd',
+  strokeWidth: 1,
+  cornerRadius: 4,
+} as const
+
+const LABEL_BACKGROUND_ID_SUFFIX = '-bg'
+
+/** 標籤底框的固定 ID；由 labelId 推導，重新匯出時可據此移除舊節點。 */
+export function labelBackgroundId(labelId: string): string {
+  return `${labelId}${LABEL_BACKGROUND_ID_SUFFIX}`
+}
 
 export type SvgComponent = ManagedComponentRecord & {
   template: 'icon-multi' | 'icon-pair' | 'icon' | 'cylinder' | 'switch' | 'rect'
@@ -25,6 +42,8 @@ export type SvgIdAllocator = (prefix: string) => string
 export interface BuiltComponentNodes {
   shapeNodes: Element[]
   labelNode: Element
+  /** 平面圖 View 才會有：墊在標籤之下、隨標籤一同移動的底框。 */
+  labelBackgroundNode?: Element
 }
 
 function createSvgNode(
@@ -361,6 +380,35 @@ function buildLabelNode(
   return text
 }
 
+function buildLabelBackgroundNode(
+  doc: XMLDocument,
+  component: SvgComponent,
+  placement: ComponentPlacement,
+  grid: GridSettings,
+): Element {
+  const bounds = getLabelBackgroundBounds(
+    component.label,
+    placement.label.x,
+    placement.label.y,
+    placement.label.anchor,
+    grid.labelFontSize,
+  )
+  return createSvgNode(doc, 'rect', {
+    'data-name': `tc_${component.seq}_label_bg`,
+    id: labelBackgroundId(component.labelId),
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    rx: LABEL_BACKGROUND_STYLE.cornerRadius,
+    ry: LABEL_BACKGROUND_STYLE.cornerRadius,
+    fill: LABEL_BACKGROUND_STYLE.fill,
+    'fill-opacity': LABEL_BACKGROUND_STYLE.fillOpacity,
+    stroke: LABEL_BACKGROUND_STYLE.stroke,
+    'stroke-width': LABEL_BACKGROUND_STYLE.strokeWidth,
+  })
+}
+
 export function buildComponentNodes(
   doc: XMLDocument,
   component: SvgComponent,
@@ -368,6 +416,7 @@ export function buildComponentNodes(
   grid: GridSettings,
   resolveIcon: IconAssetResolver,
   allocateId: SvgIdAllocator,
+  options: { labelBackground?: boolean } = {},
 ): BuiltComponentNodes {
   const shapeNodes = component.template === 'icon-pair'
     ? buildIconPairNodes(doc, component, placement, resolveIcon)
@@ -376,8 +425,11 @@ export function buildComponentNodes(
       : [component.template === 'switch'
         ? buildSwitchNode(doc, component, placement, allocateId)
         : buildShapeNode(doc, component, placement, resolveIcon, allocateId)]
+  const labelNode = buildLabelNode(doc, component, placement, grid)
+  if (!options.labelBackground) return { shapeNodes, labelNode }
   return {
     shapeNodes,
-    labelNode: buildLabelNode(doc, component, placement, grid),
+    labelNode,
+    labelBackgroundNode: buildLabelBackgroundNode(doc, component, placement, grid),
   }
 }

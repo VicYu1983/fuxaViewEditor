@@ -1,6 +1,7 @@
 // Here, floor means a Tag group within one View, not a cross-View building floor.
 import { isRecord } from '../config/validateFuxaConfig'
 import { FLOOR_PLAN_ATTRIBUTE, FLOOR_PLAN_ID } from './buildFloorPlanNode'
+import { labelBackgroundId } from './buildComponentNodes'
 import { findSvgElementById } from './parseSvg'
 
 const FLOOR_ARTIFACT_NAMES = new Set([
@@ -72,6 +73,10 @@ function addComponentIds(target: Set<string>, components: unknown): void {
     for (const key of ['shapeId', 'alarmShapeId', 'labelId'] as const) {
       const id = component[key]
       if (typeof id === 'string' && id) target.add(id)
+    }
+    // 標籤底框的 id 由 labelId 推導，重新匯出時要一併移除，否則會殘留堆疊
+    if (typeof component.labelId === 'string' && component.labelId) {
+      target.add(labelBackgroundId(component.labelId))
     }
     if (Array.isArray(component.multiStateBindings)) {
       for (const binding of component.multiStateBindings) {

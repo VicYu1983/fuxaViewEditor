@@ -146,3 +146,29 @@ export function getSvgTextBounds(
     bottom: y + fontSize * 0.2,
   }
 }
+
+// 平面圖 View 的 Tag 標籤底框，用來隔開底圖線條；預覽與匯出共用同一組幾何。
+export const LABEL_BACKGROUND_PADDING = { x: 4, y: 2 } as const
+
+export interface LabelBackgroundBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export function getLabelBackgroundBounds(
+  text: unknown,
+  x: number,
+  y: number,
+  anchor: LabelPlacement['anchor'],
+  fontSize: number,
+): LabelBackgroundBounds {
+  const bounds = getSvgTextBounds(text, x, y, anchor, fontSize)
+  return {
+    x: bounds.left - LABEL_BACKGROUND_PADDING.x,
+    y: bounds.top - LABEL_BACKGROUND_PADDING.y,
+    width: bounds.right - bounds.left + LABEL_BACKGROUND_PADDING.x * 2,
+    height: bounds.bottom - bounds.top + LABEL_BACKGROUND_PADDING.y * 2,
+  }
+}
