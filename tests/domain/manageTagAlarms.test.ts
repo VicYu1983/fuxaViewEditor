@@ -198,24 +198,24 @@ describe('setTagAlarmClosed', () => {
       property: { variableId: 'tag-1' },
       highhigh: { enabled: true, text: '高高' },
       low: { enabled: false, text: '低' },
+      actions: { enabled: true, values: [{ type: 'setView', actparam: 'view-1' }] },
     }]
 
     const closed = setTagAlarmClosed(source, 'tag-1', true)
     expect(closed.updated).toBe(true)
     const closedAlarm = (closed.config.alarms as Record<string, unknown>[])[0]!
-
     expect(closedAlarm.highhigh).toMatchObject({ enabled: false, text: '高高' })
     expect(closedAlarm.low).toMatchObject({ enabled: false, text: '低' })
+    expect(closedAlarm.actions).toMatchObject({ enabled: false })
     expect(closedAlarm.closedLevels).toEqual(['highhigh'])
 
     const reopened = setTagAlarmClosed(closed.config, 'tag-1', false)
     expect(reopened.updated).toBe(true)
     const reopenedAlarm = (reopened.config.alarms as Record<string, unknown>[])[0]!
-
     expect(reopenedAlarm.highhigh).toMatchObject({ enabled: true })
     expect(reopenedAlarm.low).toMatchObject({ enabled: false })
-    expect(reopenedAlarm).not.toHaveProperty('closedLevels')
-  })
+    expect(reopenedAlarm.actions).toMatchObject({ enabled: true })
+    expect(reopenedAlarm).not.toHaveProperty('closedLevels')  })
 
   it('reports no update when there is nothing to close or reopen', () => {
     const source = createConfig()

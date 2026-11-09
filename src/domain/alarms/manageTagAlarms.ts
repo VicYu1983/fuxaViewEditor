@@ -89,6 +89,7 @@ export function setTagAlarmClosed(
       const setting = alarm[level]
       if (isRecord(setting)) setting.enabled = false
     }
+    if (isRecord(alarm.actions)) alarm.actions.enabled = false
     alarm.closedLevels = levelsToClose
     return { config, updated: true }
   }
@@ -103,6 +104,7 @@ export function setTagAlarmClosed(
     const setting = alarm[level]
     if (isRecord(setting)) setting.enabled = true
   }
+  if (isRecord(alarm.actions)) alarm.actions.enabled = true
   delete alarm.closedLevels
   return { config, updated: true }
 }
