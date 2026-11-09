@@ -1411,7 +1411,8 @@ function EditorWorkspace() {
           { ...model, floorGroupFrame: updatedFrame },
         ]),
       )
-      commitDocumentEdit(config, result.config, nextModels)
+      const allViewIds = new Set([...models.keys(), ...modifiedViewIds])
+      commitDocumentEdit(config, result.config, nextModels, allViewIds)
       setViewSettingsOpen(false)
       messageApi.success('已更新所有 View 的群組底框設定。')
     } catch (error) {
