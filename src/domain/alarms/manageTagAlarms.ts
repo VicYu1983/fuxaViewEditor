@@ -59,6 +59,54 @@ export function updateTagAlarmInversion(
   return { config, updated }
 }
 
+const TAG_ALARM_LEVELS: readonly TagAlarmLevel[] = ['highhigh', 'high', 'low', 'info']
+
+export function setTagAlarmClosed(
+  source: FuxaConfig,
+  tagId: string,
+  closed: boolean,
+): { config: FuxaConfig; updated: boolean } {
+  const config = structuredClone(source)
+  if (config.alarms !== undefined && !Array.isArray(config.alarms)) {
+    throw new Error('FUXA alarms 欄位格式無效，無法關閉告警。')
+  }
+  if (!Array.isArray(config.alarms)) return { config, updated: false }
+
+  const alarm = config.alarms.find((candidate) => (
+    isRecord(candidate)
+    && isRecord(candidate.property)
+    && candidate.property.variableId === tagId
+  ))
+  if (!isRecord(alarm)) return { config, updated: false }
+
+  if (closed) {
+    const levelsToClose = TAG_ALARM_LEVELS.filter((level) => {
+      const setting = alarm[level]
+      return isRecord(setting) && setting.enabled === true
+    })
+    if (!levelsToClose.length) return { config, updated: false }
+    for (const level of levelsToClose) {
+      const setting = alarm[level]
+      if (isRecord(setting)) setting.enabled = false
+    }
+    alarm.closedLevels = levelsToClose
+    return { config, updated: true }
+  }
+
+  const closedLevels = Array.isArray(alarm.closedLevels)
+    ? alarm.closedLevels.filter((level): level is TagAlarmLevel => (
+      typeof level === 'string' && (TAG_ALARM_LEVELS as readonly string[]).includes(level)
+    ))
+    : []
+  if (!closedLevels.length) return { config, updated: false }
+  for (const level of closedLevels) {
+    const setting = alarm[level]
+    if (isRecord(setting)) setting.enabled = true
+  }
+  delete alarm.closedLevels
+  return { config, updated: true }
+}
+
 export function updateExistingTagAlarmTexts(
   source: FuxaConfig,
   tagNames: ReadonlyMap<string, string>,
@@ -229,6 +277,7 @@ export function applyTagAlarms(
       : []
     const alarm = {
       ...existing,
+      closedLevels: undefined,
       highhigh: createAlarmLevel('highhigh', text, draft.level === 'highhigh', draft.invertState),
       high: createAlarmLevel('high', text, draft.level === 'high', draft.invertState),
       low: createAlarmLevel('low', text, draft.level === 'low', draft.invertState),

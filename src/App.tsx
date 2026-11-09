@@ -1965,7 +1965,9 @@ function EditorWorkspace() {
             : projectManagerTab === 'tag-add'
               ? () => tagAddRef.current?.submit()
             : undefined}
-        width={projectManagerTab === 'tag-create' ? 1000 : 900}
+        width={projectManagerTab === 'alarms'
+          ? 1200
+          : projectManagerTab === 'tag-create' ? 1000 : 900}
         items={[
             {
               key: 'devices',

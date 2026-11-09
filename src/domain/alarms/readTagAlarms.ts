@@ -34,6 +34,21 @@ export function readAlarmSettingsByTag(alarms: unknown): Map<string, TagAlarmSet
   return settingsByTag
 }
 
+export function readClosedAlarmTagIds(alarms: unknown): Set<string> {
+  const closedTagIds = new Set<string>()
+  if (!Array.isArray(alarms)) return closedTagIds
+
+  for (const alarm of alarms) {
+    if (!isRecord(alarm) || !isRecord(alarm.property)
+        || typeof alarm.property.variableId !== 'string') continue
+    const hasClosedLevels = Array.isArray(alarm.closedLevels) && alarm.closedLevels.length > 0
+    if (hasClosedLevels && !getEnabledAlarmLevels(alarm).length) {
+      closedTagIds.add(alarm.property.variableId)
+    }
+  }
+  return closedTagIds
+}
+
 export function readAlarmInversionByTag(alarms: unknown): Map<string, boolean> {
   const inversionByTag = new Map<string, boolean>()
   if (!Array.isArray(alarms)) return inversionByTag

@@ -6,6 +6,7 @@ import type {
 } from '../../src/domain/alarms/manageTagAlarms'
 import {
   applyTagAlarms,
+  setTagAlarmClosed,
   updateExistingTagAlarmTexts,
   updateTagAlarmInversion,
 } from '../../src/domain/alarms/manageTagAlarms'
@@ -187,6 +188,42 @@ describe('applyTagAlarms', () => {
     })
     expect(alarms[0]?.highhigh).not.toHaveProperty('voiceRepeat')
     expect(alarms[0]?.high).not.toHaveProperty('voiceRepeat')
+  })
+})
+
+describe('setTagAlarmClosed', () => {
+  it('disables enabled levels, remembers them, and restores them when reopened', () => {
+    const source = createConfig()
+    source.alarms = [{
+      property: { variableId: 'tag-1' },
+      highhigh: { enabled: true, text: '高高' },
+      low: { enabled: false, text: '低' },
+    }]
+
+    const closed = setTagAlarmClosed(source, 'tag-1', true)
+    expect(closed.updated).toBe(true)
+    const closedAlarm = (closed.config.alarms as Record<string, unknown>[])[0]!
+
+    expect(closedAlarm.highhigh).toMatchObject({ enabled: false, text: '高高' })
+    expect(closedAlarm.low).toMatchObject({ enabled: false, text: '低' })
+    expect(closedAlarm.closedLevels).toEqual(['highhigh'])
+
+    const reopened = setTagAlarmClosed(closed.config, 'tag-1', false)
+    expect(reopened.updated).toBe(true)
+    const reopenedAlarm = (reopened.config.alarms as Record<string, unknown>[])[0]!
+
+    expect(reopenedAlarm.highhigh).toMatchObject({ enabled: true })
+    expect(reopenedAlarm.low).toMatchObject({ enabled: false })
+    expect(reopenedAlarm).not.toHaveProperty('closedLevels')
+  })
+
+  it('reports no update when there is nothing to close or reopen', () => {
+    const source = createConfig()
+    source.alarms = [{ property: { variableId: 'tag-1' }, high: { enabled: false } }]
+
+    expect(setTagAlarmClosed(source, 'tag-1', true).updated).toBe(false)
+    expect(setTagAlarmClosed(source, 'tag-1', false).updated).toBe(false)
+    expect(setTagAlarmClosed(source, 'missing', true).updated).toBe(false)
   })
 })
 

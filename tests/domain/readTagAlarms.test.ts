@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { readAlarmInversionByTag, readAlarmSettingsByTag } from '../../src/domain/alarms/readTagAlarms'
+import {
+  readAlarmInversionByTag,
+  readAlarmSettingsByTag,
+  readClosedAlarmTagIds,
+} from '../../src/domain/alarms/readTagAlarms'
 
 describe('readAlarmSettingsByTag', () => {
   it('returns only enabled levels with their text, grouped by variable id', () => {
@@ -24,6 +28,18 @@ describe('readAlarmSettingsByTag', () => {
 
   it('returns an empty map when alarms is not an array', () => {
     expect(readAlarmSettingsByTag(undefined).size).toBe(0)
+  })
+})
+
+describe('readClosedAlarmTagIds', () => {
+  it('returns tags whose alarm levels were closed and none remain enabled', () => {
+    const alarms = [
+      { property: { variableId: 'closed' }, high: { enabled: false }, closedLevels: ['high'] },
+      { property: { variableId: 'open' }, high: { enabled: true }, closedLevels: [] },
+      { property: { variableId: 'partly' }, high: { enabled: false }, low: { enabled: true }, closedLevels: ['high'] },
+    ]
+
+    expect([...readClosedAlarmTagIds(alarms)]).toEqual(['closed'])
   })
 })
 

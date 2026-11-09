@@ -57,6 +57,13 @@
   padding: 6px 0;
 }
 
+.alarm-tag-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .alarm-tag-settings {
   display: grid;
   gap: 4px;

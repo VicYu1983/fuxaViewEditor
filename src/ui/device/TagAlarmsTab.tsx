@@ -10,9 +10,11 @@ import { groupByFloor } from '../../domain/tags/floor'
 import {
   readAlarmInversionByTag,
   readAlarmSettingsByTag,
+  readClosedAlarmTagIds,
 } from '../../domain/alarms/readTagAlarms'
 import {
   applyTagAlarms,
+  setTagAlarmClosed,
   updateExistingTagAlarmTexts,
   updateTagAlarmInversion,
   type TagAlarmLevel,
@@ -121,6 +123,10 @@ export const TagAlarmsTab = forwardRef<TagAlarmsTabHandle, TagAlarmsTabProps>(
       () => readAlarmInversionByTag(config?.rawConfig.alarms),
       [config],
     )
+    const closedAlarmTagIds = useMemo(
+      () => readClosedAlarmTagIds(config?.rawConfig.alarms),
+      [config],
+    )
     const filteredAlarmTags = useMemo(() => {
       const query = tagAlarmSearch.trim().toLocaleLowerCase()
       return selectableAlarmTags.filter((tag) => (
@@ -186,6 +192,22 @@ export const TagAlarmsTab = forwardRef<TagAlarmsTabHandle, TagAlarmsTabProps>(
       } catch (error) {
         const detail = getErrorMessage(error)
         onNotify('error', `更新告警狀態失敗：${detail}`)
+      }
+    }
+
+    function handleToggleAlarmTagClosed(tagId: string, closed: boolean) {
+      if (!config) return
+      try {
+        const result = setTagAlarmClosed(config.rawConfig, tagId, closed)
+        if (!result.updated) return
+        onDocumentEdit(parseUpdatedConfig(result.config, config))
+        onNotify(
+          'success',
+          `已${closed ? '關閉' : '開啟'} Tag「${tags.find((tag) => tag.id === tagId)?.name ?? tagId}」的告警。`,
+        )
+      } catch (error) {
+        const detail = getErrorMessage(error)
+        onNotify('error', `更新告警開關失敗：${detail}`)
       }
     }
 
@@ -355,21 +377,33 @@ export const TagAlarmsTab = forwardRef<TagAlarmsTabHandle, TagAlarmsTabProps>(
                   >
                     Address: {String(tag.record.address ?? '未設定')}
                   </Text>
-                  {['bool', 'boolean'].includes(tag.type.toLocaleLowerCase()) && (
-                    <Checkbox
-                      aria-label={`${tag.name} 反轉狀態`}
-                      title="啟用中的告警條件由 Tag 值 1 改為 0"
-                      checked={alarmInversionByTag.get(tag.id)
-                        ?? tagAlarmInversionDrafts[tag.id]
-                        ?? false}
-                      onChange={(event) => handleToggleAlarmTagInversion(
-                        tag.id,
-                        event.target.checked,
-                      )}
-                    >
-                      反轉狀態
-                    </Checkbox>
-                  )}
+                  <div className="alarm-tag-controls">
+                    {(alarmSettingsByTag.has(tag.id) || closedAlarmTagIds.has(tag.id)) && (
+                      <Checkbox
+                        aria-label={`${tag.name} 關閉告警`}
+                        title="關閉後保留告警設定，取消勾選即可重新開啟"
+                        checked={closedAlarmTagIds.has(tag.id)}
+                        onChange={(event) => handleToggleAlarmTagClosed(tag.id, event.target.checked)}
+                      >
+                        關閉
+                      </Checkbox>
+                    )}
+                    {['bool', 'boolean'].includes(tag.type.toLocaleLowerCase()) && (
+                      <Checkbox
+                        aria-label={`${tag.name} 反轉狀態`}
+                        title="啟用中的告警條件由 Tag 值 1 改為 0"
+                        checked={alarmInversionByTag.get(tag.id)
+                          ?? tagAlarmInversionDrafts[tag.id]
+                          ?? false}
+                        onChange={(event) => handleToggleAlarmTagInversion(
+                          tag.id,
+                          event.target.checked,
+                        )}
+                      >
+                        反轉狀態
+                      </Checkbox>
+                    )}
+                  </div>
                   <div className="alarm-tag-settings" aria-label={`${tag.name} 已設定告警`}>
                     {alarmSettingsByTag.get(tag.id)?.length ? (
                       alarmSettingsByTag.get(tag.id)?.map(({ level, text }, index) => (
@@ -384,6 +418,8 @@ export const TagAlarmsTab = forwardRef<TagAlarmsTabHandle, TagAlarmsTabProps>(
                           <Text type="secondary">語音 {tagAlarmVoiceRepeats[level]} 次</Text>
                         </div>
                       ))
+                    ) : closedAlarmTagIds.has(tag.id) ? (
+                      <Text type="secondary">已關閉</Text>
                     ) : (
                       <Text type="secondary">未設定告警</Text>
                     )}
