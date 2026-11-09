@@ -49,6 +49,24 @@ function makeDocument(root: TestElement): XMLDocument {
 }
 
 describe('readFloorArtifacts', () => {
+  it('does not adopt unregistered floor groups when a group index exists', () => {
+    const root = new TestElement('svg', {}, '', [
+      new TestElement('text', { id: 'title-old', x: '10', y: '20', 'data-floor-group': '排風機' }, '排風機'),
+      new TestElement('g', { id: 'frame-old', 'data-floor-group': '排風機' }, '', [
+        new TestElement('rect', { id: 'shape-old', x: '0', y: '0', width: '100', height: '100' }),
+      ]),
+    ])
+    const result = readFloorArtifacts({
+      'title-old': { name: 'fuxa_floor_section_title' },
+      'frame-old': { name: 'fuxa_floor_section_frame' },
+    }, makeDocument(root), {})
+
+    expect(result.floorTitles).toEqual({})
+    expect(result.floorFrames).toEqual({})
+    expect(result.consumed.size).toBe(0)
+    expect(result.unregisteredFloorItemIds).toEqual(['title-old', 'frame-old'])
+  })
+
   it('groups floor titles and frames, retaining duplicate IDs and choosing canonical artifacts', () => {
     const root = new TestElement('svg', {}, '', [
       new TestElement('text', { id: 'title-old', x: '10', y: '20' }, '未設定樓層'),

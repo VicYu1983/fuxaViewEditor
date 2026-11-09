@@ -18,6 +18,7 @@ export interface ReadManagedResult {
   floorFrames?: Record<string, string>
   floorFrameIds?: Record<string, string[]>
   floorFrameShapeIds?: Record<string, string>
+  unregisteredFloorItemIds?: string[]
   doc?: XMLDocument
   error?: string
 }
@@ -25,7 +26,7 @@ export interface ReadManagedResult {
 export function readManaged(
   view: unknown,
   Parser: SvgParserConstructor,
-  floorGroupArtifacts: unknown = {},
+  floorGroupArtifacts?: unknown,
   iconAssetIds: ReadonlyMap<string, string> = new Map(),
   iconSets: readonly MultiStateIconSet[] = [],
   reservedIds: ReadonlySet<string> = new Set(),
@@ -67,6 +68,7 @@ export function readManaged(
     floorFrames: floor.floorFrames,
     floorFrameIds: floor.floorFrameIds,
     floorFrameShapeIds: floor.floorFrameShapeIds,
+    unregisteredFloorItemIds: floor.unregisteredFloorItemIds,
     doc,
   }
 }

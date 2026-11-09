@@ -4,7 +4,7 @@ import { getFloorGroupFrameSettings } from '../layout/floorGroupFrame'
 import type { FloorLayoutComponent, Bounds } from '../layout/floorLayout'
 import { getViewGridSettings } from '../layout/gridSettings'
 import { getViewFloorPlanSetting, getViewFloorPlanTagOffsets } from '../layout/floorPlanViews'
-import { getFloorGroupArtifacts } from '../layout/floorGroupArtifacts'
+import { getFloorGroupArtifactIndex } from '../layout/floorGroupArtifacts'
 import { getIconAssets, getIconLibrary } from '../icons/iconLibrary'
 import type { MultiStateIconSet } from '../icons/iconLibrary'
 import { readManaged } from '../svg/readManaged'
@@ -198,7 +198,7 @@ export function buildViewEditorModels(
     const parsed = readManaged(
       view,
       Parser,
-      getFloorGroupArtifacts(config, view.id),
+      getFloorGroupArtifactIndex(config, view.id),
       iconAssetIds,
       multiStateIcons,
       reservedComponentIds(stored),
@@ -227,6 +227,7 @@ export function buildViewEditorModels(
       components,
       originalComponents: structuredClone([...reconciled.original, ...existingComponents]),
       componentsNeedRebuild: reconciled.needsRebuild,
+      floorGroupsNeedRebuild: (parsed.unregisteredFloorItemIds?.length ?? 0) > 0,
       grid: getViewGridSettings(config, view.id),
       floorGroupFrame: getFloorGroupFrameSettings(config),
       floorPlan: getViewFloorPlanSetting(config, view.id),

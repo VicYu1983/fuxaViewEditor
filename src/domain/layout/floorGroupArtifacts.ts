@@ -31,6 +31,18 @@ export function getFloorGroupArtifacts(
   return isRecord(viewArtifacts) ? viewArtifacts : {}
 }
 
+// 回傳 undefined 表示配置尚無群組登記索引（舊檔），此時才允許依 SVG 推測群組。
+export function getFloorGroupArtifactIndex(
+  config: FuxaConfig,
+  viewId: string,
+): Record<string, unknown> | undefined {
+  const toolSettings = getToolSettings(config)
+  const allArtifacts = toolSettings?.[FLOOR_GROUP_ARTIFACTS_KEY]
+  if (!isRecord(allArtifacts)) return undefined
+  const viewArtifacts = allArtifacts[viewId]
+  return isRecord(viewArtifacts) ? viewArtifacts : {}
+}
+
 export function saveFloorGroupArtifacts(
   config: FuxaConfig,
   viewIds: readonly string[],

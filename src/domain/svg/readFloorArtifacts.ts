@@ -3,6 +3,11 @@ import { normalizeFloor } from '../tags/floor'
 import { isRecord } from '../config/validateFuxaConfig'
 import { findSvgElementById } from './parseSvg'
 
+const FLOOR_ARTIFACT_NAMES = new Set([
+  'fuxa_floor_section_title',
+  'fuxa_floor_section_frame',
+])
+
 export interface FloorArtifactItem {
   name?: unknown
 }
@@ -20,6 +25,7 @@ export interface ReadFloorArtifactsResult {
   floorFrameShapeIds: Record<string, string>
   floorTitleNodes: Record<string, Element>
   unassignedFloorFrames: UnassignedFloorFrame[]
+  unregisteredFloorItemIds: string[]
   consumed: Set<string>
 }
 
@@ -44,7 +50,7 @@ function inferredTitleFloor(node: Element, id: string, artifactFloorById: Map<st
 export function readFloorArtifacts(
   items: Record<string, unknown>,
   doc: XMLDocument,
-  configuredArtifacts: unknown = {},
+  configuredArtifacts?: unknown,
 ): ReadFloorArtifactsResult {
   const floorTitles: Record<string, string> = {}
   const floorTitleIds: Record<string, string[]> = {}
@@ -55,7 +61,8 @@ export function readFloorArtifacts(
   const unassignedFloorFrames: UnassignedFloorFrame[] = []
   const consumed = new Set<string>()
   const artifactFloorById = new Map<string, string>()
-  const artifacts = isRecord(configuredArtifacts) ? configuredArtifacts : {}
+  const hasIndex = isRecord(configuredArtifacts)
+  const artifacts = hasIndex ? configuredArtifacts : {}
 
   for (const [floorKey, artifact] of Object.entries(artifacts)) {
     if (!isRecord(artifact)) continue
@@ -90,9 +97,19 @@ export function readFloorArtifacts(
     }
   }
 
+  // 有登記索引時群組只認索引，未登記的群組項目交由匯出時重新生成而非採用。
+  const unregisteredFloorItemIds: string[] = []
+  if (hasIndex) {
+    for (const [id, item] of Object.entries(items)) {
+      if (FLOOR_ARTIFACT_NAMES.has(itemName(item)) && !consumed.has(id)) {
+        unregisteredFloorItemIds.push(id)
+      }
+    }
+  }
+
   // 以下依 data-floor-group、文字推測群組，僅用於 extra 索引不存在的舊檔；
   // 已由索引認定的元件（consumed）不再推測，避免同一元件被登記到多個群組。
-  for (const [shapeId, shapeItem] of Object.entries(items)) {
+  for (const [shapeId, shapeItem] of Object.entries(hasIndex ? {} : items)) {
     if (consumed.has(shapeId)) continue
     if (itemName(shapeItem) === 'fuxa_floor_section_frame') {
       const frameNode = findSvgElementById(doc, shapeId)
@@ -161,6 +178,7 @@ export function readFloorArtifacts(
     floorFrameShapeIds,
     floorTitleNodes,
     unassignedFloorFrames,
+    unregisteredFloorItemIds,
     consumed,
   }
 }

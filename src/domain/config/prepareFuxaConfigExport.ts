@@ -70,6 +70,8 @@ export interface ExportViewModel extends GeneratedViewModel {
   originalFloorFrameIds?: Record<string, string[]>
   /** extra 保存的元件定義與 SVG 不一致，匯出時需重新套用此 View。 */
   componentsNeedRebuild?: boolean
+  /** SVG 含有未登記於 extra 群組索引的舊群組，匯出時需重新套用此 View 以移除並依索引重建。 */
+  floorGroupsNeedRebuild?: boolean
 }
 
 export interface PrepareFuxaConfigExportInput {
@@ -437,6 +439,7 @@ export function findViewIdsNeedingReapply(
     ...findLegacySwitchViewIds(models),
     ...findStaleFloorPlanViewIds(models),
     ...models.filter((model) => model.componentsNeedRebuild === true).map((model) => model.viewId),
+    ...models.filter((model) => model.floorGroupsNeedRebuild === true).map((model) => model.viewId),
   ])
 }
 
